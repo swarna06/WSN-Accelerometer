@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <assert.h>
 
 #include <driverlib/prcm.h>
 #include <driverlib/sys_ctrl.h>
@@ -12,10 +13,14 @@
 
 #include <driverlib/gpio.h>
 
+#include "misc.h"
+#include "printf.h"
+#include "smartrf_settings.h"
+
 #include "board.h"
 #include "timing.h"
 #include "serial_port.h"
-#include "printf.h"
+#include "radio.h"
 
 void Startup();
 void GPIO_Init();
@@ -30,13 +35,14 @@ int main(void)
     Tm_Init_Aux_Timer(TM_AUXT_MODE_ONE_SHOT);
     Tm_Init_RTC();
 
+    Rad_Init();
+
     Tm_Start_RTC_Period(500);
 
     while (1)
     {
         if (Tm_RTC_Period_Completed())
         {
-            PRINTF("Hola\r\n");
             GPIO_toggleDio(BRD_GREEN_LED);
         }
     }
