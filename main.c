@@ -14,6 +14,8 @@
 
 #include "board.h"
 #include "timing.h"
+#include "serial_port.h"
+#include "printf.h"
 
 void Startup();
 void GPIO_Init();
@@ -22,6 +24,8 @@ int main(void)
 {
     Startup();
     GPIO_Init();
+
+    Sep_UART_Init();
 
     Tm_Init_Aux_Timer(TM_AUXT_MODE_ONE_SHOT);
     Tm_Init_RTC();
@@ -32,11 +36,9 @@ int main(void)
     {
         if (Tm_RTC_Period_Completed())
         {
+            PRINTF("Hola\r\n");
             GPIO_toggleDio(BRD_GREEN_LED);
         }
-
-
-//        Tm_Delay_Microsec(1000*500);
     }
 
 	return 0;
@@ -47,6 +49,10 @@ void Startup()
     // Power peripherals
     PRCMPowerDomainOn(PRCM_DOMAIN_PERIPH);
     while((PRCMPowerDomainStatus(PRCM_DOMAIN_PERIPH) != PRCM_DOMAIN_POWER_ON));
+
+    // Power serial interfaces
+    PRCMPowerDomainOn(PRCM_DOMAIN_SERIAL);
+    while((PRCMPowerDomainStatus(PRCM_DOMAIN_SERIAL) != PRCM_DOMAIN_POWER_ON));
 
     // Set clock source
     OSCClockSourceSet(OSC_SRC_CLK_MF | OSC_SRC_CLK_HF, OSC_XOSC_HF);
@@ -63,7 +69,7 @@ void GPIO_Init()
     PRCMLoadSet();
     while(!PRCMLoadGet());
 
-    // GPIO as 'standard' output
+    // Configure outputs
     IOCPinTypeGpioOutput(BRD_RED_LED);
     IOCPinTypeGpioOutput(BRD_GREEN_LED);
 
@@ -72,8 +78,12 @@ void GPIO_Init()
     IOCPinTypeGpioOutput(BRD_DEBUG_PIN1);
     GPIO_clearDio(BRD_DEBUG_PIN1);
 
+    // Configure inputs
     IOCPinTypeGpioInput(BRD_BUTTON1);
     IOCPinTypeGpioInput(BRD_BUTTON2);
     IOCIOPortPullSet(BRD_BUTTON1, IOC_IOPULL_UP);
     IOCIOPortPullSet(BRD_BUTTON2, IOC_IOPULL_UP);
+
+    // Configure peripheral IO pin
+    IOCPinTypeUart(UART0_BASE, IOID_UNUSED, IOID_3, IOID_UNUSED, IOID_UNUSED); // UART, TX only
 }
