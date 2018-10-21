@@ -23,12 +23,20 @@ int main(void)
     Startup();
     GPIO_Init();
 
-    Tm_Init_Aux_Timer(TM_AUX_TIMER_MODE_ONE_SHOT);
+    Tm_Init_Aux_Timer(TM_AUXT_MODE_ONE_SHOT);
+    Tm_Init_RTC();
+
+    Tm_Start_RTC_Period(500);
 
     while (1)
     {
-        GPIO_toggleDio(BRD_GREEN_LED);
-        Tm_Delay(TM_USEC_TO_TICKS(1000*500));
+        if (Tm_RTC_Period_Completed())
+        {
+            GPIO_toggleDio(BRD_GREEN_LED);
+        }
+
+
+//        Tm_Delay_Microsec(1000*500);
     }
 
 	return 0;

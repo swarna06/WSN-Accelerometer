@@ -3,26 +3,26 @@
 
 #include <stdint.h>
 
-#define TM_AUX_TIMER_MODE_ONE_SHOT  (true)
-#define TM_AUX_TIMER_MODE_PERIODIC  (false)
+// RTC ticks per millisecond
+#define TM_RTC_TICKS_PER_MSEC   64
 
-#define TM_DELAY_TICKS_PER_US 48
-#define TM_USEC_TO_TICKS(d)     (d * TM_DELAY_TICKS_PER_US)
+// Auxiliary timer ticks per microsecond
+#define TM_AUXT_TICKS_PER_US    48
 
+// Auxiliary timer operation modes
+#define TM_AUXT_MODE_ONE_SHOT   true
+#define TM_AUXT_MODE_PERIODIC   false
+
+// System tick
 #define TM_HW_SYSTICK_PER       48000 // 1ms
-
 #define TM_TICK_PER_MS			1 // systick 1 ms
 #define TM_TICKS(time_ms)		(time_ms/TM_TICK_PER_MS)
 
-// Aux timer config
-#define TM_AUX_TIMER_PERIODIC   false
-#define TM_AUX_TIMER_ONE_SHOT   true
-
-// total number of periods and timeouts
+// Total number of periods and timeouts
 #define TM_PER_NUM				3       // TODO keep this value updated !
 #define TM_TOUT_NUM				1       // TODO keep this value updated !
 
-// periods
+// Periods
 #define TM_PER0_IDX             0
 #define TM_PER0_VAL		        TM_TICKS(1000)
 
@@ -32,11 +32,11 @@
 #define TM_PER_XOSC_CAL_IDX     2
 #define TM_PER_XOSC_CAL_VAL     TM_TICKS(500)
 
-// timeouts
+// Timeouts
 #define TEST_TOUT_IDX			0
 #define TEST_TOUT_VAL			TM_TICKS(20)
 
-// flags
+// Flags
 #define TM_F_PER_ACTIVE			0x01
 #define TM_F_PER_COMPLETED		0x02
 
@@ -83,6 +83,12 @@ bool Tm_Aux_Timer_Event_Occurred();
 
 void Tm_Wait_Aux_Timer_Event();
 
-void Tm_Delay(uint32_t ticks);
+void Tm_Delay_Microsec(uint32_t ticks);
+
+void Tm_Init_RTC();
+
+void Tm_Start_RTC_Period(uint32_t period_ms);
+
+bool Tm_RTC_Period_Completed();
 
 #endif // TIMING_H__ 

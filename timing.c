@@ -3,6 +3,10 @@
 #include <driverlib/systick.h>
 #include <driverlib/timer.h>
 
+#include <driverlib/aon_rtc.h>
+#include <driverlib/aux_timer.h>
+#include <driverlib/aon_event.h>
+
 #include "timing.h"
 
 uint8_t state = 0;
@@ -128,17 +132,16 @@ void Tm_Init_Aux_Timer(bool mode)
     while(!PRCMLoadGet());
 
     // Setup timer0
-    // Mode: TIMER_CFG_ONE_SHOT, TIMER_CFG_PERIODIC
-    if (mode == TM_AUX_TIMER_MODE_ONE_SHOT)
+    if (mode == TM_AUXT_MODE_ONE_SHOT)
         TimerConfigure(GPT0_BASE, TIMER_CFG_ONE_SHOT);
     else
         TimerConfigure(GPT0_BASE, TIMER_CFG_PERIODIC);
     TimerLoadSet(GPT0_BASE, TIMER_A, 0);
 }
 
-void Tm_Set_Aux_Timer(uint32_t ticks)
+void Tm_Set_Aux_Timer(uint32_t time_usec)
 {
-    TimerLoadSet(GPT0_BASE, TIMER_A, ticks);
+    TimerLoadSet(GPT0_BASE, TIMER_A, time_usec*TM_AUXT_TICKS_PER_US);
 }
 
 void Tm_Start_Aux_Timer()
@@ -169,10 +172,47 @@ void Tm_Wait_Aux_Timer_Event()
     while (!(TimerIntStatus(GPT0_BASE, false) & TIMER_TIMA_TIMEOUT));
 }
 
-void Tm_Delay(uint32_t ticks)
+void Tm_Delay_Microsec(uint32_t time_usec)
 {
-    TimerLoadSet(GPT0_BASE, TIMER_A, ticks);
+    TimerLoadSet(GPT0_BASE, TIMER_A, time_usec*TM_AUXT_TICKS_PER_US);
     TimerIntClear(GPT0_BASE, TIMER_TIMA_TIMEOUT);
     TimerEnable(GPT0_BASE, TIMER_A);
     while (!(TimerIntStatus(GPT0_BASE, false) & TIMER_TIMA_TIMEOUT));
+}
+
+void Tm_Init_RTC()
+{
+    // Reset RTC
+    AONRTCReset();
+
+    // Enable 16 kHz signal used to sync up with the RAdio Timer
+    HWREG(AON_RTC_BASE + AON_RTC_O_CTL) |= AON_RTC_CTL_RTC_UPD_EN;
+
+    // Enable RTC
+    AONRTCEnable();
+    while (HWREG(AON_RTC_BASE + AON_RTC_O_SYNC)); // synch CPU and AON
+}
+
+void Tm_Start_RTC_Period(uint32_t period_ms)
+{
+    const uint32_t TICKS_PER_PERIOD = period_ms*TM_RTC_TICKS_PER_MSEC;
+    uint32_t curr_time;
+
+    // Configure and enable CH2 (periodic compare)
+    AONRTCModeCh2Set(AON_RTC_MODE_CH2_CONTINUOUS);
+    curr_time = AONRTCCurrentCompareValueGet();
+    AONRTCCompareValueSet(AON_RTC_CH2, curr_time + TICKS_PER_PERIOD);
+    AONRTCIncValueCh2Set(TICKS_PER_PERIOD);
+    AONRTCChannelEnable(AON_RTC_CH2);
+}
+
+bool Tm_RTC_Period_Completed()
+{
+    if (AONRTCEventGet(AON_RTC_CH2))
+    {
+        AONRTCEventClear(AON_RTC_CH2);
+        return true;
+    }
+    else
+        return false;
 }
