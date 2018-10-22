@@ -28,6 +28,10 @@
 static volatile rfc_CMD_BLE5_RADIO_SETUP_t* cmd_ble5_radio_setup = &RF_cmdBle5RadioSetup;
 static volatile rfc_CMD_FS_t* cmd_fs = &RF_cmdFs;
 
+// Local functions
+static int Rad_Execute_Radio_Op(volatile rfc_radioOp_t* radio_op_p);
+static int Rad_Execute_Direct_Cmd(uint16_t cmd_id);
+
 static void Rad_Boot_RFC()
 {
     // Turn off RF core

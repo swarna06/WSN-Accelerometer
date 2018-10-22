@@ -40,8 +40,8 @@
 
 void Rad_Init();
 
-int Rad_Execute_Radio_Op(volatile rfc_radioOp_t* radio_op_p);
 
-int Rad_Execute_Direct_Cmd(uint16_t cmd_id);
+
+
 
 #endif /* RADIO_H_ */
