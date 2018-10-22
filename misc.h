@@ -19,8 +19,10 @@
 #define TO_STR(l)           TO_STR_HELPER(l)
 
 #if defined (ENABLE_ASSERT)
-    #define assertion(__e) ((__e) ? (void)0 : \
-            PRINTF("Assertion violation: file " __FILE__ ", line " TO_STR(__LINE__) ": " #__e "\r\n"));
+    #define assertion(__e)  if (__e) (void)0;   \
+                            else {               \
+                                PRINTF("Assertion violation: file " __FILE__ ", line " TO_STR(__LINE__) ": " #__e "\r\n"); \
+                                exit(0);}
 #else
     #define Assert(__e)
 #endif
