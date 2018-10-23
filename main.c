@@ -43,6 +43,7 @@ int main(void)
     {
         if (Tm_RTC_Period_Completed())
         {
+            Rad_Ble5_Adv_Aux(0,0);
             GPIO_toggleDio(BRD_GREEN_LED);
         }
     }

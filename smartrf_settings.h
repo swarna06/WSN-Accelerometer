@@ -15,9 +15,9 @@
 extern rfc_CMD_BLE5_RADIO_SETUP_t RF_cmdBle5RadioSetup;
 extern rfc_CMD_FS_t RF_cmdFs;
 extern rfc_CMD_BLE5_ADV_AUX_t RF_cmdBle5AdvAux;
+extern rfc_CMD_BLE5_SCANNER_t RF_cmdBle5Scanner;
 extern rfc_CMD_SYNC_STOP_RAT_t RF_cmdSyncStopRat;
 extern rfc_CMD_SYNC_START_RAT_t RF_cmdSyncStartRat;
-extern rfc_CMD_BLE_SCANNER_t RF_cmdBleScanner;
 
 
 // RF Core API Overrides

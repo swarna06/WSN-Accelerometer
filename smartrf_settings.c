@@ -195,6 +195,90 @@ rfc_CMD_BLE5_ADV_AUX_t RF_cmdBle5AdvAux =
     .pOutput = 0, // INSERT APPLICABLE POINTER: (uint8_t*)&xxx
 };
 
+// Structure for CMD_BLE5_SCANNER.pParams
+rfc_ble5ScannerPar_t ble5ScannerPar =
+{
+ .pRxQ = NULL, // xxx insert pointer
+
+ .rxConfig.bAutoFlushIgnored = 0,
+ .rxConfig.bAutoFlushCrcErr = 0,
+ .rxConfig.bAutoFlushEmpty = 0,
+ .rxConfig.bIncludeLenByte = 1,
+ .rxConfig.bIncludeCrc = 0,
+ .rxConfig.bAppendRssi = 0,
+ .rxConfig.bAppendStatus = 0,
+ .rxConfig.bAppendTimestamp = 0,
+
+ .scanConfig.scanFilterPolicy = 0,
+ .scanConfig.bActiveScan = 0,
+ .scanConfig.deviceAddrType = 0,
+ .scanConfig.rpaFilterPolicy = 1, // TODO check this value
+ .scanConfig.bStrictLenFilter = 0,
+ .scanConfig.bAutoWlIgnore = 0,
+ .scanConfig.bEndOnRpt = 1,
+ .scanConfig.rpaMode = 0,
+
+ .randomState = 1, // TODO check this value
+ .backoffCount = 1,
+
+ .backoffPar.logUpperLimit = 0,
+ .backoffPar.bLastSucceeded = 0,
+ .backoffPar.bLastFailed = 0,
+
+ .extFilterConfig.bCheckAdi = 0,
+ .extFilterConfig.bAutoAdiUpdate = 0,
+ .extFilterConfig.bApplyDuplicateFiltering = 0,
+ .extFilterConfig.bAutoWlIgnore = 0,
+
+ .__dummy0 = 0,
+ .pDeviceAddress = NULL,
+ .pWhiteList = NULL,
+ .pAdiList = NULL,
+ .maxWaitTimeForAuxCh = 0, // TODO check this value
+
+ .timeoutTrigger.triggerType = 0x1, // TODO check this value
+ .timeoutTrigger.bEnaCmd = 0x0,
+ .timeoutTrigger.triggerNo = 0x0,
+ .timeoutTrigger.pastTrig = 0x0,
+
+ .endTrigger.triggerType = 0x1,
+ .endTrigger.bEnaCmd = 0x0,
+ .endTrigger.triggerNo = 0x0,
+ .endTrigger.pastTrig = 0x0,
+
+ .timeoutTime = 0,
+ .endTime = 0,
+ .rxStartTime = 0,
+ .rxListenTime = 0,
+ .channelNo = 0x8C,
+ .phyMode = 1,
+};
+
+// CMD_BLE5_SCANNER
+// Bluetooth 5 Scanner Command
+rfc_CMD_BLE5_SCANNER_t RF_cmdBle5Scanner =
+{
+    .commandNo = 0x1827,
+    .status = 0x0000,
+    .pNextOp = 0, // INSERT APPLICABLE POINTER: (uint8_t*)&xxx
+    .startTime = 0x00000000,
+    .startTrigger.triggerType = 0x0,
+    .startTrigger.bEnaCmd = 0x0,
+    .startTrigger.triggerNo = 0x0,
+    .startTrigger.pastTrig = 0x0,
+    .condition.rule = 0x1,
+    .condition.nSkip = 0x0,
+    .channel = 0x8C,
+    .whitening.init = 0x51,
+    .whitening.bOverride = 0x1,
+    .phyMode.mainMode = 0x0,
+    .phyMode.coding = 0x0,
+    .rangeDelay = 0x00,
+    .txPower = 0x9330,
+    .pParams = &ble5ScannerPar,
+    .pOutput = 0, // INSERT APPLICABLE POINTER: (uint8_t*)&xxx
+};
+
 // CMD_SYNC_STOP_RAT
 // Synchronize and Stop Radio Timer Command
 rfc_CMD_SYNC_STOP_RAT_t RF_cmdSyncStopRat =
@@ -271,25 +355,4 @@ rfc_bleScannerPar_t bleScannerPar =
     .endTrigger.pastTrig = 0x0,
     .timeoutTime = 0x00000000,
     .endTime = 0x00000000,
-};
-
-// CMD_BLE_SCANNER
-// BLE Scanner Command
-rfc_CMD_BLE_SCANNER_t RF_cmdBleScanner =
-{
-    .commandNo = 0x1807,
-    .status = 0x0000,
-    .pNextOp = 0, // INSERT APPLICABLE POINTER: (uint8_t*)&xxx
-    .startTime = 0x00000000,
-    .startTrigger.triggerType = 0x0,
-    .startTrigger.bEnaCmd = 0x0,
-    .startTrigger.triggerNo = 0x0,
-    .startTrigger.pastTrig = 0x0,
-    .condition.rule = 0x1,
-    .condition.nSkip = 0x0,
-    .channel = 0x8C,
-    .whitening.init = 0x51,
-    .whitening.bOverride = 0x1,
-    .pParams = &bleScannerPar,
-    .pOutput = 0, // INSERT APPLICABLE POINTER: (uint8_t*)&xxx
 };
