@@ -107,4 +107,8 @@ void Rad_Set_Channel(uint8_t channel);
 int Rad_Ble5_Adv_Aux(rad_tx_param_t* tx_param,
                      rad_tx_result_t* tx_result);
 
+void Rad_Synch_Master();
+
+void Rad_Synch_Slave();
+
 #endif /* RADIO_H_ */

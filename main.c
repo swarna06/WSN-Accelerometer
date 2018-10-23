@@ -34,6 +34,7 @@ int main(void)
 
     Tm_Init_Aux_Timer(TM_AUXT_MODE_ONE_SHOT);
     Tm_Init_RTC();
+    Tm_Init_Free_Running_Timer();
 
     Rad_Init();
 
@@ -46,12 +47,12 @@ int main(void)
             rad_tx_param_t tx_param;
             rad_tx_result_t tx_result;
 
-            uint8_t payload[254];
+            uint8_t payload[36];
             for (size_t n = 0; n < sizeof(payload); n++)
                 payload[n] = n+1;
 
-            tx_param.payload = (uint8_t*)payload + 1;
-            tx_param.payload_len = sizeof(payload) - 1;
+            tx_param.payload = (uint8_t*)payload;
+            tx_param.payload_len = sizeof(payload);
             tx_param.synch = false;
 
             Rad_Ble5_Adv_Aux(&tx_param, &tx_result);

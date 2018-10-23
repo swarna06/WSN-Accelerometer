@@ -23,6 +23,7 @@
 
 #include "radio.h"
 #include "smartrf_settings.h"
+#include "timing.h"
 
 #include "misc.h"
 #include "printf.h"
@@ -30,8 +31,10 @@
 // Pointers to SmartRF command structures
 static volatile rfc_CMD_BLE5_RADIO_SETUP_t* cmd_ble5_radio_setup = &RF_cmdBle5RadioSetup;
 static volatile rfc_CMD_FS_t* cmd_fs = &RF_cmdFs;
-static volatile rfc_CMD_BLE5_ADV_AUX_t *cmd_ble5_adv_aux = &RF_cmdBle5AdvAux;
-static volatile rfc_CMD_BLE5_SCANNER_t *cmd_ble5_scanner = &RF_cmdBle5Scanner;
+static volatile rfc_CMD_BLE5_ADV_AUX_t* cmd_ble5_adv_aux = &RF_cmdBle5AdvAux;
+static volatile rfc_CMD_BLE5_SCANNER_t* cmd_ble5_scanner = &RF_cmdBle5Scanner;
+static volatile rfc_CMD_SYNC_STOP_RAT_t* cmd_sync_stop_rat = &RF_cmdSyncStopRat;
+static volatile rfc_CMD_SYNC_START_RAT_t* cmd_sync_start_rat = &RF_cmdSyncStartRat;
 
 // Data entries
 static volatile rfc_ble5ExtAdvEntry_t ble5_ext_adv_entry; // TODO should it be memory aligned ?
@@ -49,6 +52,7 @@ static int Rad_Execute_Direct_Cmd(uint16_t cmd_id);
 static void Rad_Reset_Radio_Op_Struct(rfc_radioOp_t* radio_op_p);
 static void Rad_Reset_Adv_Entry(volatile rfc_ble5ExtAdvEntry_t* adv_entry);
 static void Rad_Reset_Adv_Aux_Struct(volatile rfc_CMD_BLE5_ADV_AUX_t *cmd_ble5_adv_aux);
+static uint16_t Rad_Synch_RAT();
 
 void Rad_Init()
 {
@@ -160,30 +164,42 @@ int Rad_Ble5_Adv_Aux(rad_tx_param_t* tx_param,
         ble5_ext_adv_entry.advDataLen = 0;
     }
 
-    // RFCDoorbellSendTo
+    // Execute command
+    int result = Rad_Execute_Radio_Op((rfc_radioOp_t*)cmd_ble5_adv_aux);
+    if (result < 0)
+    {
+        Rad_Print_Radio_Op_Err(cmd_ble5_adv_aux);
+        exit(0);
+    }
+
+    return 0;
+}
+
+void Rad_Synch_Master()
+{
+    uint32_t rat_timestamp_start, rat_timestamp_end;
+
+    // Prepare empty packet
+    ble5_ext_adv_entry.pAdvData = NULL;
+    ble5_ext_adv_entry.advDataLen = 0;
+
+    // Wait until RF Core is ready
     cmd_ble5_adv_aux->status = IDLE;
     while(HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDR) != 0); // wait until RFC door bell is ready
-    // Synchronize clocks
-    RFCAckIntClear();
-    if (tx_param->synch == true)
-    {
-        // Synchronize with RTC
-        bool phase = 0;
-        do
-        {
-            phase = HWREG(AON_RTC_BASE + AON_RTC_O_SEC); // 0: falling edge, 1: rising edge
-        } while (phase != 1); // synchronize with rising edge
-    }
-    // Save time stamps
-    tx_result->rat_timestamp_start = HWREG(RFC_RAT_BASE + RFC_RAT_O_RATCNT);
-    tx_result->rtc_timestamp = AONRTCCurrentCompareValueGet();
-    // Send command to RFC door bell
-    HWREG(RFC_DBELL_BASE+RFC_DBELL_O_CMDR) = (uint32_t)cmd_ble5_adv_aux;
-    // Wait until command is parsed by the RF Core
-    while(!HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFACKIFG));
     RFCAckIntClear();
 
-    // Wait for operation execution
+    // Synchronize clocks
+    Rad_Synch_RAT();
+    while (HWREG(AON_RTC_BASE + AON_RTC_O_SEC) != 1) { }; // synchronize with RTC rising edge ? xxx
+
+    // Get time stamp and send command to RFC door bell
+    rat_timestamp_start = HWREG(RFC_RAT_BASE + RFC_RAT_O_RATCNT);
+//    tx_result->rtc_timestamp = AONRTCCurrentCompareValueGet(); // TODO is it necessary to get this timestamp ?
+    HWREG(RFC_DBELL_BASE+RFC_DBELL_O_CMDR) = (uint32_t)cmd_ble5_adv_aux;
+    while(!HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFACKIFG)); // wait until command is parsed by the RF Core
+    RFCAckIntClear();
+
+    // Wait for operation execution TODO
     while (cmd_ble5_adv_aux->status <= ACTIVE)
     {
         if (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG) & RAD_M_RFCPEIFG_ERROR) // critical error ?
@@ -192,14 +208,14 @@ int Rad_Ble5_Adv_Aux(rad_tx_param_t* tx_param,
             exit(0);
         }
     }
-    tx_result->rat_timestamp_end = HWREG(RFC_RAT_BASE + RFC_RAT_O_RATCNT);
+    rat_timestamp_end = HWREG(RFC_RAT_BASE + RFC_RAT_O_RATCNT);
     if (cmd_ble5_adv_aux->status & RAD_F_STATUS_ERR) // error in the status field of the command structure ?
     {
         Rad_Print_Radio_Op_Err(cmd_ble5_adv_aux);
         exit(0);
     }
 
-    return 0;
+    PRINTF("%lu, %lu\r\n", rat_timestamp_start, rat_timestamp_end);
 }
 
 //********************************
@@ -351,4 +367,29 @@ static void Rad_Reset_Adv_Aux_Struct(volatile rfc_CMD_BLE5_ADV_AUX_t *cmd_ble5_a
     // Reset advertising data entry and store pointer in command parameters
     Rad_Reset_Adv_Entry(&ble5_ext_adv_entry);
     cmd_ble5_adv_aux->pParams->pAdvPkt = (uint8_t*)&ble5_ext_adv_entry;
+}
+
+static uint16_t Rad_Synch_RAT()
+{
+    int result;
+
+    // Stop RAT
+    result = Rad_Execute_Radio_Op((rfc_radioOp_t*)cmd_sync_stop_rat);
+    if (result < 0)
+    {
+        Rad_Print_Radio_Op_Err(cmd_sync_stop_rat);
+        exit(0);
+    }
+    // Use result as a parameter in START_RAT
+    cmd_sync_start_rat->rat0 = cmd_sync_stop_rat->rat0;
+
+    // Synchronize with RTC and start RAT
+    result = Rad_Execute_Radio_Op((rfc_radioOp_t*)cmd_sync_start_rat);
+    if (result < 0)
+    {
+        Rad_Print_Radio_Op_Err(cmd_sync_start_rat);
+        exit(0);
+    }
+
+    return cmd_sync_start_rat->status;
 }
