@@ -3,8 +3,14 @@
 
 #include <stdint.h>
 
+#include <driverlib/timer.h>
+
 // Get delta time from uint32 time stamps
 #define Tm_Delta_Time32(start, end) (end > start ? end - start : (0xFFFFFFFF - start) + end)
+#define Tm_Get_Free_Running_Timer_Val() HWREG(GPT1_BASE + GPT_O_TAR)
+
+// HF XOSC nanoseconds per tick
+#define TM_HFXOSC_NSEC_PER_TICK     21
 
 // RTC ticks per millisecond
 #define TM_RTC_TICKS_PER_MSEC   64
@@ -93,5 +99,7 @@ void Tm_Init_RTC();
 void Tm_Start_RTC_Period(uint32_t period_ms);
 
 bool Tm_RTC_Period_Completed();
+
+void Tm_Init_Free_Running_Timer();
 
 #endif // TIMING_H__ 

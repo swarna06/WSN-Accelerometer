@@ -216,3 +216,18 @@ bool Tm_RTC_Period_Completed()
     else
         return false;
 }
+
+void Tm_Init_Free_Running_Timer()
+{
+    // Power timer1
+    PRCMPeripheralRunEnable(PRCM_PERIPH_TIMER1);
+    PRCMLoadSet();
+    while(!PRCMLoadGet());
+
+    // Setup timer1
+    TimerConfigure(GPT1_BASE, TIMER_CFG_PERIODIC_UP);
+    TimerLoadSet(GPT1_BASE, TIMER_A, 0xFFFFFFFF); // note: only timer A should be loaded when timer is configured in full-width mode
+
+    TimerIntClear(GPT1_BASE, TIMER_TIMA_TIMEOUT);
+    TimerEnable(GPT1_BASE, TIMER_A);
+}
