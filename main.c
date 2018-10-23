@@ -43,7 +43,18 @@ int main(void)
     {
         if (Tm_RTC_Period_Completed())
         {
-            Rad_Ble5_Adv_Aux(0,0);
+            rad_tx_param_t tx_param;
+            rad_tx_result_t tx_result;
+
+            uint8_t payload[36];
+            for (size_t n = 0; n < sizeof(payload); n++)
+                payload[n] = n+1;
+
+            tx_param.payload = (uint8_t*)payload + 1;
+            tx_param.payload_len = sizeof(payload) - 1;
+            tx_param.synch = false;
+
+            Rad_Ble5_Adv_Aux(&tx_param, &tx_result);
             GPIO_toggleDio(BRD_GREEN_LED);
         }
     }

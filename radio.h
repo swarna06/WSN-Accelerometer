@@ -52,16 +52,16 @@ typedef enum
 // Command parameter structures
 typedef struct
 {
-    uint8_t ch, phy_mode;
-    rad_tx_power_t tx_pow;
+    bool synch;
+    size_t payload_len;
     uint8_t* payload;
-} rad_ble5_adv_aux_param_t;
+} rad_tx_param_t;
 
 // Command result structures
 typedef struct
 {
     uint32_t timestamp;
-} rad_ble5_adv_aux_result_t;
+} rad_tx_result_t;
 
 // Macros for printing error information
 #define Rad_Print_RFCPEIFG_Err() \
@@ -99,6 +99,7 @@ void Rad_Set_Tx_Power(rad_tx_power_t tx_pow);
 
 void Rad_Set_Channel(uint8_t channel);
 
-void Rad_Ble5_Adv_Aux(uint8_t* payload, uint32_t* timestamp);
+int Rad_Ble5_Adv_Aux(rad_tx_param_t* tx_param,
+                     rad_tx_result_t* tx_result);
 
 #endif /* RADIO_H_ */

@@ -6,6 +6,7 @@
  */
 
 #include <stdint.h>
+#include <string.h>
 
 #include <driverlib/prcm.h>
 #include <driverlib/sys_ctrl.h>
@@ -31,7 +32,7 @@ static volatile rfc_CMD_BLE5_ADV_AUX_t *cmd_ble5_adv_aux = &RF_cmdBle5AdvAux;
 static volatile rfc_CMD_BLE5_SCANNER_t *cmd_ble5_scanner = &RF_cmdBle5Scanner;
 
 // Data entries
-static volatile rfc_ble5ExtAdvEntry_t ble5_ext_adv_entry;
+static volatile rfc_ble5ExtAdvEntry_t ble5_ext_adv_entry; // TODO should it be memory aligned ?
 
 // Local functions
 static void Rad_Boot_RF_Core();
@@ -138,8 +139,25 @@ void Rad_Set_Channel(uint8_t channel)
     Rad_Set_Ch((rfc_ble5RadioOp_t*)cmd_ble5_scanner, ch, whitening);
 }
 
-void Rad_Ble5_Adv_Aux(uint8_t* payload, uint32_t* timestamp)
+int Rad_Ble5_Adv_Aux(rad_tx_param_t* tx_param,
+                     rad_tx_result_t* tx_result)
 {
+    assertion(tx_param != NULL);
+    assertion(tx_result != NULL);
+    assertion(cmd_ble5_adv_aux->pParams->pAdvPkt == (uint8_t *)&ble5_ext_adv_entry);
+
+    // Add payload to advertising packet
+    if (tx_param->payload != NULL)
+    {
+        ble5_ext_adv_entry.pAdvData = tx_param->payload;
+        ble5_ext_adv_entry.advDataLen = tx_param->payload_len;
+    }
+    else
+    {
+        ble5_ext_adv_entry.pAdvData = NULL;
+        ble5_ext_adv_entry.advDataLen = 0;
+    }
+
     // Execute command
     int result = Rad_Execute_Radio_Op((rfc_radioOp_t*)cmd_ble5_adv_aux);
     if (result < 0)
@@ -147,6 +165,8 @@ void Rad_Ble5_Adv_Aux(uint8_t* payload, uint32_t* timestamp)
         Rad_Print_Radio_Op_Err(cmd_ble5_adv_aux);
         exit(0);
     }
+
+    return 0;
 }
 
 //********************************
