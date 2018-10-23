@@ -10,6 +10,13 @@
 
 #include <driverlib/rf_common_cmd.h>
 
+// Data entry buffer size
+#define RAD_DATA_ENTRY_BUF_LEN      270
+
+// Data entry buffer payload index
+#define RAD_DENTRY_LEN_IDX          1
+#define RAD_DENTRY_PAYLOAD_IDX      2
+
 // RAT nanoseconds per tick
 #define RAD_RAT_NSEC_PER_TICK       250
 
@@ -52,21 +59,11 @@ typedef enum
 #define RAD_DEFAULT_TX_POW      ZERO_0dBm
 #define RAD_DEFAULT_CHANNEL     17
 
-// Command parameter structures
-typedef struct
-{
-    bool synch;
-    size_t payload_len;
-    uint8_t* payload;
-} rad_tx_param_t;
-
 // Command result structures
 typedef struct
 {
-    uint32_t rat_timestamp_start;
-    uint32_t rat_timestamp_end;
-    uint32_t rtc_timestamp;
-} rad_tx_result_t;
+    uint32_t rat_timestamp;
+} rad_rx_result_t;
 
 // Macros for printing error information
 #define Rad_Print_RFCPEIFG_Err() \
@@ -104,8 +101,9 @@ void Rad_Set_Tx_Power(rad_tx_power_t tx_pow);
 
 void Rad_Set_Channel(uint8_t channel);
 
-int Rad_Ble5_Adv_Aux(rad_tx_param_t* tx_param,
-                     rad_tx_result_t* tx_result);
+int Rad_Ble5_Adv_Aux(uint8_t* payload, size_t payload_len);
+
+int Rad_Ble5_Scanner(uint8_t* buffer, size_t buf_len);
 
 void Rad_Synch_Master();
 

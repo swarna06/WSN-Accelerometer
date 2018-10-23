@@ -42,25 +42,27 @@ int main(void)
 
     while (1)
     {
-        if (Tm_RTC_Period_Completed())
+//        if (Tm_RTC_Period_Completed())
         {
-            rad_tx_param_t tx_param;
-            rad_tx_result_t tx_result;
+//            uint8_t payload[36];
+//            for (size_t n = 0; n < sizeof(payload); n++)
+//                payload[n] = n+1;
+//
+//            Rad_Ble5_Adv_Aux(payload, sizeof(payload));
+//            GPIO_toggleDio(BRD_GREEN_LED);
 
-            uint8_t payload[36];
-            for (size_t n = 0; n < sizeof(payload); n++)
-                payload[n] = n+1;
+            uint8_t buf[256];
+            size_t payload_len;
+            payload_len = Rad_Ble5_Scanner(buf, sizeof(buf));
+            PRINTF("payload: ");
+            for (size_t n = 0; n < payload_len; n++)
+                PRINTF("%02x ", buf[n]);
+            PRINTF("\r\n");
 
-            tx_param.payload = (uint8_t*)payload;
-            tx_param.payload_len = sizeof(payload);
-            tx_param.synch = false;
-
-            Rad_Ble5_Adv_Aux(&tx_param, &tx_result);
-            GPIO_toggleDio(BRD_GREEN_LED);
-            uint32_t rat_delta = Tm_Delta_Time32(tx_result.rat_timestamp_start, tx_result.rat_timestamp_end);
-            PRINTF("RTC: %lu, RAT start: %lu, RAT end: %lu, RAT delta: %lu\r\n",
-                   tx_result.rtc_timestamp, tx_result.rat_timestamp_start,
-                   tx_result.rat_timestamp_end, rat_delta * RAD_RAT_NSEC_PER_TICK);
+//            uint32_t rat_delta = Tm_Delta_Time32(tx_result.rat_timestamp_start, tx_result.rat_timestamp_end);
+//            PRINTF("RTC: %lu, RAT start: %lu, RAT end: %lu, RAT delta: %lu\r\n",
+//                   tx_result.rtc_timestamp, tx_result.rat_timestamp_start,
+//                   tx_result.rat_timestamp_end, rat_delta * RAD_RAT_NSEC_PER_TICK);
         }
     }
 

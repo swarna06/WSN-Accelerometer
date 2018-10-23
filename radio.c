@@ -36,8 +36,11 @@ static volatile rfc_CMD_BLE5_SCANNER_t* cmd_ble5_scanner = &RF_cmdBle5Scanner;
 static volatile rfc_CMD_SYNC_STOP_RAT_t* cmd_sync_stop_rat = &RF_cmdSyncStopRat;
 static volatile rfc_CMD_SYNC_START_RAT_t* cmd_sync_start_rat = &RF_cmdSyncStartRat;
 
-// Data entries
-static volatile rfc_ble5ExtAdvEntry_t ble5_ext_adv_entry; // TODO should it be memory aligned ?
+// Data entries TODO should them be memory aligned ?
+static volatile rfc_ble5ExtAdvEntry_t ble5_ext_adv_entry;
+static volatile uint8_t data_entry_buf[RAD_DATA_ENTRY_BUF_LEN];
+static volatile rfc_dataEntryPointer_t data_entry_ptr;
+static volatile dataQueue_t data_queue;
 
 // Local functions
 static void Rad_Boot_RF_Core();
@@ -50,8 +53,13 @@ static void Rad_Set_Ch(rfc_ble5RadioOp_t* ble5_radio_op_p,
 static int Rad_Execute_Radio_Op(volatile rfc_radioOp_t* radio_op_p);
 static int Rad_Execute_Direct_Cmd(uint16_t cmd_id);
 static void Rad_Reset_Radio_Op_Struct(rfc_radioOp_t* radio_op_p);
-static void Rad_Reset_Adv_Entry(volatile rfc_ble5ExtAdvEntry_t* adv_entry);
-static void Rad_Reset_Adv_Aux_Struct(volatile rfc_CMD_BLE5_ADV_AUX_t *cmd_ble5_adv_aux);
+static void Rad_Reset_Adv_Entry(volatile rfc_ble5ExtAdvEntry_t* adv_entry_p);
+static void Rad_Reset_Adv_Aux_Struct(volatile rfc_CMD_BLE5_ADV_AUX_t* cmd_ble5_adv_aux_p);
+
+static void Rad_Reset_Data_Entry(volatile rfc_dataEntryPointer_t* data_entry_p);
+static void Rad_Reset_Data_Queue(volatile dataQueue_t* data_queue_p);
+static void Rad_Reset_Scanner_Struct(volatile rfc_CMD_BLE5_SCANNER_t* cmd_ble5_scanner_p);
+
 static uint16_t Rad_Synch_RAT();
 
 void Rad_Init()
@@ -63,7 +71,7 @@ void Rad_Init()
     Rad_Reset_Radio_Op_Struct((rfc_radioOp_t*)cmd_ble5_radio_setup);
     Rad_Reset_Radio_Op_Struct((rfc_radioOp_t*)cmd_fs);
     Rad_Reset_Adv_Aux_Struct(cmd_ble5_adv_aux);
-    Rad_Reset_Radio_Op_Struct((rfc_radioOp_t*)cmd_ble5_scanner);
+    Rad_Reset_Scanner_Struct(cmd_ble5_scanner);
 
     // Set default channel, PHY mode and TX power
     cmd_ble5_radio_setup->defaultPhy.mainMode = RAD_DEFAULT_PHY_MODE;
@@ -145,18 +153,15 @@ void Rad_Set_Channel(uint8_t channel)
     Rad_Set_Ch((rfc_ble5RadioOp_t*)cmd_ble5_scanner, ch, whitening);
 }
 
-int Rad_Ble5_Adv_Aux(rad_tx_param_t* tx_param,
-                     rad_tx_result_t* tx_result)
+int Rad_Ble5_Adv_Aux(uint8_t* payload, size_t payload_len)
 {
-    assertion(tx_param != NULL);
-    assertion(tx_result != NULL);
     assertion(cmd_ble5_adv_aux->pParams->pAdvPkt == (uint8_t *)&ble5_ext_adv_entry);
 
     // Add payload to advertising packet
-    if (tx_param->payload != NULL)
+    if (payload != NULL)
     {
-        ble5_ext_adv_entry.pAdvData = tx_param->payload;
-        ble5_ext_adv_entry.advDataLen = tx_param->payload_len;
+        ble5_ext_adv_entry.pAdvData = payload;
+        ble5_ext_adv_entry.advDataLen = payload_len;
     }
     else
     {
@@ -173,6 +178,29 @@ int Rad_Ble5_Adv_Aux(rad_tx_param_t* tx_param,
     }
 
     return 0;
+}
+
+int Rad_Ble5_Scanner(uint8_t* buffer, size_t buf_len)
+{
+    Rad_Reset_Data_Queue(&data_queue);
+
+    // Execute command
+    int result = Rad_Execute_Radio_Op((rfc_radioOp_t*)cmd_ble5_scanner);
+    if (result < 0)
+    {
+        Rad_Print_Radio_Op_Err(cmd_ble5_scanner);
+        exit(0);
+    }
+
+    size_t payload_len = data_entry_buf[RAD_DENTRY_LEN_IDX];
+    uint8_t *payload = (uint8_t*)data_entry_buf + RAD_DENTRY_PAYLOAD_IDX;
+
+    if (payload_len > buf_len)
+        payload_len = buf_len;
+
+    memcpy(buffer, payload, payload_len);
+
+    return payload_len;
 }
 
 void Rad_Synch_Master()
@@ -288,7 +316,6 @@ static void Rad_Set_Ch(rfc_ble5RadioOp_t* ble5_radio_op_p,
         ble5_radio_op_p->whitening.bOverride = 0; // use default whitening for BLE
 }
 
-
 static int Rad_Execute_Radio_Op(volatile rfc_radioOp_t* radio_op_p)
 {
     assertion(radio_op_p != NULL);
@@ -345,28 +372,57 @@ static void Rad_Reset_Radio_Op_Struct(rfc_radioOp_t* radio_op_p)
     radio_op_p->condition.nSkip = 0;
 }
 
-static void Rad_Reset_Adv_Entry(volatile rfc_ble5ExtAdvEntry_t* adv_entry)
+static void Rad_Reset_Adv_Entry(volatile rfc_ble5ExtAdvEntry_t* adv_entry_p)
 {
     // Empty packet
-    adv_entry->extHdrInfo.advMode = 0;
-    adv_entry->extHdrInfo.length = 0;
-    adv_entry->extHdrFlags = 0;
-    adv_entry->extHdrConfig.bSkipAdvA = 0;
-    adv_entry->extHdrConfig.bSkipTargetA = 0;
-    adv_entry->extHdrConfig.deviceAddrType = 0;
-    adv_entry->extHdrConfig.targetAddrType = 0;
-    adv_entry->advDataLen = 0;
-    adv_entry->pAdvData = NULL;
-    adv_entry->pExtHeader = NULL;
+    adv_entry_p->extHdrInfo.advMode = 0;
+    adv_entry_p->extHdrInfo.length = 0;
+    adv_entry_p->extHdrFlags = 0;
+    adv_entry_p->extHdrConfig.bSkipAdvA = 0;
+    adv_entry_p->extHdrConfig.bSkipTargetA = 0;
+    adv_entry_p->extHdrConfig.deviceAddrType = 0;
+    adv_entry_p->extHdrConfig.targetAddrType = 0;
+    adv_entry_p->advDataLen = 0;
+    adv_entry_p->pAdvData = NULL;
+    adv_entry_p->pExtHeader = NULL;
 }
 
-static void Rad_Reset_Adv_Aux_Struct(volatile rfc_CMD_BLE5_ADV_AUX_t *cmd_ble5_adv_aux)
+static void Rad_Reset_Adv_Aux_Struct(volatile rfc_CMD_BLE5_ADV_AUX_t *cmd_ble5_adv_aux_p)
 {
-    Rad_Reset_Radio_Op_Struct((rfc_radioOp_t*)cmd_ble5_adv_aux);
+    Rad_Reset_Radio_Op_Struct((rfc_radioOp_t*)cmd_ble5_adv_aux_p);
 
     // Reset advertising data entry and store pointer in command parameters
     Rad_Reset_Adv_Entry(&ble5_ext_adv_entry);
-    cmd_ble5_adv_aux->pParams->pAdvPkt = (uint8_t*)&ble5_ext_adv_entry;
+    cmd_ble5_adv_aux_p->pParams->pAdvPkt = (uint8_t*)&ble5_ext_adv_entry;
+}
+
+static void Rad_Reset_Data_Entry(volatile rfc_dataEntryPointer_t* data_entry_p)
+{
+    memset((rfc_dataEntryPointer_t*)data_entry_p, 0, sizeof(rfc_dataEntryPointer_t));
+    data_entry_p->config.type = DATA_ENTRY_TYPE_PTR;
+    data_entry_p->length = sizeof(data_entry_buf);
+    data_entry_p->pData = (uint8_t*)data_entry_buf;
+}
+
+static void Rad_Reset_Data_Queue(volatile dataQueue_t* data_queue_p)
+{
+    Rad_Reset_Data_Entry(&data_entry_ptr);
+    data_queue_p->pCurrEntry = (uint8_t*)&data_entry_ptr;
+    data_queue_p->pLastEntry = NULL;
+}
+
+static void Rad_Reset_Scanner_Struct(volatile rfc_CMD_BLE5_SCANNER_t* cmd_ble5_scanner_p)
+{
+    Rad_Reset_Data_Queue(&data_queue);
+
+    assertion(cmd_ble5_scanner_p->pParams != NULL);
+    cmd_ble5_scanner_p->pParams->pRxQ = (dataQueue_t*)&data_queue;
+
+    cmd_ble5_scanner_p->pParams->rxConfig.bAppendRssi = 1;
+    cmd_ble5_scanner_p->pParams->rxConfig.bAppendStatus = 0;
+    cmd_ble5_scanner_p->pParams->rxConfig.bAppendTimestamp = 1;
+    cmd_ble5_scanner_p->pParams->rxConfig.bIncludeCrc = 0;
+    cmd_ble5_scanner_p->pParams->rxConfig.bIncludeLenByte = 1;
 }
 
 static uint16_t Rad_Synch_RAT()
