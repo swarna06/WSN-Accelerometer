@@ -19,6 +19,8 @@
 #include <driverlib/rf_data_entry.h>
 #include <inc/hw_rfc_rat.h>
 
+#include <driverlib/aon_rtc.h>
+
 #include "radio.h"
 #include "smartrf_settings.h"
 
@@ -158,9 +160,40 @@ int Rad_Ble5_Adv_Aux(rad_tx_param_t* tx_param,
         ble5_ext_adv_entry.advDataLen = 0;
     }
 
-    // Execute command
-    int result = Rad_Execute_Radio_Op((rfc_radioOp_t*)cmd_ble5_adv_aux);
-    if (result < 0)
+    // RFCDoorbellSendTo
+    cmd_ble5_adv_aux->status = IDLE;
+    while(HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDR) != 0); // wait until RFC door bell is ready
+    // Synchronize clocks
+    RFCAckIntClear();
+    if (tx_param->synch == true)
+    {
+        // Synchronize with RTC
+        bool phase = 0;
+        do
+        {
+            phase = HWREG(AON_RTC_BASE + AON_RTC_O_SEC); // 0: falling edge, 1: rising edge
+        } while (phase != 1); // synchronize with rising edge
+    }
+    // Save time stamps
+    tx_result->rat_timestamp_start = HWREG(RFC_RAT_BASE + RFC_RAT_O_RATCNT);
+    tx_result->rtc_timestamp = AONRTCCurrentCompareValueGet();
+    // Send command to RFC door bell
+    HWREG(RFC_DBELL_BASE+RFC_DBELL_O_CMDR) = (uint32_t)cmd_ble5_adv_aux;
+    // Wait until command is parsed by the RF Core
+    while(!HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFACKIFG));
+    RFCAckIntClear();
+
+    // Wait for operation execution
+    while (cmd_ble5_adv_aux->status <= ACTIVE)
+    {
+        if (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG) & RAD_M_RFCPEIFG_ERROR) // critical error ?
+        {
+            Rad_Print_Radio_Op_Err(cmd_ble5_adv_aux);
+            exit(0);
+        }
+    }
+    tx_result->rat_timestamp_end = HWREG(RFC_RAT_BASE + RFC_RAT_O_RATCNT);
+    if (cmd_ble5_adv_aux->status & RAD_F_STATUS_ERR) // error in the status field of the command structure ?
     {
         Rad_Print_Radio_Op_Err(cmd_ble5_adv_aux);
         exit(0);

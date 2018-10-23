@@ -10,6 +10,9 @@
 
 #include <driverlib/rf_common_cmd.h>
 
+// RAT nanoseconds per tick
+#define RAD_RAT_NSEC_PER_TICK       250
+
 // PHY modes
 #define RAF_PHY_MODE_1MBPS          0
 #define RAF_PHY_MODE_2MBPS          1
@@ -60,7 +63,9 @@ typedef struct
 // Command result structures
 typedef struct
 {
-    uint32_t timestamp;
+    uint32_t rat_timestamp_start;
+    uint32_t rat_timestamp_end;
+    uint32_t rtc_timestamp;
 } rad_tx_result_t;
 
 // Macros for printing error information

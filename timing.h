@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+// Get delta time from uint32 time stamps
+#define Tm_Delta_Time32(start, end) (end > start ? end - start : (0xFFFFFFFF - start) + end)
+
 // RTC ticks per millisecond
 #define TM_RTC_TICKS_PER_MSEC   64
 
