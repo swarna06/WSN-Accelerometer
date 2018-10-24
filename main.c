@@ -53,24 +53,21 @@ int main(void)
             uint32_t rtc_timestamp0, rtc_timestamp1, rtc_read_time;
 
             // Wait for current RTC cycle to end
-            HWREG(AON_RTC_BASE + AON_RTC_O_SYNC) = 1; // write to force synchronization on read
-            while (HWREG(AON_RTC_BASE + AON_RTC_O_SYNC)) { }; // read to synchronize with next SCLK_LF edge
+            Tm_Synch_With_RTC();
 
             // Measure time of 1 RTC cycle
             HWREG(AON_RTC_BASE + AON_RTC_O_SYNC) = 1; // write to force synchronization on read
             start_time = Tm_Get_Free_Running_Timer_Val(); // tic
-            while (HWREG(AON_RTC_BASE + AON_RTC_O_SYNC)) { }; // read to synchronize with next SCLK_LF edge
+            HWREG(AON_RTC_BASE + AON_RTC_O_SYNC); // read to synchronize with next SCLK_LF edge
             end_time = Tm_Get_Free_Running_Timer_Val(); // toc
 
             cycle_time = Tm_Delta_Time32(start_time, end_time);
 
             // Synchronize with RTC and read RTC counter
-            HWREG(AON_RTC_BASE + AON_RTC_O_SYNC) = 1; // write to force synchronization on read
-            while (HWREG(AON_RTC_BASE + AON_RTC_O_SYNC)) { }; // read to synchronize with next SCLK_LF edge
+            Tm_Synch_With_RTC();
             rtc_timestamp0 = AONRTCCurrentCompareValueGet();
             // Synchronize again and read RTC counter, measure time required to read the RTC counter
-            HWREG(AON_RTC_BASE + AON_RTC_O_SYNC) = 1; // write to force synchronization on read
-            while (HWREG(AON_RTC_BASE + AON_RTC_O_SYNC)) { }; // read to synchronize with next SCLK_LF edge
+            Tm_Synch_With_RTC();
             start_time = Tm_Get_Free_Running_Timer_Val(); // tic
             rtc_timestamp1 = AONRTCCurrentCompareValueGet();
             end_time = Tm_Get_Free_Running_Timer_Val(); // toc

@@ -5,6 +5,11 @@
 
 #include <driverlib/timer.h>
 
+// Synchronize with RTC (write to SYNC register prior reading to force a wait until next SCLK_LF edge)
+#define Tm_Synch_With_RTC()     HWREG(AON_RTC_BASE + AON_RTC_O_SYNC) = 1; \
+                                HWREG(AON_RTC_BASE + AON_RTC_O_SYNC);
+//                                while (HWREG(AON_RTC_BASE + AON_RTC_O_SYNC)) { }; is this necessary to guarantee a register read ? xxx
+
 // Get delta time from uint32 time stamps
 #define Tm_Delta_Time32(start, end) (end > start ? end - start : (0xFFFFFFFF - start) + end)
 #define Tm_Get_Free_Running_Timer_Val() HWREG(GPT1_BASE + GPT_O_TAR)
