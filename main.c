@@ -13,6 +13,8 @@
 
 #include <driverlib/gpio.h>
 
+#include <driverlib/aon_rtc.h>
+
 #include "misc.h"
 #include "printf.h"
 #include "smartrf_settings.h"
@@ -44,8 +46,11 @@ int main(void)
     {
         if (Tm_RTC_Period_Completed())
         {
+            GPIO_toggleDio(BRD_GREEN_LED); // heart beat
+
             // Test: Synchronization with RTC
             uint32_t start_time, end_time, cycle_time;
+            uint32_t rtc_timestamp0, rtc_timestamp1, rtc_read_time;
 
             // Wait for current RTC cycle to end
             HWREG(AON_RTC_BASE + AON_RTC_O_SYNC) = 1; // write to force synchronization on read
@@ -53,35 +58,36 @@ int main(void)
 
             // Measure time of 1 RTC cycle
             HWREG(AON_RTC_BASE + AON_RTC_O_SYNC) = 1; // write to force synchronization on read
-            start_time = Tm_Get_Free_Running_Timer_Val();
+            start_time = Tm_Get_Free_Running_Timer_Val(); // tic
             while (HWREG(AON_RTC_BASE + AON_RTC_O_SYNC)) { }; // read to synchronize with next SCLK_LF edge
-            end_time = Tm_Get_Free_Running_Timer_Val();
+            end_time = Tm_Get_Free_Running_Timer_Val(); // toc
 
             cycle_time = Tm_Delta_Time32(start_time, end_time);
-            PRINTF("cycle time: %lu ns\r\n", cycle_time * TM_HFXOSC_NSEC_PER_TICK);
 
-            GPIO_toggleDio(BRD_GREEN_LED);
+            // Synchronize with RTC and read RTC counter
+            HWREG(AON_RTC_BASE + AON_RTC_O_SYNC) = 1; // write to force synchronization on read
+            while (HWREG(AON_RTC_BASE + AON_RTC_O_SYNC)) { }; // read to synchronize with next SCLK_LF edge
+            rtc_timestamp0 = AONRTCCurrentCompareValueGet();
+            // Synchronize again and read RTC counter, measure time required to read the RTC counter
+            HWREG(AON_RTC_BASE + AON_RTC_O_SYNC) = 1; // write to force synchronization on read
+            while (HWREG(AON_RTC_BASE + AON_RTC_O_SYNC)) { }; // read to synchronize with next SCLK_LF edge
+            start_time = Tm_Get_Free_Running_Timer_Val(); // tic
+            rtc_timestamp1 = AONRTCCurrentCompareValueGet();
+            end_time = Tm_Get_Free_Running_Timer_Val(); // toc
 
+            rtc_read_time = Tm_Delta_Time32(start_time, end_time);
 
-//            uint8_t payload[36];
-//            for (size_t n = 0; n < sizeof(payload); n++)
-//                payload[n] = n+1;
-//
-//            Rad_Ble5_Adv_Aux(payload, sizeof(payload));
-//            GPIO_toggleDio(BRD_GREEN_LED);
+            PRINTF("cycle time: %lu ns, rtc_read_time: %lu ns, rtc_ticks: %lu\r\n",
+                   cycle_time * TM_HFXOSC_NSEC_PER_TICK, rtc_read_time * TM_HFXOSC_NSEC_PER_TICK,
+                   rtc_timestamp1 - rtc_timestamp0);
 
-//            uint8_t buf[256];
-//            size_t payload_len;
-//            payload_len = Rad_Ble5_Scanner(buf, sizeof(buf));
-//            PRINTF("payload: ");
-//            for (size_t n = 0; n < payload_len; n++)
-//                PRINTF("%02x ", buf[n]);
-//            PRINTF("\r\n");
-
-//            uint32_t rat_delta = Tm_Delta_Time32(tx_result.rat_timestamp_start, tx_result.rat_timestamp_end);
-//            PRINTF("RTC: %lu, RAT start: %lu, RAT end: %lu, RAT delta: %lu\r\n",
-//                   tx_result.rtc_timestamp, tx_result.rat_timestamp_start,
-//                   tx_result.rat_timestamp_end, rat_delta * RAD_RAT_NSEC_PER_TICK);
+            // Results: (from terminal)
+            // cycle time: 30702 ns, rtc_read_time: 945 ns, rtc_ticks: 2
+            //
+            // Conclusions
+            // 1. Synchronization sequence (write SYNCH, read SYNCH) takes a complete period of the RTC (~30 usec)
+            // 2. Reading the RTC does not block for an entire RTC cycle
+            // 3. The RTC counter clock increments two units with every RTC period (counts on both edges?)
         }
     }
 
