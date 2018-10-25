@@ -180,6 +180,14 @@ void Tm_Delay_Microsec(uint32_t time_usec)
     while (!(TimerIntStatus(GPT0_BASE, false) & TIMER_TIMA_TIMEOUT));
 }
 
+void Tm_Delay_Millisec(uint32_t time_msec)
+{
+    TimerLoadSet(GPT0_BASE, TIMER_A, time_msec*TM_AUXT_TICKS_PER_MS);
+    TimerIntClear(GPT0_BASE, TIMER_TIMA_TIMEOUT);
+    TimerEnable(GPT0_BASE, TIMER_A);
+    while (!(TimerIntStatus(GPT0_BASE, false) & TIMER_TIMA_TIMEOUT));
+}
+
 void Tm_Init_RTC()
 {
     // Reset RTC

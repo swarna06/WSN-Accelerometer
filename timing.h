@@ -20,8 +20,9 @@
 // RTC ticks per millisecond
 #define TM_RTC_TICKS_PER_MSEC   64
 
-// Auxiliary timer ticks per microsecond
+// Auxiliary timer ticks per milliseconds and microsecond
 #define TM_AUXT_TICKS_PER_US    48
+#define TM_AUXT_TICKS_PER_MS    TM_AUXT_TICKS_PER_US*1000
 
 // Auxiliary timer operation modes
 #define TM_AUXT_MODE_ONE_SHOT   true
@@ -97,7 +98,9 @@ bool Tm_Aux_Timer_Event_Occurred();
 
 void Tm_Wait_Aux_Timer_Event();
 
-void Tm_Delay_Microsec(uint32_t ticks);
+void Tm_Delay_Microsec(uint32_t time_usec);
+
+void Tm_Delay_Millisec(uint32_t time_msec);
 
 void Tm_Init_RTC();
 
