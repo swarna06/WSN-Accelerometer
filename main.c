@@ -44,47 +44,54 @@ int main(void)
 
     while (1)
     {
-        if (Tm_RTC_Period_Completed())
+//        if (Tm_RTC_Period_Completed())
+        if (!GPIO_readDio(BRD_BUTTON1))
         {
             GPIO_toggleDio(BRD_GREEN_LED); // heart beat
 
-            // Test: Synchronization with RTC
-            uint32_t start_time, end_time, cycle_time;
-            uint32_t rtc_timestamp0, rtc_timestamp1, rtc_read_time;
+            Rad_Synch_Master();
+//            Rad_Ble5_Adv_Aux(NULL, 0);
 
-            // Wait for current RTC cycle to end
-            Tm_Synch_With_RTC();
+//            Tm_Delay_Microsec(1000*1000); // debounce 1 sec
+            GPIO_toggleDio(BRD_GREEN_LED); // heart beat
 
-            // Measure time of 1 RTC cycle
-            HWREG(AON_RTC_BASE + AON_RTC_O_SYNC) = 1; // write to force synchronization on read
-            start_time = Tm_Get_Free_Running_Timer_Val(); // tic
-            HWREG(AON_RTC_BASE + AON_RTC_O_SYNC); // read to synchronize with next SCLK_LF edge
-            end_time = Tm_Get_Free_Running_Timer_Val(); // toc
-
-            cycle_time = Tm_Delta_Time32(start_time, end_time);
-
-            // Synchronize with RTC and read RTC counter
-            Tm_Synch_With_RTC();
-            rtc_timestamp0 = AONRTCCurrentCompareValueGet();
-            // Synchronize again and read RTC counter, measure time required to read the RTC counter
-            Tm_Synch_With_RTC();
-            start_time = Tm_Get_Free_Running_Timer_Val(); // tic
-            rtc_timestamp1 = AONRTCCurrentCompareValueGet();
-            end_time = Tm_Get_Free_Running_Timer_Val(); // toc
-
-            rtc_read_time = Tm_Delta_Time32(start_time, end_time);
-
-            PRINTF("cycle time: %lu ns, rtc_read_time: %lu ns, rtc_ticks: %lu\r\n",
-                   cycle_time * TM_HFXOSC_NSEC_PER_TICK, rtc_read_time * TM_HFXOSC_NSEC_PER_TICK,
-                   rtc_timestamp1 - rtc_timestamp0);
-
-            // Results: (from terminal)
-            // cycle time: 30702 ns, rtc_read_time: 945 ns, rtc_ticks: 2
-            //
-            // Conclusions
-            // 1. Synchronization sequence (write SYNCH, read SYNCH) takes a complete period of the RTC (~30 usec)
-            // 2. Reading the RTC does not block for an entire RTC cycle
-            // 3. The RTC counter clock increments two units with every RTC period (counts on both edges?)
+//            // Test: Synchronization with RTC
+//            uint32_t start_time, end_time, cycle_time;
+//            uint32_t rtc_timestamp0, rtc_timestamp1, rtc_read_time;
+//
+//            // Wait for current RTC cycle to end
+//            Tm_Synch_With_RTC();
+//
+//            // Measure time of 1 RTC cycle
+//            HWREG(AON_RTC_BASE + AON_RTC_O_SYNC) = 1; // write to force synchronization on read
+//            start_time = Tm_Get_Free_Running_Timer_Val(); // tic
+//            HWREG(AON_RTC_BASE + AON_RTC_O_SYNC); // read to synchronize with next SCLK_LF edge
+//            end_time = Tm_Get_Free_Running_Timer_Val(); // toc
+//
+//            cycle_time = Tm_Delta_Time32(start_time, end_time);
+//
+//            // Synchronize with RTC and read RTC counter
+//            Tm_Synch_With_RTC();
+//            rtc_timestamp0 = AONRTCCurrentCompareValueGet();
+//            // Synchronize again and read RTC counter, measure time required to read the RTC counter
+//            Tm_Synch_With_RTC();
+//            start_time = Tm_Get_Free_Running_Timer_Val(); // tic
+//            rtc_timestamp1 = AONRTCCurrentCompareValueGet();
+//            end_time = Tm_Get_Free_Running_Timer_Val(); // toc
+//
+//            rtc_read_time = Tm_Delta_Time32(start_time, end_time);
+//
+//            PRINTF("cycle time: %lu ns, rtc_read_time: %lu ns, rtc_ticks: %lu\r\n",
+//                   cycle_time * TM_HFXOSC_NSEC_PER_TICK, rtc_read_time * TM_HFXOSC_NSEC_PER_TICK,
+//                   rtc_timestamp1 - rtc_timestamp0);
+//
+//            // Results: (from terminal)
+//            // cycle time: 30702 ns, rtc_read_time: 945 ns, rtc_ticks: 2
+//            //
+//            // Conclusions
+//            // 1. Synchronization sequence (write SYNCH, read SYNCH) takes a complete period of the RTC (~30 usec)
+//            // 2. Reading the RTC does not block for an entire RTC cycle
+//            // 3. The RTC counter clock increments two units with every RTC period (counts on both edges?)
         }
     }
 

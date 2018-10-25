@@ -72,6 +72,8 @@ void Rad_Init()
     Rad_Reset_Radio_Op_Struct((rfc_radioOp_t*)cmd_fs);
     Rad_Reset_Adv_Aux_Struct(cmd_ble5_adv_aux);
     Rad_Reset_Scanner_Struct(cmd_ble5_scanner);
+    Rad_Reset_Radio_Op_Struct((rfc_radioOp_t*)cmd_sync_stop_rat);
+    Rad_Reset_Radio_Op_Struct((rfc_radioOp_t*)cmd_sync_start_rat);
 
     // Set default channel, PHY mode and TX power
     cmd_ble5_radio_setup->defaultPhy.mainMode = RAD_DEFAULT_PHY_MODE;
@@ -205,26 +207,40 @@ int Rad_Ble5_Scanner(uint8_t* buffer, size_t buf_len)
 
 void Rad_Synch_Master()
 {
-    uint32_t rat_timestamp_start, rat_timestamp_end;
+    uint32_t rat_synch_time, rtc_synch_time;
+    uint32_t rat_timestamp_tx, rat_timestamp_rx;
 
     // Prepare empty packet
     ble5_ext_adv_entry.pAdvData = NULL;
     ble5_ext_adv_entry.advDataLen = 0;
 
-    // Wait until RF Core is ready
+    // Prepare tx and rx commands
     cmd_ble5_adv_aux->status = IDLE;
-    while(HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDR) != 0); // wait until RFC door bell is ready
-    RFCAckIntClear();
+    cmd_ble5_adv_aux->startTrigger.triggerType = TRIG_ABSTIME;
+    cmd_ble5_adv_aux->pNextOp = (rfc_radioOp_t *)cmd_ble5_scanner;
+    cmd_ble5_adv_aux->condition.rule = COND_STOP_ON_FALSE;
+
+    rfc_ble5ScanInitOutput_t scan_output;
+    Rad_Reset_Data_Queue(&data_queue);
+    cmd_ble5_scanner->status = IDLE;
+    cmd_ble5_scanner->startTrigger.triggerType = TRIG_NOW;
+//    cmd_ble5_scanner->pParams->endTrigger.triggerType = TRIG_REL_START; // TODO add timeout
+//    cmd_ble5_scanner->pParams->endTime = xxx;
+    cmd_ble5_scanner->pOutput = &scan_output;
 
     // Synchronize clocks
     Rad_Synch_RAT();
-    while (HWREG(AON_RTC_BASE + AON_RTC_O_SEC) != 1) { }; // synchronize with RTC rising edge ? xxx
+    Tm_Synch_With_RTC(); // CPU waits until the start of next RTC period
+    rat_synch_time = HWREG(RFC_RAT_BASE + RFC_RAT_O_RATCNT); // get RAT time right after RTC edge
+    rtc_synch_time = AONRTCCurrentCompareValueGet(); // TODO is it necessary to get this time stamp ?
+    rat_timestamp_tx = rat_synch_time + 1024; // transmission will start after N RAT cycles xxx (enough time to prepare command structures)
+    cmd_ble5_adv_aux->startTime = rat_timestamp_tx; // set the TX start time
 
-    // Get time stamp and send command to RFC door bell
-    rat_timestamp_start = HWREG(RFC_RAT_BASE + RFC_RAT_O_RATCNT);
-//    tx_result->rtc_timestamp = AONRTCCurrentCompareValueGet(); // TODO is it necessary to get this timestamp ?
+    // Send command to the RF Core and wait until ACK is received
+    while(HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDR) != 0); // wait until RFC door bell is ready
+    RFCAckIntClear();
     HWREG(RFC_DBELL_BASE+RFC_DBELL_O_CMDR) = (uint32_t)cmd_ble5_adv_aux;
-    while(!HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFACKIFG)); // wait until command is parsed by the RF Core
+    while(!HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFACKIFG)); // wait for ACK TODO not necessary ?
     RFCAckIntClear();
 
     // Wait for operation execution TODO
@@ -236,14 +252,39 @@ void Rad_Synch_Master()
             exit(0);
         }
     }
-    rat_timestamp_end = HWREG(RFC_RAT_BASE + RFC_RAT_O_RATCNT);
     if (cmd_ble5_adv_aux->status & RAD_F_STATUS_ERR) // error in the status field of the command structure ?
     {
         Rad_Print_Radio_Op_Err(cmd_ble5_adv_aux);
         exit(0);
     }
 
-    PRINTF("%lu, %lu\r\n", rat_timestamp_start, rat_timestamp_end);
+    while (cmd_ble5_scanner->status <= ACTIVE)
+    {
+        if (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG) & RAD_M_RFCPEIFG_ERROR) // critical error ?
+        {
+            Rad_Print_Radio_Op_Err(cmd_ble5_scanner);
+            exit(0);
+        }
+    }
+    if (cmd_ble5_scanner->status & RAD_F_STATUS_ERR) // error in the status field of the command structure ?
+    {
+        Rad_Print_Radio_Op_Err(cmd_ble5_scanner);
+        exit(0);
+    }
+
+    // Get reception time stamp
+    rat_timestamp_rx = Rad_Get_Pkt_Timestamp(data_entry_buf);
+
+    // Print results
+    uint32_t round_trip_time = Tm_Delta_Time32(rat_timestamp_tx, rat_timestamp_rx);
+    PRINTF("%rtc_timestamp: %lu, round_trip_time: %lu ns\r\n",
+           rtc_synch_time, round_trip_time * RAD_RAT_NSEC_PER_TICK);
+
+    // Restore tx and rx commands
+    cmd_ble5_adv_aux->startTrigger.triggerType = TRIG_NOW;
+    cmd_ble5_adv_aux->pNextOp = NULL;
+    cmd_ble5_adv_aux->condition.rule = COND_NEVER;
+    cmd_ble5_scanner->pParams->endTrigger.triggerType = TRIG_NEVER;
 }
 
 //********************************

@@ -16,6 +16,11 @@
 // Data entry buffer payload index
 #define RAD_DENTRY_LEN_IDX          1
 #define RAD_DENTRY_PAYLOAD_IDX      2
+#define RAD_DENTRY_RSSI_LEN         1
+
+// Macros for extracting RSSI and time stamp from data entry buffer
+#define Rad_Get_Pkt_RSSI(p)         *((int8_t*)p + RAD_DENTRY_PAYLOAD_IDX + p[RAD_DENTRY_LEN_IDX])
+#define Rad_Get_Pkt_Timestamp(p)    *((uint32_t*)(p + RAD_DENTRY_PAYLOAD_IDX + p[RAD_DENTRY_LEN_IDX] + RAD_DENTRY_RSSI_LEN))
 
 // RAT nanoseconds per tick
 #define RAD_RAT_NSEC_PER_TICK       250
@@ -65,6 +70,18 @@ typedef struct
     uint32_t rat_timestamp;
 } rad_rx_result_t;
 
+// Error flag for CMDSTA register and status field in
+#define RAD_F_STATUS_ERR        0x0800
+
+// CPE error interrupt flags mask
+#define RAD_M_RFCPEIFG_ERROR    (RFC_DBELL_RFCPEIFG_INTERNAL_ERROR | \
+                                 RFC_DBELL_RFCPEIFG_SYNTH_NO_LOCK)
+#define RAD_M_RFCPEIFG_TX_OK    (RFC_DBELL_RFCPEIFG_TX_DONE | \
+                                 RFC_DBELL_RFCPEIFG_COMMAND_DONE)
+#define RAD_M_RFCPEIFG_TX_INT   (RAD_M_RFCPEIFG_ERROR | \
+                                 RAD_M_RFCPEIFG_TX_OK)
+
+
 // Macros for printing error information
 #define Rad_Print_RFCPEIFG_Err() \
         PRINTF("ERR: func: %s, RFCPEIFG: %p\r\n", \
@@ -79,13 +96,6 @@ typedef struct
         PRINTF("ERR: func: %s, commandNo: %04X, CMDSTA: %p, RFCPEIFG: %p\r\n", \
                __func__, id, (void*)HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDSTA), \
                (void*)HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG))
-
-// CPE error interrupt flags mask
-#define RAD_M_RFCPEIFG_ERROR    (RFC_DBELL_RFCPEIFG_INTERNAL_ERROR | \
-                                 RFC_DBELL_RFCPEIFG_SYNTH_NO_LOCK)
-
-// Error flag for CMDSTA register and status field in
-#define RAD_F_STATUS_ERR        0x0800
 
 // Return values
 #define RAD_OK                  0
