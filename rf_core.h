@@ -233,15 +233,15 @@ void Rfc_Process();
 
 void Rfc_Set_Tx_Power(rfc_tx_power_t tx_power);
 
-void Rfc_Set_BLE5_PHY_Mode(uint8_t ble5_mode);
+void Rfc_BLE5_Set_PHY_Mode(uint8_t ble5_mode);
 
 void Rfc_BLE5_Set_Channel(uint8_t channel);
 
 bool Rfc_BLE5_Adv_Aux(rfc_tx_param_t* tx_param_p);
 
-bool Rfc_Prop_Rx(uint32_t timeout_usec);
+bool Rfc_BLE5_Scanner(uint32_t timeout_usec);
 
-void Rfc_Get_Prop_Rx_Results(rfc_rx_result_t* dest);
+void Rfc_BLE5_Get_Scanner_Result(rfc_rx_result_t* dest);
 
 bool Rfc_Synchronize_RAT();
 

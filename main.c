@@ -38,11 +38,12 @@ int main(void)
     Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
 
     int state = -1;
-    uint8_t ch = 37;
+    uint8_t ch = 17;
+    bool op_in_progress = false;
 
     Rfc_Set_Tx_Power(RFC_TX_POW_MINUS_21dBm);
-    Rfc_Set_BLE5_PHY_Mode(RFC_PHY_MODE_2MBPS);
-    Rfc_BLE5_Set_Channel(18);
+    Rfc_BLE5_Set_PHY_Mode(RFC_PHY_MODE_2MBPS);
+    Rfc_BLE5_Set_Channel(ch);
 
     Log_Value("ch", ch);
 
@@ -55,14 +56,17 @@ int main(void)
         {
             GPIO_toggleDio(BRD_LED1);  // heart beat
 
-            if (Rfc_Ready())
+            if (!op_in_progress && Rfc_Ready())
             {
-                uint8_t buf[] = "Hola!";
-                rfc_tx_param_t tx_param;
-                tx_param.buf = buf;
-                tx_param.len = sizeof(buf);
-                tx_param.rat_start_time = 0;
-                Rfc_BLE5_Adv_Aux(&tx_param);
+                Rfc_BLE5_Scanner(1000*1000);
+                op_in_progress = true;
+
+//                uint8_t buf[] = "Hola!";
+//                rfc_tx_param_t tx_param;
+//                tx_param.buf = buf;
+//                tx_param.len = sizeof(buf);
+//                tx_param.rat_start_time = 0;
+//                Rfc_BLE5_Adv_Aux(&tx_param);
 
                 ch = ch == 37 ? 36 : 37; // jump from lowest to highest frequency
                 Rfc_BLE5_Set_Channel(ch);
@@ -82,9 +86,28 @@ int main(void)
 
         Log_Process();
 
+        if (op_in_progress && Rfc_Ready())
+        {
+            op_in_progress = false;
+
+            uint8_t buf[256];
+            rfc_rx_result_t rx_result;
+            rx_result.buf = buf;
+            rx_result.buf_len = sizeof(buf);
+
+            Rfc_BLE5_Get_Scanner_Result(&rx_result);
+
+            PRINTF("len: %d\r\n", rx_result.payload_len);
+            PRINTF("buf: ");
+            for (size_t n = 0; n < 16; n++)
+            {
+                PRINTF("%d ", buf[n]);
+            }
+            PRINTF("\r\n");
+        }
     }
 
-	return 0;
+    return 0;
 }
 
 void Startup()

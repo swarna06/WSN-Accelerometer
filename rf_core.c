@@ -32,7 +32,7 @@ rfc_control_t rfc;
 static volatile rfc_CMD_BLE5_RADIO_SETUP_t* cmd_ble5_radio_setup_p = &RF_cmdBle5RadioSetup;
 static volatile rfc_CMD_FS_t* cmd_fs_p = &RF_cmdFs;
 static volatile rfc_CMD_BLE5_ADV_AUX_t* cmd_ble5_adv_aux_p = &RF_cmdBle5AdvAux;
-//static volatile rfc_CMD_PROP_RX_t* cmd_prop_rx_p = &RF_cmdPropRx;
+static volatile rfc_CMD_BLE5_SCANNER_t* cmd_ble5_scanner_p = &RF_cmdBle5Scanner;
 static volatile rfc_CMD_SYNC_STOP_RAT_t* cmd_sync_stop_rat_p = &RF_cmdSyncStopRat;
 static volatile rfc_CMD_SYNC_START_RAT_t* cmd_sync_start_rat_p = &RF_cmdSyncStartRat;
 
@@ -41,7 +41,7 @@ static volatile rfc_ble5ExtAdvEntry_t ble5_ext_adv_entry;
 static volatile uint8_t data_entry_buf[RFC_RX_BUF_LEN];
 static volatile rfc_dataEntryPointer_t data_entry_ptr;
 static volatile dataQueue_t data_queue;
-static volatile rfc_propRxOutput_t prop_rx_output;
+static volatile rfc_ble5ScanInitOutput_t ble5_scan_init_output;
 
 static void Rfc_HW_Setup();
 static void Rfc_Init_CPE_Structs();
@@ -62,30 +62,6 @@ void Rfc_Process()
     {
     case RFC_S_IDLE: // wait for RF core operation
         break;
-
-    case RFC_S_PROCESS_PROP_TX_RESULT:
-    {
-        if (cmd_ble5_adv_aux_p->status & RFC_F_RADIO_OP_STATUS_ERR)
-        {
-            // TODO handle error
-            Rfc_Print_Radio_Op_Err(cmd_ble5_adv_aux_p);
-            exit(0);
-        }
-        rfc.state = RFC_S_IDLE;
-    }
-    break;
-
-//    case RFC_S_PROCESS_PROP_RX_RESULT:
-//    {
-//        if (cmd_prop_rx_p->status & RFC_F_RADIO_OP_STATUS_ERR)
-//        {
-//            // TODO handle error
-//            Rfc_Print_Radio_Op_Err(cmd_prop_rx_p);
-//            exit(0);
-//        }
-//        rfc.state = RFC_S_IDLE;
-//    }
-//    break;
 
     // RF core initialization
     case RFC_S_WAIT_RFC_BOOT:
@@ -240,7 +216,7 @@ void Rfc_Set_Tx_Power(rfc_tx_power_t tx_power)
     cmd_ble5_adv_aux_p->txPower = tx_power;
 }
 
-void Rfc_Set_BLE5_PHY_Mode(uint8_t ble5_mode)
+void Rfc_BLE5_Set_PHY_Mode(uint8_t ble5_mode)
 {
     /*
      * Main mode and coding values according to data sheet
@@ -267,8 +243,12 @@ void Rfc_Set_BLE5_PHY_Mode(uint8_t ble5_mode)
         coding = RFC_PHY_CODING_125KBPS;
     }
 
+    // Set channel TX and RX commands
     cmd_ble5_adv_aux_p->phyMode.mainMode = main_mode;
     cmd_ble5_adv_aux_p->phyMode.coding = coding;
+
+    cmd_ble5_scanner_p->phyMode.mainMode = main_mode;
+    cmd_ble5_scanner_p->phyMode.coding = coding;
 }
 
 void Rfc_BLE5_Set_Channel(uint8_t channel)
@@ -301,6 +281,10 @@ void Rfc_BLE5_Set_Channel(uint8_t channel)
     cmd_ble5_adv_aux_p->channel = ch;
     cmd_ble5_adv_aux_p->whitening.init = whitening & 0x7F;
     cmd_ble5_adv_aux_p->whitening.bOverride = 1;
+
+    cmd_ble5_scanner_p->channel = ch;
+    cmd_ble5_scanner_p->whitening.init = whitening & 0x7F;
+    cmd_ble5_scanner_p->whitening.bOverride = 1;
 }
 
 bool Rfc_BLE5_Adv_Aux(rfc_tx_param_t* tx_param_p)
@@ -333,108 +317,72 @@ bool Rfc_BLE5_Adv_Aux(rfc_tx_param_t* tx_param_p)
     // Start radio operation
     Rfc_Clear_CPE_Int_Flags(RFC_M_CPE_TX_INT_FLAGS);
     Rfc_Start_Radio_Op(cmd_ble5_adv_aux_p, timeout_ms);
-    rfc.next_state = RFC_S_PROCESS_PROP_TX_RESULT; // state where the result of the operation is processed
+    rfc.next_state = RFC_S_IDLE;
 
     return true;
 }
 
+bool Rfc_BLE5_Scanner(uint32_t timeout_usec)
+{
+    if (!Rfc_Ready())
+        return false;
 
-//bool Rfc_Prop_Tx(rfc_tx_param_t* tx_param_p)
-//{
-//    if (!Rfc_Ready())
-//        return false;
-//    if (tx_param_p->buf == NULL) // at least 1 byte should be transmitted
-//        return false;
-//
-//    uint16_t timeout_ms = RFC_TOUT_TX_MSEC;
-//
-//    // set trigger type and start time
-//    if (tx_param_p->rat_start_time)
-//    {
-//        // Calculate the timeout of the operation considering delayed timeout
-//        uint32_t rat_curr_time = Rfc_Get_RAT_Time();
-//        uint32_t deta_time = Tm_Delta_Time32(rat_curr_time, tx_param_p->rat_start_time);
-//        timeout_ms += (deta_time / RAD_RAT_TICKS_PER_MSEC);
-//
-//        cmd_prop_tx_p->startTrigger.triggerType = TRIG_ABSTIME;
-//        cmd_prop_tx_p->startTime = tx_param_p->rat_start_time;
-//    }
-//    else
-//        cmd_prop_tx_p->startTrigger.triggerType = TRIG_NOW;
-//
-//    // Set payload length and pointer
-//    cmd_prop_tx_p->pktLen = tx_param_p->len;
-//    cmd_prop_tx_p->pPkt = tx_param_p->buf;
-//
-//    // Start radio operation
-//    Rfc_Clear_CPE_Int_Flags(RFC_M_CPE_TX_INT_FLAGS);
-//    Rfc_Start_Radio_Op(cmd_prop_tx_p, timeout_ms);
-//    rfc.next_state = RFC_S_PROCESS_PROP_TX_RESULT; // state where the result of the operation is processed
-//
-//    return true;
-//}
-//
-//bool Rfc_Prop_Rx(uint32_t timeout_usec)
-//{
-//    if (!Rfc_Ready())
-//        return false;
-//
-//    // Reset data entry and queue
-//    data_entry_ptr.status = DATA_ENTRY_PENDING;
-//    data_entry_ptr.pData = (uint8_t*)data_entry_buf;
-//    data_queue.pCurrEntry = (uint8_t*)&data_entry_ptr;
-//
-//    // Set command end time (Radio Timer)
-//    cmd_prop_rx_p->endTime = timeout_usec * RAD_RAT_TICKS_PER_USEC; // end time relative to start of command
-//
-//    // Calculate FSM operation timeout
-//    uint16_t tout_ms = timeout_usec/1000 + RFC_TOUT_RX_MSEC; // timeout in case the RF core is unresponsive
-//
-//    // Start radio operation
-//    Rfc_Clear_CPE_Int_Flags(RFC_M_CPE_RX_INT_FLAGS);
-//    Rfc_Start_Radio_Op(cmd_prop_rx_p, tout_ms);
-//    rfc.next_state = RFC_S_PROCESS_PROP_RX_RESULT; // state where the result of the operation is processed
-//
-//    return true;
-//}
-//
-//void Rfc_Get_Prop_Rx_Results(rfc_rx_result_t* dest)
-//{
-//    if (dest == NULL)
-//        return;
-//
-//    // Check interrupt flags for errors in reception
-//    dest->err_flags = 0;
-//    uint32_t cpe_int_flags = Rfc_Get_CPE_Int_Flags();
-//    if (cpe_int_flags & RFC_DBELL_RFCPEIFG_RX_NOK)
-//        dest->err_flags |= RFC_F_RX_CRC_ERR;
-//    if (cmd_prop_rx_p->status == PROP_DONE_RXTIMEOUT)
-//        dest->err_flags |= RFC_F_RX_TOUT_ERR;
-//
-//    // Copy results if there were no errors
-//    if (dest->buf != NULL && !((uint8_t)dest->err_flags))
-//    {
-//        // Copy payload if buffer was provided
-//        if (dest->buf != NULL)
-//        {
-//            dest->payload_len = data_entry_buf[0]; // first element of buffer is the payload length
-//            for (size_t n = 0; n < dest->payload_len && n < dest->buf_len; n++) // condition prevents buffer overflow
-//                ((uint8_t*)dest->buf)[n] = data_entry_buf[n+1];
-//        }
-//
-//        // Get timestamp and RSSI of last received packet
-//        dest->rat_timestamp = prop_rx_output.timeStamp;
-//        dest->rssi_db = prop_rx_output.lastRssi;
-//    }
-//    else
-//    {
-//        // Set special values to indicate that result is invalid
-//        dest->rat_timestamp = -1;
-//        dest->rssi_db = -128;
-//        dest->payload_len = 0;
-//    }
-//}
-//
+    // Reset data entry and queue
+    data_entry_ptr.status = DATA_ENTRY_PENDING;
+    data_entry_ptr.pData = (uint8_t*)data_entry_buf;
+    data_queue.pCurrEntry = (uint8_t*)&data_entry_ptr;
+
+    // Set command end time (Radio Timer)
+    cmd_ble5_scanner_p->pParams->timeoutTime = timeout_usec * RAD_RAT_TICKS_PER_USEC; // end time relative to start of command
+
+    // Calculate FSM operation timeout
+    uint16_t tout_ms = timeout_usec/1000 + RFC_TOUT_RX_MSEC; // timeout in case the RF core is unresponsive
+
+    // Start radio operation
+    Rfc_Clear_CPE_Int_Flags(RFC_M_CPE_RX_INT_FLAGS);
+    Rfc_Start_Radio_Op(cmd_ble5_scanner_p, tout_ms);
+    rfc.next_state = RFC_S_IDLE;
+
+    return true;
+}
+
+void Rfc_BLE5_Get_Scanner_Result(rfc_rx_result_t* dest)
+{
+    if (dest == NULL)
+        return;
+
+    // Check interrupt flags for errors in reception
+    dest->err_flags = 0;
+    uint32_t cpe_int_flags = Rfc_Get_CPE_Int_Flags();
+    if (cpe_int_flags & RFC_DBELL_RFCPEIFG_RX_NOK)
+        dest->err_flags |= RFC_F_RX_CRC_ERR;
+    if (cmd_ble5_scanner_p->status == BLE_DONE_RXTIMEOUT)
+        dest->err_flags |= RFC_F_RX_TOUT_ERR;
+
+    // Copy results if there were no errors
+    if (dest->buf != NULL && !((uint8_t)dest->err_flags))
+    {
+        // Copy payload if buffer was provided
+        if (dest->buf != NULL)
+        {
+            dest->payload_len = data_entry_buf[0]; // first element of buffer is the payload length
+            for (size_t n = 0; n < dest->payload_len && n < dest->buf_len; n++) // condition prevents buffer overflow
+                ((uint8_t*)dest->buf)[n] = data_entry_buf[n+1];
+        }
+
+        // Get timestamp and RSSI of last received packet
+        dest->rat_timestamp = ble5_scan_init_output.timeStamp;
+        dest->rssi_db = ble5_scan_init_output.lastRssi;
+    }
+    else
+    {
+        // Set special values to indicate that result is invalid
+        dest->rat_timestamp = -1;
+        dest->rssi_db = -128;
+        dest->payload_len = 0;
+    }
+}
+
 //bool Rfc_Synchronize_RAT()
 //{
 //    if (!Rfc_Ready())
@@ -492,8 +440,8 @@ static void Rfc_Init_CPE_Structs()
     memset((void*)&ble5_ext_adv_entry, 0, sizeof(rfc_ble5ExtAdvEntry_t));
     cmd_ble5_adv_aux_p->pParams->pAdvPkt = (uint8_t*)&ble5_ext_adv_entry;
 
-    // CMD_PROP_RX
-    memset((rfc_dataEntryPointer_t*)&data_entry_ptr, 0, sizeof(rfc_dataEntryPointer_t));
+    // CMD_BLE5_SCANNER
+    memset((void*)&data_entry_ptr, 0, sizeof(rfc_dataEntryPointer_t));
     data_entry_ptr.config.type = DATA_ENTRY_TYPE_PTR;
     data_entry_ptr.length = sizeof(data_entry_buf);
     data_entry_ptr.pData = (uint8_t*)data_entry_buf;
@@ -501,9 +449,11 @@ static void Rfc_Init_CPE_Structs()
     data_queue.pCurrEntry = (uint8_t*)&data_entry_ptr;
     data_queue.pLastEntry = NULL;
 
-//    cmd_prop_rx_p->pQueue = (dataQueue_t*)&data_queue;
-//    cmd_prop_rx_p->pOutput = (uint8_t*)&prop_rx_output;
-//    cmd_prop_rx_p->endTrigger.triggerType = TRIG_REL_START;
+    memset((void*)&ble5_scan_init_output, 0, sizeof(ble5_scan_init_output));
+
+    cmd_ble5_scanner_p->pParams->pRxQ = (dataQueue_t*)&data_queue;
+    cmd_ble5_scanner_p->pParams->timeoutTrigger.triggerType = TRIG_REL_START;
+    cmd_ble5_scanner_p->pOutput = (rfc_ble5ScanInitOutput_t*)&ble5_scan_init_output;
 
 //    // SYNC_STOP_RAT, SYNC_START_RAT
 //    cmd_sync_stop_rat_p->condition.rule = COND_NEVER;
