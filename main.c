@@ -38,9 +38,13 @@ int main(void)
     Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
 
     int state = -1;
+    uint8_t ch = 37;
 
     Rfc_Set_Tx_Power(RFC_TX_POW_MINUS_21dBm);
-    Rfc_Set_BLE5_PHY_Mode(RFC_PHY_MODE_1MBPS);
+    Rfc_Set_BLE5_PHY_Mode(RFC_PHY_MODE_2MBPS);
+    Rfc_BLE5_Set_Channel(18);
+
+    Log_Value("ch", ch);
 
     while (1)
     {
@@ -59,6 +63,10 @@ int main(void)
                 tx_param.len = sizeof(buf);
                 tx_param.rat_start_time = 0;
                 Rfc_BLE5_Adv_Aux(&tx_param);
+
+                ch = ch == 37 ? 36 : 37; // jump from lowest to highest frequency
+                Rfc_BLE5_Set_Channel(ch);
+                Log_Value("ch", ch);
 
 //                Log_Line("Rfc_Ready");
             }

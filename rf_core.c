@@ -249,8 +249,7 @@ void Rfc_Set_BLE5_PHY_Mode(uint8_t ble5_mode)
      * Coding => 0: S = 8 (125 kbps), 1: S = 2 (500 kbps)
      */
 
-    if (ble5_mode >= RFC_PHY_MODES_NUM) // invalid value ?
-        return;
+    assertion(ble5_mode < RFC_PHY_MODES_NUM);
 
     uint8_t main_mode = RFC_PHY_MAIN_MODE_2MBPS; // default mode 2 Mbps
     uint8_t coding = RFC_PHY_CODING_NONE; // default: no coding
@@ -270,6 +269,38 @@ void Rfc_Set_BLE5_PHY_Mode(uint8_t ble5_mode)
 
     cmd_ble5_adv_aux_p->phyMode.mainMode = main_mode;
     cmd_ble5_adv_aux_p->phyMode.coding = coding;
+}
+
+void Rfc_BLE5_Set_Channel(uint8_t channel)
+{
+    assertion(channel < 40);
+
+    // Calculate channel offset (BLE channels are not consecutive)
+    uint8_t ch_offset = 0;
+    if (channel == 37)
+        ch_offset = 0;
+    else if (channel == 38)
+        ch_offset = 12;
+    else if (channel == 39)
+        ch_offset = 39;
+    else if ((channel >= 0) && (channel <= 10))
+        ch_offset = channel + 1;
+    else if ((channel >= 11) && (channel <= 36))
+        ch_offset = channel + 2;
+
+    // Calculate field values (defined in the data sheet)
+    ch_offset = ch_offset * 2;
+    uint16_t freq = RFC_BLE5_BASE_FREQ + ch_offset;
+    uint8_t ch = RFC_BLE5_BASE_CH + ch_offset;
+    uint8_t whitening = RFC_BLE5_BASE_WHITE_INIT + channel;
+
+    // Set frequency of synthesizer
+    cmd_fs_p->frequency = freq;
+
+    // Set channel TX and RX commands
+    cmd_ble5_adv_aux_p->channel = ch;
+    cmd_ble5_adv_aux_p->whitening.init = whitening & 0x7F;
+    cmd_ble5_adv_aux_p->whitening.bOverride = 1;
 }
 
 bool Rfc_BLE5_Adv_Aux(rfc_tx_param_t* tx_param_p)
