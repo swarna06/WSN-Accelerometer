@@ -38,10 +38,6 @@ void Log(void* data, size_t data_len);
 
 void Log_Value_Hex(uint32_t val);
 
-// Function to avoid calling Log() when length of string literal is 0 (excluding '\0')
-inline void Log_Dummy(void* data, size_t data_len)
-{
-    (void)0; // do nothing
-}
+void Log_Dummy(void* data, size_t data_len);
 
 #endif /* LOG_H_ */

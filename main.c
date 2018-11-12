@@ -39,6 +39,9 @@ int main(void)
 
     int state = -1;
 
+    Rfc_Set_Tx_Power(RFC_TX_POW_MINUS_21dBm);
+    Rfc_Set_BLE5_PHY_Mode(RFC_PHY_MODE_1MBPS);
+
     while (1)
     {
         if (Tm_System_Tick())
@@ -50,14 +53,12 @@ int main(void)
 
             if (Rfc_Ready())
             {
-                Rfc_Set_Tx_Power(RFC_TX_POW_MINUS_21dBm);
-
                 uint8_t buf[] = "Hola!";
                 rfc_tx_param_t tx_param;
                 tx_param.buf = buf;
                 tx_param.len = sizeof(buf);
                 tx_param.rat_start_time = 0;
-                Rfc_Ble5_Adv_Aux(&tx_param);
+                Rfc_BLE5_Adv_Aux(&tx_param);
 
 //                Log_Line("Rfc_Ready");
             }

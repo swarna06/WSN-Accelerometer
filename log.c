@@ -78,4 +78,10 @@ void Log_Value_Hex(uint32_t val)
     Queue_Add(&log_queue, value_str, len);
 }
 
+// Function to avoid calling Log() when length of string literal is 0 (excluding '\0')
+inline void Log_Dummy(void* data, size_t data_len)
+{
+    (void)0; // do nothing
+}
+
 

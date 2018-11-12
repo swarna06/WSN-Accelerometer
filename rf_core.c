@@ -16,7 +16,8 @@
 #include <driverlib/rf_common_cmd.h>
 #include <driverlib/rf_data_entry.h>
 #include <inc/hw_rfc_rat.h>
-#include <driverlib/rf_prop_mailbox.h>
+#include <driverlib/rf_ble_mailbox.h>
+#include <driverlib/rf_ble_cmd.h>
 
 #include <driverlib/aon_rtc.h>
 
@@ -239,7 +240,39 @@ void Rfc_Set_Tx_Power(rfc_tx_power_t tx_power)
     cmd_ble5_adv_aux_p->txPower = tx_power;
 }
 
-bool Rfc_Ble5_Adv_Aux(rfc_tx_param_t* tx_param_p)
+void Rfc_Set_BLE5_PHY_Mode(uint8_t ble5_mode)
+{
+    /*
+     * Main mode and coding values according to data sheet
+     *
+     * Main modes => 0: 1 Mbps, 1: 2 Mbps, 2: Coded
+     * Coding => 0: S = 8 (125 kbps), 1: S = 2 (500 kbps)
+     */
+
+    if (ble5_mode >= RFC_PHY_MODES_NUM) // invalid value ?
+        return;
+
+    uint8_t main_mode = RFC_PHY_MAIN_MODE_2MBPS; // default mode 2 Mbps
+    uint8_t coding = RFC_PHY_CODING_NONE; // default: no coding
+
+    if (ble5_mode == RFC_PHY_MODE_1MBPS)
+        main_mode = RFC_PHY_MAIN_MODE_1MBPS;
+    else if  (ble5_mode == RFC_PHY_MODE_500KBPS)
+    {
+        main_mode = RFC_PHY_MAIN_MODE_CODED;
+        coding = RFC_PHY_CODING_500KBPS;
+    }
+    else if  (ble5_mode == RFC_PHY_MODE_125KBPS)
+    {
+        main_mode = RFC_PHY_MAIN_MODE_CODED;
+        coding = RFC_PHY_CODING_125KBPS;
+    }
+
+    cmd_ble5_adv_aux_p->phyMode.mainMode = main_mode;
+    cmd_ble5_adv_aux_p->phyMode.coding = coding;
+}
+
+bool Rfc_BLE5_Adv_Aux(rfc_tx_param_t* tx_param_p)
 {
     if (!Rfc_Ready())
         return false;

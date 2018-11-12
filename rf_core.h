@@ -128,6 +128,23 @@ typedef enum
     RFC_TX_POW_MINUS_21dBm = 0x0CC7,
 } rfc_tx_power_t;
 
+// PHY modes
+typedef enum
+{
+    RFC_PHY_MODE_2MBPS = 0,
+    RFC_PHY_MODE_1MBPS,
+    RFC_PHY_MODE_500KBPS,
+    RFC_PHY_MODE_125KBPS,
+    RFC_PHY_MODES_NUM,
+} rfc_ble5_mode;
+
+#define RFC_PHY_MAIN_MODE_1MBPS     0
+#define RFC_PHY_MAIN_MODE_2MBPS     1
+#define RFC_PHY_MAIN_MODE_CODED     2
+#define RFC_PHY_CODING_NONE         0
+#define RFC_PHY_CODING_500KBPS      2
+#define RFC_PHY_CODING_125KBPS      8
+
 // RF Core FSM states
 typedef enum
 {
@@ -211,7 +228,9 @@ void Rfc_Process();
 
 void Rfc_Set_Tx_Power(rfc_tx_power_t tx_power);
 
-bool Rfc_Ble5_Adv_Aux(rfc_tx_param_t* tx_param_p);
+void Rfc_Set_BLE5_PHY_Mode(uint8_t ble5_mode);
+
+bool Rfc_BLE5_Adv_Aux(rfc_tx_param_t* tx_param_p);
 
 bool Rfc_Prop_Rx(uint32_t timeout_usec);
 
