@@ -110,6 +110,23 @@
                                             op = NULL; \
                                         }
 
+// Transmission power codes (taken from SmartRF)
+typedef enum
+{
+    RFC_TX_POW_PLUS_5dBm = 0x9330,
+    RFC_TX_POW_PLUS_4dBm = 0x9324,
+    RFC_TX_POW_PLUS_3dBm = 0x5A1C,
+    RFC_TX_POW_PLUS_2dBm = 0x4E18,
+    RFC_TX_POW_PLUS_1dBm = 0x4214,
+    RFC_TX_POW_0dBm = 0x3161,
+    RFC_TX_POW_MINUS_3dBm = 0x2558,
+    RFC_TX_POW_MINUS_6dBm = 0x1D52,
+    RFC_TX_POW_MINUS_9dBm = 0x194E,
+    RFC_TX_POW_MINUS_12dBm = 0x144B,
+    RFC_TX_POW_MINUS_15dBm = 0x0CCB,
+    RFC_TX_POW_MINUS_18dBm = 0x0CC9,
+    RFC_TX_POW_MINUS_21dBm = 0x0CC7,
+} rfc_tx_power_t;
 
 // RF Core FSM states
 typedef enum
@@ -191,6 +208,8 @@ typedef struct
 void Rfc_Init();
 
 void Rfc_Process();
+
+void Rfc_Set_Tx_Power(rfc_tx_power_t tx_power);
 
 bool Rfc_Ble5_Adv_Aux(rfc_tx_param_t* tx_param_p);
 

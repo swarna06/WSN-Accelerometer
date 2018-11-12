@@ -234,6 +234,11 @@ void Rfc_Process()
     }
 }
 
+void Rfc_Set_Tx_Power(rfc_tx_power_t tx_power)
+{
+    cmd_ble5_adv_aux_p->txPower = tx_power;
+}
+
 bool Rfc_Ble5_Adv_Aux(rfc_tx_param_t* tx_param_p)
 {
     if (!Rfc_Ready())

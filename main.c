@@ -50,6 +50,8 @@ int main(void)
 
             if (Rfc_Ready())
             {
+                Rfc_Set_Tx_Power(RFC_TX_POW_MINUS_21dBm);
+
                 uint8_t buf[] = "Hola!";
                 rfc_tx_param_t tx_param;
                 tx_param.buf = buf;
