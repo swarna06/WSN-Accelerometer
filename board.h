@@ -8,21 +8,43 @@
 #ifndef BOARD_H_
 #define BOARD_H_
 
+#define BOARD_LAUNCHPAD     0
+#define BOARD_ES            1
+#define BOARD_SENSORTAG     2
 
-#define BRD_RED_LED     6
-#define BRD_GREEN_LED   7
+#define BOARD_USED  BOARD_LAUNCHPAD
 
-#define BRD_DEBUG_PIN0  21
-#define BRD_DEBUG_PIN1  22
-//#define BRD_DEBUG_PIN1  26
-//#define BRD_DEBUG_PIN2  1
-//#define BRD_DEBUG_PIN3  15
-#define BRD_PIN_TX_READY    1
-#define BRD_PIN_RX_READY    15
-#define BRD_PIN_TX_STARTED  0
+#ifndef BOARD_USED
+    #define BOARD_USED BOARD_LAUNCHPAD
+#endif  // BOARD_USED
 
-#define BRD_BUTTON1     13
-#define BRD_BUTTON2     14
+#if (BOARD_USED == BOARD_LAUNCHPAD)
 
+    #define BRD_LED0            6
+    #define BRD_LED1            7
+
+    #define BRD_DEBUG_PIN0      21
+    #define BRD_DEBUG_PIN1      22
+
+    #define BRD_BUTTON1         13
+    #define BRD_BUTTON2         14
+
+    #define BRD_UART_TX         3
+    #define BRD_UART_RX         2
+
+#elif (BOARD_USED == BOARD_ES)
+
+    #define BRD_LED0            13
+    #define BRD_LED1            14
+
+    #define BRD_DEBUG_PIN0      11
+    #define BRD_DEBUG_PIN1      12
+
+    #define BRD_BUTTON1
+    #define BRD_BUTTON2
+
+    #define BRD_UART_TX         4
+
+#endif  // #if (BOARD_USED == BOARD_LAUNCHPAD)
 
 #endif /* BOARD_H_ */

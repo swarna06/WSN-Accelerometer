@@ -5,24 +5,23 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <assert.h>
 
 #include <driverlib/prcm.h>
 #include <driverlib/sys_ctrl.h>
 #include <driverlib/ioc.h>
 
 #include <driverlib/gpio.h>
+#include <driverlib/timer.h>
 
-#include <driverlib/aon_rtc.h>
-
-#include "misc.h"
-#include "printf.h"
-#include "smartrf_settings.h"
+#include <driverlib/aon_event.h>
 
 #include "board.h"
 #include "timing.h"
 #include "serial_port.h"
-#include "radio.h"
+#include "rf_core.h"
+#include "log.h"
+
+#include "printf.h"
 
 void Startup();
 void GPIO_Init();
@@ -31,57 +30,19 @@ int main(void)
 {
     Startup();
     GPIO_Init();
+    Tm_Init();
+    Sep_Init();
+    Log_Init();
 
-    Sep_UART_Init();
-
-    Tm_Init_Aux_Timer(TM_AUXT_MODE_ONE_SHOT);
-    Tm_Init_RTC();
-    Tm_Init_Free_Running_Timer();
-
-    Rad_Init();
-
-    Tm_Start_RTC_Period(500);
-
-    uint8_t mode = 0;
-    const uint8_t MODE_MTR = 1;
-    const uint8_t MODE_SLV = 2;
-    while (!mode)
-    {
-        if (!GPIO_readDio(BRD_BUTTON1))
-        {
-            mode = MODE_MTR;
-            PRINTF("Master mode\r\n");
-        }
-        else if (!GPIO_readDio(BRD_BUTTON2))
-        {
-            mode = MODE_SLV;
-            PRINTF("Slave mode\r\n");
-        }
-    }
-    Tm_Delay_Millisec(1000); // debounce button
+    Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
 
     while (1)
     {
-        if (Tm_RTC_Period_Completed())
-        {
-            GPIO_toggleDio(BRD_GREEN_LED); // heartbeat
-        }
+        if (Tm_System_Tick())
+            Tm_Update_Time_Events();
 
-        if (mode == MODE_MTR && !GPIO_readDio(BRD_BUTTON1))
-        {
-            GPIO_toggleDio(BRD_RED_LED);
-            Rad_Synch_Master();
-            Tm_Delay_Millisec(1000); // debounce button
-            GPIO_toggleDio(BRD_RED_LED);
-        }
-
-        if (mode == MODE_SLV && !GPIO_readDio(BRD_BUTTON2))
-        {
-            GPIO_toggleDio(BRD_RED_LED);
-            Rad_Synch_Slave();
-            Tm_Delay_Millisec(1000); // debounce button
-            GPIO_toggleDio(BRD_RED_LED);
-        }
+        if (Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
+            GPIO_toggleDio(BRD_LED1);  // heart beat
     }
 
 	return 0;
@@ -113,20 +74,6 @@ void GPIO_Init()
     while(!PRCMLoadGet());
 
     // Configure outputs
-    IOCPinTypeGpioOutput(BRD_RED_LED);
-    IOCPinTypeGpioOutput(BRD_GREEN_LED);
-
-    IOCPinTypeGpioOutput(BRD_DEBUG_PIN0);
-    GPIO_clearDio(BRD_DEBUG_PIN0);
-    IOCPinTypeGpioOutput(BRD_DEBUG_PIN1);
-    GPIO_clearDio(BRD_DEBUG_PIN1);
-
-    // Configure inputs
-    IOCPinTypeGpioInput(BRD_BUTTON1);
-    IOCPinTypeGpioInput(BRD_BUTTON2);
-    IOCIOPortPullSet(BRD_BUTTON1, IOC_IOPULL_UP);
-    IOCIOPortPullSet(BRD_BUTTON2, IOC_IOPULL_UP);
-
-    // Configure peripheral IO pin
-    IOCPinTypeUart(UART0_BASE, IOID_UNUSED, IOID_3, IOID_UNUSED, IOID_UNUSED); // UART, TX only
+    IOCPinTypeGpioOutput(BRD_LED0);
+    IOCPinTypeGpioOutput(BRD_LED1);
 }

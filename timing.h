@@ -1,60 +1,56 @@
-#ifndef TIMING_H__
-#define TIMING_H__
+/*
+ * timing.h
+ *
+ *  Created on: 27 oct. 2018
+ *      Author: Alvaro
+ */
 
-#include <stdint.h>
+#ifndef TIMING_H_
+#define TIMING_H_
 
-#include <driverlib/timer.h>
+#include <driverlib/aon_rtc.h>
+
+// Total number of periods and timeouts
+#define TM_PER_NUM              2       // xxx do not forget to update !
+#define TM_TOUT_NUM             2       // xxx do not forget to update !
+
+// List of periods, values in milliseconds
+#define TM_PER_HEARTBEAT_ID     0
+#define TM_PER_HEARTBEAT_VAL    1000
+
+#define TM_PER_COORD_ID         1
+
+// List of timeouts, values in milliseconds
+#define TM_TOUT_TEST_ID         0
+#define TM_TOUT_TEST_VAL        500
+
+#define TM_RFC_TOUT_ID          1
 
 // Synchronize with RTC (write to SYNC register prior reading to force a wait until next SCLK_LF edge)
 #define Tm_Synch_With_RTC()     HWREG(AON_RTC_BASE + AON_RTC_O_SYNC) = 1; \
                                 HWREG(AON_RTC_BASE + AON_RTC_O_SYNC);
-//                                while (HWREG(AON_RTC_BASE + AON_RTC_O_SYNC)) { }; is this necessary to guarantee a register read ? xxx
 
-// Get delta time from uint32 time stamps
-#define Tm_Delta_Time32(start, end) (end > start ? end - start : (0xFFFFFFFF - start) + end)
-#define Tm_Get_Free_Running_Timer_Val() HWREG(GPT1_BASE + GPT_O_TAR)
-
-// HF XOSC nanoseconds per tick
-#define TM_HFXOSC_NSEC_PER_TICK     21
+// Macro to get RTC counter value (32-bit)
+#define Tm_Get_RTC_Time()       AONRTCCurrentCompareValueGet();
 
 // RTC ticks per millisecond
 #define TM_RTC_TICKS_PER_MSEC   64
 
-// Auxiliary timer ticks per milliseconds and microsecond
-#define TM_AUXT_TICKS_PER_US    48
-#define TM_AUXT_TICKS_PER_MS    TM_AUXT_TICKS_PER_US*1000
+// RTC CH1 period
+#define TM_ABS_TIME_PERIOD_MS   200
+#define TM_ABS_TIME_PER_TICKS   (TM_ABS_TIME_PERIOD_MS*TM_RTC_TICKS_PER_MSEC)
 
-// Auxiliary timer operation modes
-#define TM_AUXT_MODE_ONE_SHOT   true
-#define TM_AUXT_MODE_PERIODIC   false
+// Macro for getting system tick
+#define Tm_System_Tick()        Tm_RTC_Period_Completed()
 
-// System tick
-#define TM_HW_SYSTICK_PER       48000 // 1ms
-#define TM_TICK_PER_MS			1 // systick 1 ms
-#define TM_TICKS(time_ms)		(time_ms/TM_TICK_PER_MS)
-
-// Total number of periods and timeouts
-#define TM_PER_NUM				3       // TODO keep this value updated !
-#define TM_TOUT_NUM				1       // TODO keep this value updated !
-
-// Periods
-#define TM_PER0_IDX             0
-#define TM_PER0_VAL		        TM_TICKS(1000)
-
-#define TM_HEART_BEAT_PER_IDX   1
-#define TM_HEART_BEAT_PER_VAL   TM_TICKS(1000)
-
-#define TM_PER_XOSC_CAL_IDX     2
-#define TM_PER_XOSC_CAL_VAL     TM_TICKS(500)
-
-// Timeouts
-#define TEST_TOUT_IDX			0
-#define TEST_TOUT_VAL			TM_TICKS(20)
+// Macro for getting the delta time between two time stamps
+#define Tm_Delta_Time32(start, end) (end > start ? end - start : (0xFFFFFFFF - start) + end)
 
 // Flags
-#define TM_F_PER_ACTIVE			0x01
-#define TM_F_PER_COMPLETED		0x02
+#define TM_F_PER_ACTIVE         0x01
+#define TM_F_PER_COMPLETED      0x02
 
+// Period structure
 typedef struct
 {
   uint8_t flags;
@@ -62,45 +58,12 @@ typedef struct
   period;
 } tm_period_t;
 
+// Timing control structure
 typedef struct
 {
   tm_period_t period[TM_PER_NUM];
   uint16_t timeout[TM_TOUT_NUM];
 } tm_control_t;
-
-void Tm_Init();
-
-void Tm_Update_Events();
-
-void Tm_Start_Period(uint8_t per_idx,
-                     uint16_t per_val,
-                     uint16_t delay);
-
-uint8_t Tm_Period_Completed(uint8_t per_idx);
-
-void Tm_End_Period(uint8_t per_idx);
-
-void Tm_Start_Timeout(uint8_t tout_idx, uint16_t tout_val);
-
-uint8_t Tm_Timeout_Completed(uint8_t tout_idx);
-
-void Tm_Init_Aux_Timer(bool mode);
-
-void Tm_Set_Aux_Timer(uint32_t ticks);
-
-void Tm_Start_Aux_Timer();
-
-void Tm_Enable_Aux_Timer_Int(void (*timer_isr)(void));
-
-void Tm_Disable_Aux_Timer_Int();
-
-bool Tm_Aux_Timer_Event_Occurred();
-
-void Tm_Wait_Aux_Timer_Event();
-
-void Tm_Delay_Microsec(uint32_t time_usec);
-
-void Tm_Delay_Millisec(uint32_t time_msec);
 
 void Tm_Init_RTC();
 
@@ -108,6 +71,26 @@ void Tm_Start_RTC_Period(uint32_t period_ms);
 
 bool Tm_RTC_Period_Completed();
 
-void Tm_Init_Free_Running_Timer();
+void Tm_Enable_Abs_Time_Per();
 
-#endif // TIMING_H__ 
+bool Tm_Abs_Time_Per_Completed();
+
+void Tm_Abs_Period_Update();
+
+void Tm_Init();
+
+void Tm_Adjust_Counters();
+
+void Tm_Update_Time_Events();
+
+void Tm_Start_Period(uint8_t per_idx, uint16_t per_val);
+
+bool Tm_Period_Completed(uint8_t per_idx);
+
+void Tm_End_Period(uint8_t per_idx);
+
+void Tm_Start_Timeout(uint8_t tout_idx, uint16_t tout_val);
+
+bool Tm_Timeout_Completed(uint8_t tout_idx);
+
+#endif /* TIMING_H_ */
