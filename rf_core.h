@@ -192,7 +192,7 @@ void Rfc_Init();
 
 void Rfc_Process();
 
-bool Rfc_Prop_Tx(rfc_tx_param_t* tx_param_p);
+bool Rfc_Ble5_Adv_Aux(rfc_tx_param_t* tx_param_p);
 
 bool Rfc_Prop_Rx(uint32_t timeout_usec);
 

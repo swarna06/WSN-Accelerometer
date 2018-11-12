@@ -33,8 +33,11 @@ int main(void)
     Tm_Init();
     Sep_Init();
     Log_Init();
+    Rfc_Init();
 
     Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
+
+    int state = -1;
 
     while (1)
     {
@@ -42,7 +45,32 @@ int main(void)
             Tm_Update_Time_Events();
 
         if (Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
+        {
             GPIO_toggleDio(BRD_LED1);  // heart beat
+
+            if (Rfc_Ready())
+            {
+                uint8_t buf[] = "Hola!";
+                rfc_tx_param_t tx_param;
+                tx_param.buf = buf;
+                tx_param.len = sizeof(buf);
+                tx_param.rat_start_time = 0;
+                Rfc_Ble5_Adv_Aux(&tx_param);
+
+//                Log_Line("Rfc_Ready");
+            }
+        }
+
+        if (state != rfc.state)
+        {
+            state = rfc.state;
+            Log_Value("", state);
+        }
+
+        Rfc_Process(); // RF core FSM
+
+        Log_Process();
+
     }
 
 	return 0;
