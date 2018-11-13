@@ -8,8 +8,8 @@
 #ifndef SERIAL_PORT_H_
 #define SERIAL_PORT_H_
 
-void Sep_Init();
+#define SEP_BAUD_RATE       115200
 
-void Sep_Send(char *data, size_t count);
+void Sep_Init();
 
 #endif /* SERIAL_PORT_H_ */

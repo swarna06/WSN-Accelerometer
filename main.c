@@ -35,6 +35,8 @@ int main(void)
     Log_Init();
     Rfc_Init();
 
+    Log_String_Literal("\f"); // clear screen
+
     Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
 
     int state = -1;

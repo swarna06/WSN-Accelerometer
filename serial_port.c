@@ -32,20 +32,9 @@ void Sep_Init()
     IOCPinTypeUart(UART0_BASE, BRD_UART_RX, BRD_UART_TX, IOID_UNUSED, IOID_UNUSED);
 
     // Configure and enable UART
-    UARTConfigSetExpClk(UART0_BASE, SysCtrlClockGet(), 115200,
+    UARTConfigSetExpClk(UART0_BASE, SysCtrlClockGet(), SEP_BAUD_RATE,
                         UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE);
     UARTFIFOEnable(UART0_BASE); // enable UART FIFOs
     UARTEnable(UART0_BASE);
-
-    Sep_Send("\f", sizeof("\f"));
-}
-
-void Sep_Send(char *buf, size_t count)
-{
-    for (size_t n = 0; n < count; n++)
-    {
-//        while (HWREG(UART0_BASE + UART_O_FR) & UART_FR_TXFF); // wait until there is space in the FIFO
-        HWREG(UART0_BASE + UART_O_DR) = buf[n];
-    }
 }
 
