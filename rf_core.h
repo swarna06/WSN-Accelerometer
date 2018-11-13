@@ -25,8 +25,10 @@
 #define RFC_TOUT_TX_MSEC                100 // Maximum TX time
 #define RFC_TOUT_RX_MSEC                100 // Minimum RX time
 
-// RX buffer length
+// RX buffer
 #define RFC_RX_BUF_LEN                  512
+#define RFC_RX_BUF_PAYLOAD_LEN_IDX      1
+#define RFC_RX_BUF_PAYLOAD_OFFSET       2
 
 // Error codes
 #define RFC_ERR_NONE                    0
