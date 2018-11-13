@@ -365,9 +365,9 @@ void Rfc_BLE5_Get_Scanner_Result(rfc_rx_result_t* dest)
         // Copy payload if buffer was provided
         if (dest->buf != NULL)
         {
-            dest->payload_len = data_entry_buf[0]; // first element of buffer is the payload length
+            dest->payload_len = data_entry_buf[1]; // first element of buffer is the payload length
             for (size_t n = 0; n < dest->payload_len && n < dest->buf_len; n++) // condition prevents buffer overflow
-                ((uint8_t*)dest->buf)[n] = data_entry_buf[n+1];
+                ((uint8_t*)dest->buf)[n] = data_entry_buf[n+2];
         }
 
         // Get timestamp and RSSI of last received packet

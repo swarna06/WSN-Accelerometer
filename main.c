@@ -68,9 +68,9 @@ int main(void)
 //                tx_param.rat_start_time = 0;
 //                Rfc_BLE5_Adv_Aux(&tx_param);
 
-                ch = ch == 37 ? 36 : 37; // jump from lowest to highest frequency
-                Rfc_BLE5_Set_Channel(ch);
-                Log_Value("ch", ch);
+//                ch = ch == 37 ? 36 : 37; // jump from lowest to highest frequency
+//                Rfc_BLE5_Set_Channel(ch);
+//                Log_Value("ch", ch);
 
 //                Log_Line("Rfc_Ready");
             }
@@ -99,9 +99,9 @@ int main(void)
 
             PRINTF("len: %d\r\n", rx_result.payload_len);
             PRINTF("buf: ");
-            for (size_t n = 0; n < 16; n++)
+            for (size_t n = 0; n < rx_result.payload_len; n++)
             {
-                PRINTF("%d ", buf[n]);
+                PRINTF("%02x ", buf[n]);
             }
             PRINTF("\r\n");
         }
