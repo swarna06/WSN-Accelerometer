@@ -102,14 +102,15 @@ int main(void)
 
                 if (mode == MODE_TX)
                 {
-                    uint8_t buf[] = "Hola!";
+//                    uint8_t buf[] = "Hola!";
                     rfc_tx_param_t tx_param;
-                    tx_param.buf = buf;
-                    tx_param.len = sizeof(buf);
+                    tx_param.buf = NULL;
+//                    tx_param.buf = buf;
+//                    tx_param.len = sizeof(buf);
                     tx_param.rat_start_time = 0;
                     Rfc_BLE5_Adv_Aux(&tx_param);
 
-                    Log_Value("sizeof(buf)", sizeof(buf));
+//                    Log_Value("sizeof(buf)", sizeof(buf));
                 }
                 else
                 {
