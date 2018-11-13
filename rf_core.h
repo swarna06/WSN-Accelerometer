@@ -28,7 +28,7 @@
 // RX buffer
 #define RFC_RX_BUF_LEN                  512
 #define RFC_RX_BUF_PAYLOAD_LEN_IDX      1
-#define RFC_RX_BUF_PAYLOAD_OFFSET       2
+#define RFC_RX_BUF_PAYLOAD_OFFSET       3
 
 // Error codes
 #define RFC_ERR_NONE                    0

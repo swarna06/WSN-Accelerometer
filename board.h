@@ -26,8 +26,8 @@
     #define BRD_DEBUG_PIN0      21
     #define BRD_DEBUG_PIN1      22
 
-    #define BRD_BUTTON1         13
-    #define BRD_BUTTON2         14
+    #define BRD_GPIO_IN0         13
+    #define BRD_GPIO_IN1         14
 
     #define BRD_UART_TX         3
     #define BRD_UART_RX         2
@@ -40,8 +40,8 @@
     #define BRD_DEBUG_PIN0      11
     #define BRD_DEBUG_PIN1      12
 
-    #define BRD_BUTTON1
-    #define BRD_BUTTON2
+    #define BRD_GPIO_IN0
+    #define BRD_GPIO_IN1
 
     #define BRD_UART_TX         4
 

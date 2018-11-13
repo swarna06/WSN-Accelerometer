@@ -365,7 +365,7 @@ void Rfc_BLE5_Get_Scanner_Result(rfc_rx_result_t* dest)
         // Copy payload if buffer was provided
         if (dest->buf != NULL)
         {
-            dest->payload_len = data_entry_buf[RFC_RX_BUF_PAYLOAD_LEN_IDX];
+            dest->payload_len = data_entry_buf[RFC_RX_BUF_PAYLOAD_LEN_IDX] - 1; // exclude ext header field
             for (size_t n = 0; n < dest->payload_len && n < dest->buf_len; n++) // condition prevents destination buffer overflow
                 ((uint8_t*)dest->buf)[n] = data_entry_buf[n + RFC_RX_BUF_PAYLOAD_OFFSET];
         }
@@ -383,16 +383,16 @@ void Rfc_BLE5_Get_Scanner_Result(rfc_rx_result_t* dest)
     }
 }
 
-//bool Rfc_Synchronize_RAT()
-//{
-//    if (!Rfc_Ready())
-//        return false;
-//
-//    Rfc_Start_Radio_Op(cmd_sync_stop_rat_p, RFC_TOUT_DEFAULT);
-//    rfc.next_state = RFC_S_EXEC_SYNC_START_RAT;
-//
-//    return true;
-//}
+bool Rfc_Synchronize_RAT()
+{
+    if (!Rfc_Ready())
+        return false;
+
+    Rfc_Start_Radio_Op(cmd_sync_stop_rat_p, RFC_TOUT_DEFAULT);
+    rfc.next_state = RFC_S_EXEC_SYNC_START_RAT;
+
+    return true;
+}
 
 inline bool Rfc_Ready()
 {
@@ -455,7 +455,7 @@ static void Rfc_Init_CPE_Structs()
     cmd_ble5_scanner_p->pParams->timeoutTrigger.triggerType = TRIG_REL_START;
     cmd_ble5_scanner_p->pOutput = (rfc_ble5ScanInitOutput_t*)&ble5_scan_init_output;
 
-//    // SYNC_STOP_RAT, SYNC_START_RAT
-//    cmd_sync_stop_rat_p->condition.rule = COND_NEVER;
-//    cmd_sync_start_rat_p->condition.rule = COND_NEVER;
+    // SYNC_STOP_RAT, SYNC_START_RAT
+    cmd_sync_stop_rat_p->condition.rule = COND_NEVER;
+    cmd_sync_start_rat_p->condition.rule = COND_NEVER;
 }
