@@ -196,7 +196,7 @@ void Pro_Process()
                                          + mstr_delay; // TODO this can be improved
 
 //            uint32_t slv_rtc_t0 = rtc_curr_time - (rat_time_since_t0 / RAD_RAT_TICKS_PER_RTC_TICK);
-            uint32_t slv_rtc_t0 = rtc_curr_time - (rat_time_since_t0 / RAD_RAT_TICKS_PER_RTC_TICK) - 133*2 - 6;
+            uint32_t slv_rtc_t0 = rtc_curr_time - (rat_time_since_t0 / RAD_RAT_TICKS_PER_RTC_TICK) - 190;
                                   // FIXME trimming of slv_rtc_t0 to compensate for 4 ms offset
 
             int32_t clk_offset = mstr_rtc_t0 - slv_rtc_t0;
