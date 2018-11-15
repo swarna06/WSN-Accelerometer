@@ -31,7 +31,7 @@ static size_t myitoa(int value, char* result)
     do {
         tmp_value = value;
         value /= LOG_VAL_BASE;
-        *ptr++ = "fedcba9876543210123456789abcdef" [15 + (tmp_value - value * LOG_VAL_BASE)];
+        *ptr++ = "FEDCBA9876543210123456789ABCDEF" [15 + (tmp_value - value * LOG_VAL_BASE)];
         count++;
     } while ( value );
 
