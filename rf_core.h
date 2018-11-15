@@ -14,6 +14,9 @@
 #include <driverlib/rf_common_cmd.h>
 #include <inc/hw_rfc_rat.h>
 
+// ********************************
+// Timing
+// ********************************
 // Timeout values (milliseconds)
 #define RFC_TOUT_DEFAULT                0
 #define RFC_TOUT_BOOT_MSEC              100
@@ -23,11 +26,22 @@
 #define RFC_TOUT_TX_MSEC                100 // maximum TX time
 #define RFC_TOUT_RX_MSEC                100 // minimum RX time
 
-// RX buffer
-#define RFC_RX_BUF_LEN                  512
-#define RFC_RX_BUF_PAYLOAD_LEN_IDX      1
-#define RFC_RX_BUF_PAYLOAD_OFFSET       3
+// Macro functions for interfacing with the RAdio Timer (RAT)
+#define Rfc_Get_RAT_Time()              HWREG(RFC_RAT_BASE + RFC_RAT_O_RATCNT)
 
+// RAT time conversion
+#define RAD_RAT_NSEC_PER_TICK           250
+#define RAD_RAT_USEC_PER_TICK           (RAD_RAT_NSEC_PER_TICK * 1000)
+#define RAD_RAT_MSEC_PER_TICK           (RAD_RAT_USEC_PER_TICK * 1000)
+
+#define RAD_RAT_TICKS_PER_USEC          (1000 / RAD_RAT_NSEC_PER_TICK)
+#define RAD_RAT_TICKS_PER_MSEC          (RAD_RAT_TICKS_PER_USEC * 1000)
+
+#define RAD_RAT_TICKS_PER_RTC_TICK      (122)
+
+// ********************************
+// RF Core interface
+// ********************************
 // CPE command done interrupt flags
 #define RFC_M_CPE_COMMAND_DONE          (RFC_DBELL_RFCPEIFG_LAST_COMMAND_DONE | \
                                          RFC_DBELL_RFCPEIFG_COMMAND_DONE)
@@ -62,21 +76,144 @@
 #define Rfc_CPE_Ack()                   (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFACKIFG))
 #define Rfc_Get_CPE_CMDSTA()            (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDSTA))
 
-// Macro functions for interfacing with the RAdio Timer (RAT)
-#define Rfc_Get_RAT_Time()              HWREG(RFC_RAT_BASE + RFC_RAT_O_RATCNT)
-
-// RAT time conversion
-#define RAD_RAT_NSEC_PER_TICK           250
-#define RAD_RAT_USEC_PER_TICK           (RAD_RAT_NSEC_PER_TICK * 1000)
-#define RAD_RAT_MSEC_PER_TICK           (RAD_RAT_USEC_PER_TICK * 1000)
-
-#define RAD_RAT_TICKS_PER_USEC          (1000 / RAD_RAT_NSEC_PER_TICK)
-#define RAD_RAT_TICKS_PER_MSEC          (RAD_RAT_TICKS_PER_USEC * 1000)
-
-#define RAD_RAT_TICKS_PER_RTC_TICK      (122)
-
 // Radio operation status field error flag
 #define RFC_F_RADIO_OP_STATUS_ERR       0x0800
+
+// Transmission power codes (taken from SmartRF)
+typedef enum
+{
+    RFC_TX_POW_PLUS_5dBm = 0x9330,
+    RFC_TX_POW_PLUS_4dBm = 0x9324,
+    RFC_TX_POW_PLUS_3dBm = 0x5A1C,
+    RFC_TX_POW_PLUS_2dBm = 0x4E18,
+    RFC_TX_POW_PLUS_1dBm = 0x4214,
+    RFC_TX_POW_0dBm = 0x3161,
+    RFC_TX_POW_MINUS_3dBm = 0x2558,
+    RFC_TX_POW_MINUS_6dBm = 0x1D52,
+    RFC_TX_POW_MINUS_9dBm = 0x194E,
+    RFC_TX_POW_MINUS_12dBm = 0x144B,
+    RFC_TX_POW_MINUS_15dBm = 0x0CCB,
+    RFC_TX_POW_MINUS_18dBm = 0x0CC9,
+    RFC_TX_POW_MINUS_21dBm = 0x0CC7,
+} rfc_tx_power_t;
+
+// ********************************
+// BLE 5
+// ********************************
+// BLE5 PHY modes
+typedef enum
+{
+    RFC_PHY_MODE_2MBPS = 0,
+    RFC_PHY_MODE_1MBPS,
+    RFC_PHY_MODE_500KBPS,
+    RFC_PHY_MODE_125KBPS,
+    RFC_PHY_MODES_NUM,
+} rfc_ble5_mode;
+
+#define RFC_PHY_MAIN_MODE_1MBPS     0
+#define RFC_PHY_MAIN_MODE_2MBPS     1
+#define RFC_PHY_MAIN_MODE_CODED     2
+#define RFC_PHY_CODING_NONE         0
+#define RFC_PHY_CODING_500KBPS      2
+#define RFC_PHY_CODING_125KBPS      8
+
+// BLE5 frequency channel base values
+#define RFC_BLE5_BASE_FREQ          2402 // frequency channel 37 (channel offset = 0)
+#define RFC_BLE5_BASE_CH            0x66 // id channel 37 (channel offset = 0)
+#define RFC_BLE5_BASE_WHITE_INIT    0x40 // whitening initial value for channel 0
+
+// ********************************
+// Transmission and reception data structures and constants
+// ********************************
+// RX result flags
+#define RFC_F_RX_CRC_ERR        0x01
+#define RFC_F_RX_TOUT_ERR       0x02
+
+// RX buffer
+#define RFC_RX_BUF_LEN                  512
+#define RFC_RX_BUF_PAYLOAD_LEN_IDX      1
+#define RFC_RX_BUF_PAYLOAD_OFFSET       3
+
+// TX parameter structure
+typedef struct
+{
+    size_t len;
+    uint8_t* buf;
+    uint32_t rat_start_time;
+} rfc_tx_param_t;
+
+// RX result structure
+typedef struct
+{
+    size_t payload_len, buf_len;
+    void* buf;
+    uint32_t rat_timestamp;
+    int8_t rssi_db;
+    uint8_t err_flags;
+} rfc_rx_result_t;
+
+// ********************************
+// Error handling
+// ********************************
+// Error codes
+typedef enum
+{
+    RFC_ERR_NONE = 0,
+    RFC_ERR_BOOT_FAILED,
+    RFC_ERR_OPERATION_FAILED,
+    RFC_ERR_INTERNAL,
+    RFC_ERR_SYNTH_NO_LOCK,
+    RFC_ERR_TIMEOUT,
+} rfc_error_code_t;
+
+// Error structure
+typedef struct
+{
+    uint8_t code;
+    uint8_t fsm_state;
+    uint16_t cmd_num;
+    uint16_t cmd_status;
+    uint32_t CMDSTA; // copy of register value
+    uint32_t RFHWIFG; // copy of register value
+    uint32_t RFCPEIFG; // copy of register value
+} rfc_error_t;
+
+// ********************************
+// State machine
+// ********************************
+// Control structure flags
+#define RFC_F_INITIALIZED           0x01
+
+// RF Core FSM states
+typedef enum
+{
+    RFC_S_IDLE = 0x00,
+
+    RFC_S_WAIT_RFC_BOOT = 0x10,
+    RFC_S_EXEC_RADIO_SETUP,
+    RFC_S_EXEC_FS,
+    RFC_S_EXEC_START_RAT,
+    RFC_S_EXEC_SYNC_START_RAT,
+
+    RFC_S_WAIT_CPE_READY = 0x20,
+    RFC_S_WAIT_CPE_ACK,
+    RFC_S_WAIT_RADIO_OP_EXECUTION,
+
+    RFC_S_WAIT_ERR_ACTION = 0x30,
+
+} rfc_state_t;
+
+// RF Core control structure
+typedef struct
+{
+    int state, next_state;
+    uint8_t flags, set_flags_on_success;
+    volatile rfc_command_t* immediate_cmd_p;
+    volatile rfc_radioOp_t* radio_op_p;
+    uint32_t radio_op_cpe_err_flags;
+    uint16_t op_timeout;
+    rfc_error_t error;
+} rfc_control_t;
 
 // Macros for making more readable the state machine TODO move to inline functions ?
 #define Rfc_Initialized()               (rfc.flags & RFC_F_INITIALIZED)
@@ -108,127 +245,9 @@
                                             op = NULL; \
                                         }
 
-// Transmission power codes (taken from SmartRF)
-typedef enum
-{
-    RFC_TX_POW_PLUS_5dBm = 0x9330,
-    RFC_TX_POW_PLUS_4dBm = 0x9324,
-    RFC_TX_POW_PLUS_3dBm = 0x5A1C,
-    RFC_TX_POW_PLUS_2dBm = 0x4E18,
-    RFC_TX_POW_PLUS_1dBm = 0x4214,
-    RFC_TX_POW_0dBm = 0x3161,
-    RFC_TX_POW_MINUS_3dBm = 0x2558,
-    RFC_TX_POW_MINUS_6dBm = 0x1D52,
-    RFC_TX_POW_MINUS_9dBm = 0x194E,
-    RFC_TX_POW_MINUS_12dBm = 0x144B,
-    RFC_TX_POW_MINUS_15dBm = 0x0CCB,
-    RFC_TX_POW_MINUS_18dBm = 0x0CC9,
-    RFC_TX_POW_MINUS_21dBm = 0x0CC7,
-} rfc_tx_power_t;
-
-// BLE5 PHY modes
-typedef enum
-{
-    RFC_PHY_MODE_2MBPS = 0,
-    RFC_PHY_MODE_1MBPS,
-    RFC_PHY_MODE_500KBPS,
-    RFC_PHY_MODE_125KBPS,
-    RFC_PHY_MODES_NUM,
-} rfc_ble5_mode;
-
-#define RFC_PHY_MAIN_MODE_1MBPS     0
-#define RFC_PHY_MAIN_MODE_2MBPS     1
-#define RFC_PHY_MAIN_MODE_CODED     2
-#define RFC_PHY_CODING_NONE         0
-#define RFC_PHY_CODING_500KBPS      2
-#define RFC_PHY_CODING_125KBPS      8
-
-// BLE5 frequency channel base values
-#define RFC_BLE5_BASE_FREQ          2402 // frequency channel 37 (channel offset = 0)
-#define RFC_BLE5_BASE_CH            0x66 // id channel 37 (channel offset = 0)
-#define RFC_BLE5_BASE_WHITE_INIT    0x40 // whitening initial value for channel 0
-
-// Error codes
-typedef enum
-{
-    RFC_ERR_NONE = 0,
-    RFC_ERR_BOOT_FAILED,
-    RFC_ERR_OPERATION_FAILED,
-    RFC_ERR_INTERNAL,
-    RFC_ERR_SYNTH_NO_LOCK,
-    RFC_ERR_TIMEOUT,
-} rfc_error_code_t;
-
-// Error structure
-typedef struct
-{
-    uint8_t code;
-    uint8_t fsm_state;
-    uint16_t cmd_num;
-    uint16_t cmd_status;
-    uint32_t CMDSTA; // copy of register value
-    uint32_t RFHWIFG; // copy of register value
-    uint32_t RFCPEIFG; // copy of register value
-} rfc_error_t;
-
-// RF Core FSM states
-typedef enum
-{
-    RFC_S_IDLE = 0x00,
-
-    RFC_S_WAIT_RFC_BOOT = 0x10,
-    RFC_S_EXEC_RADIO_SETUP,
-    RFC_S_EXEC_FS,
-    RFC_S_EXEC_START_RAT,
-    RFC_S_EXEC_SYNC_START_RAT,
-
-    RFC_S_WAIT_CPE_READY = 0x20,
-    RFC_S_WAIT_CPE_ACK,
-    RFC_S_WAIT_RADIO_OP_EXECUTION,
-
-    RFC_S_WAIT_ERR_ACTION = 0x30,
-
-} rfc_state_t;
-
-// Flags
-#define RFC_F_INITIALIZED           0x01
-
-// RF Core control structure
-typedef struct
-{
-    int state, next_state;
-    uint8_t flags, set_flags_on_success;
-    volatile rfc_command_t* immediate_cmd_p;
-    volatile rfc_radioOp_t* radio_op_p;
-    uint32_t radio_op_cpe_err_flags;
-    uint16_t op_timeout;
-    rfc_error_t error;
-} rfc_control_t;
-
-extern rfc_control_t rfc;
-
-// TX parameter structure
-typedef struct
-{
-    size_t len;
-    uint8_t* buf;
-    uint32_t rat_start_time;
-} rfc_tx_param_t;
-
-// RX result structure
-typedef struct
-{
-    size_t payload_len, buf_len;
-    void* buf;
-    uint32_t rat_timestamp;
-    int8_t rssi_db;
-    uint8_t err_flags;
-} rfc_rx_result_t;
-
-// RX result flags
-#define RFC_F_RX_CRC_ERR        0x01
-#define RFC_F_RX_TOUT_ERR       0x02
-
+// ********************************
+// Public functions
+// ********************************
 void Rfc_Init();
 
 void Rfc_Process();
