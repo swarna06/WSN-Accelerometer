@@ -24,6 +24,7 @@
 #include "rf_core.h"
 #include "timing.h"
 #include "smartrf_settings.h"
+#include "log.h"
 
 // RF core control structure
 rfc_control_t rfc;
@@ -45,6 +46,7 @@ static volatile rfc_ble5ScanInitOutput_t ble5_scan_init_output;
 
 static void Rfc_HW_Setup();
 static void Rfc_Init_CPE_Structs();
+static void Rfc_Handle_Error(uint8_t err_code);
 
 void Rfc_Init()
 {
@@ -58,35 +60,31 @@ void Rfc_Init()
 
 void Rfc_Process()
 {
+    uint32_t cpe_int_flags = (uint32_t)-1;
+
     switch (rfc.state)
     {
-    case RFC_S_IDLE: // wait for RF core operation
+    case RFC_S_IDLE: // wait for RF core operation request
         break;
 
+    // ********************************
     // RF core initialization
-    case RFC_S_WAIT_RFC_BOOT:
-    {
-        // Wait until the RF Core boots
-        uint32_t cpe_int_flags = Rfc_Get_CPE_Int_Flags();
+    // ********************************
+    case RFC_S_WAIT_RFC_BOOT: // wait until the RF Core boots
+        cpe_int_flags = Rfc_Get_CPE_Int_Flags();
+
         if (cpe_int_flags & RFC_DBELL_RFCPEIFG_BOOT_DONE)
         {
             Rfc_Start_Direct_Cmd(CMD_PING);
             rfc.next_state = RFC_S_EXEC_RADIO_SETUP;
         }
-        else if (cpe_int_flags & RFC_DBELL_RFCPEIFG_INTERNAL_ERROR)
+        else if (cpe_int_flags & RFC_DBELL_RFCPEIFG_INTERNAL_ERROR ||
+                Tm_Timeout_Completed(TM_RFC_TOUT_ID))
         {
-            // TODO error handling
-            Rfc_Print_CPE_Err();
-            exit(0);
+            Rfc_Handle_Error(RFC_ERR_BOOT_FAILED);
+            rfc.state = RFC_S_WAIT_ERR_ACTION;
         }
-        else if (Tm_Timeout_Completed(TM_RFC_TOUT_ID))
-        {
-            // TODO error handling
-            Rfc_Print_Timeout_Err();
-            exit(0);
-        }
-    }
-    break;
+        break;
 
     case RFC_S_EXEC_RADIO_SETUP:
         Rfc_Start_Radio_Op(cmd_ble5_radio_setup_p, RFC_TOUT_DEFAULT);
@@ -110,13 +108,14 @@ void Rfc_Process()
         rfc.next_state = RFC_S_IDLE;
         break;
 
+    // ********************************
     // Handle command execution
-    case RFC_S_WAIT_CPE_READY:
-    {
-        // Wait until the door bell becomes available
+    // ********************************
+    case RFC_S_WAIT_CPE_READY: // wait until the door bell becomes available
         if (Rfc_CPE_Ready())
         {
             uint32_t operation = 0;
+
             if (rfc.radio_op_p != NULL) // radio operation or immediate command ?
             {
                 operation = (uint32_t)rfc.radio_op_p;
@@ -132,24 +131,20 @@ void Rfc_Process()
         }
         else if (Tm_Timeout_Completed(TM_RFC_TOUT_ID))
         {
-            // TODO error handling
-            Rfc_Print_Timeout_Err();
-            exit(0);
+            Rfc_Handle_Error(RFC_ERR_TIMEOUT);
+            rfc.state = RFC_S_WAIT_ERR_ACTION;
         }
-    }
-    break;
+        break;
 
     case RFC_S_WAIT_CPE_ACK:
-    {
         if (Rfc_CPE_Ack())
         {
             uint32_t cpe_cmd_sta = Rfc_Get_CPE_CMDSTA();
+
             if (cpe_cmd_sta != CMDSTA_Done)
             {
-                // TODO error handling
-                if (rfc.radio_op_p != NULL) Rfc_Print_Radio_Op_Err(rfc.radio_op_p);
-                else Rfc_Print_Direct_Cmd_Err(rfc.immediate_cmd_p);
-                exit(0);
+                Rfc_Handle_Error(RFC_ERR_OPERATION_FAILED);
+                rfc.state = RFC_S_WAIT_ERR_ACTION;
             }
 
             if (rfc.radio_op_p != NULL) // radio operation ?
@@ -168,45 +163,47 @@ void Rfc_Process()
         }
         else if (Tm_Timeout_Completed(TM_RFC_TOUT_ID))
         {
-            // TODO error handling
-            Rfc_Print_Timeout_Err();
-            if (rfc.radio_op_p != NULL) Rfc_Print_Radio_Op_Err(rfc.radio_op_p);
-            else Rfc_Print_Direct_Cmd_Err(rfc.immediate_cmd_p);
-            exit(0);
+            Rfc_Handle_Error(RFC_ERR_TIMEOUT);
+            rfc.state = RFC_S_WAIT_ERR_ACTION;
         }
-
-    }
-    break;
+        break;
 
     case RFC_S_WAIT_RADIO_OP_EXECUTION:
-    {
-        uint32_t cpe_int_flags = Rfc_Get_CPE_Int_Flags();
+        cpe_int_flags = Rfc_Get_CPE_Int_Flags();
+
         if (cpe_int_flags & RFC_M_CPE_COMMAND_DONE)
         {
             if (rfc.radio_op_p->status & RFC_F_RADIO_OP_STATUS_ERR)
             {
-                Rfc_Print_Radio_Op_Err(rfc.radio_op_p);
-                exit(0);
+                Rfc_Handle_Error(RFC_ERR_OPERATION_FAILED);
+                rfc.state = RFC_S_WAIT_ERR_ACTION;
             }
 
             Rfc_On_Success_Do(rfc.radio_op_p);
             rfc.state = rfc.next_state;
         }
-        else if (cpe_int_flags & (RFC_DBELL_RFCPEIFG_INTERNAL_ERROR | RFC_DBELL_RFCPEIFG_SYNTH_NO_LOCK))
+        else if (cpe_int_flags & RFC_DBELL_RFCPEIFG_INTERNAL_ERROR)
         {
-            // TODO error handling
-            Rfc_Print_Radio_Op_Err(rfc.radio_op_p);
-            exit(0);
+            Rfc_Handle_Error(RFC_ERR_INTERNAL);
+            rfc.state = RFC_S_WAIT_ERR_ACTION;
+        }
+        else if (cpe_int_flags & RFC_DBELL_RFCPEIFG_SYNTH_NO_LOCK)
+        {
+            Rfc_Handle_Error(RFC_ERR_SYNTH_NO_LOCK);
+            rfc.state = RFC_S_WAIT_ERR_ACTION;
         }
         else if (Tm_Timeout_Completed(TM_RFC_TOUT_ID))
         {
-            // TODO error handling
-            Rfc_Print_Timeout_Err();
-            Rfc_Print_Radio_Op_Err(rfc.radio_op_p);
-            exit(0);
+            Rfc_Handle_Error(RFC_ERR_TIMEOUT);
+            rfc.state = RFC_S_WAIT_ERR_ACTION;
         }
-    }
-    break;
+        break;
+
+    // ********************************
+    // Error handling
+    // ********************************
+    case RFC_S_WAIT_ERR_ACTION: // wait until error is read by external module and some action is taken
+        break;
 
     }
 }
@@ -401,8 +398,8 @@ inline bool Rfc_Ready()
 
 uint8_t Rfc_Error()
 {
-    uint8_t ret_val = rfc.error;  // TODO set this variable in FSM error handling
-    rfc.error = 0;
+    uint8_t ret_val = rfc.error.code;  // TODO set this variable in FSM error handling
+    rfc.error.code = 0;
     return ret_val;
 }
 
@@ -458,4 +455,44 @@ static void Rfc_Init_CPE_Structs()
     // SYNC_STOP_RAT, SYNC_START_RAT
     cmd_sync_stop_rat_p->condition.rule = COND_NEVER;
     cmd_sync_start_rat_p->condition.rule = COND_NEVER;
+}
+
+static void Rfc_Handle_Error(uint8_t err_code)
+{
+    /*
+     * Store context in which occurred the error
+     */
+    rfc.error.code = err_code;
+    rfc.error.fsm_state = rfc.state;
+
+    // Store the value of the RF core registers
+    rfc.error.CMDSTA = HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDSTA);
+    rfc.error.RFHWIFG = HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG);
+    rfc.error.RFCPEIFG = HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG);
+
+    // If there was an ongoing operation store command id and status
+    rfc.error.cmd_num = 0;
+    rfc.error.cmd_status = 0;
+    if (rfc.radio_op_p != NULL) // radio operation ?
+    {
+        rfc.error.cmd_num = rfc.radio_op_p->commandNo;
+        rfc.error.cmd_status = rfc.radio_op_p->status;
+    }
+    else if (rfc.immediate_cmd_p) // immediate or direct command ?
+    {
+        if ((uint32_t)rfc.immediate_cmd_p & 0x1) // direct command ?
+            rfc.error.cmd_num = (uint32_t)rfc.immediate_cmd_p >> 16;
+        else
+            rfc.error.cmd_num = rfc.immediate_cmd_p->commandNo;
+    }
+
+    // Log error
+    Log_Line("RFC err:");
+    Log_Value("\tcode: ", rfc.error.code);
+    Log_Value("\tfsm_st: ", rfc.error.fsm_state);
+    Log_Value("\tCMDSTA: ", rfc.error.CMDSTA);
+    Log_Value("\tRFHWIFG: ", rfc.error.RFHWIFG);
+    Log_Value("\tRFCPEIFG: ", rfc.error.RFCPEIFG);
+    Log_Value("\tcmd_num: ", rfc.error.cmd_num);
+    Log_Value("\tcmd_sta: ", rfc.error.cmd_status);
 }

@@ -22,16 +22,13 @@
 #define RFC_TOUT_CPE_READY_MSEC         100
 #define RFC_TOUT_CPE_ACK_MSEC           100 // xxx
 #define RFC_TOUT_MAX_OP_TIME_MSEC       1000 // 1 second xxx
-#define RFC_TOUT_TX_MSEC                100 // Maximum TX time
-#define RFC_TOUT_RX_MSEC                100 // Minimum RX time
+#define RFC_TOUT_TX_MSEC                100 // maximum TX time
+#define RFC_TOUT_RX_MSEC                100 // minimum RX time
 
 // RX buffer
 #define RFC_RX_BUF_LEN                  512
 #define RFC_RX_BUF_PAYLOAD_LEN_IDX      1
 #define RFC_RX_BUF_PAYLOAD_OFFSET       3
-
-// Error codes
-#define RFC_ERR_NONE                    0
 
 // CPE command done interrupt flags
 #define RFC_M_CPE_COMMAND_DONE          (RFC_DBELL_RFCPEIFG_LAST_COMMAND_DONE | \
@@ -90,6 +87,7 @@
 
 #define Rfc_Start_Immediate_Cmd(c)      {\
                                             rfc.immediate_cmd_p = (rfc_command_t*)c; \
+                                            rfc.error.code = 0; \
                                             rfc.state = RFC_S_WAIT_CPE_READY; \
                                             Tm_Start_Timeout(TM_RFC_TOUT_ID, RFC_TOUT_CPE_READY_MSEC); \
                                         }
@@ -100,7 +98,7 @@
 #define Rfc_Start_Radio_Op(op, to)      {\
                                             rfc.radio_op_p = (rfc_radioOp_t*)op; \
                                             rfc.radio_op_p->status = IDLE; \
-                                            rfc.error = 0; \
+                                            rfc.error.code = 0; \
                                             rfc.state = RFC_S_WAIT_CPE_READY; \
                                             Tm_Start_Timeout(TM_RFC_TOUT_ID, RFC_TOUT_CPE_READY_MSEC); \
                                             rfc.op_timeout = to; \
@@ -147,17 +145,38 @@ typedef enum
 #define RFC_PHY_CODING_500KBPS      2
 #define RFC_PHY_CODING_125KBPS      8
 
-// BLE5 channels
+// BLE5 frequency channel base values
 #define RFC_BLE5_BASE_FREQ          2402 // frequency channel 37 (channel offset = 0)
 #define RFC_BLE5_BASE_CH            0x66 // id channel 37 (channel offset = 0)
 #define RFC_BLE5_BASE_WHITE_INIT    0x40 // whitening initial value for channel 0
+
+// Error codes
+typedef enum
+{
+    RFC_ERR_NONE = 0,
+    RFC_ERR_BOOT_FAILED,
+    RFC_ERR_OPERATION_FAILED,
+    RFC_ERR_INTERNAL,
+    RFC_ERR_SYNTH_NO_LOCK,
+    RFC_ERR_TIMEOUT,
+} rfc_error_code_t;
+
+// Error structure
+typedef struct
+{
+    uint8_t code;
+    uint8_t fsm_state;
+    uint16_t cmd_num;
+    uint16_t cmd_status;
+    uint32_t CMDSTA; // copy of register value
+    uint32_t RFHWIFG; // copy of register value
+    uint32_t RFCPEIFG; // copy of register value
+} rfc_error_t;
 
 // RF Core FSM states
 typedef enum
 {
     RFC_S_IDLE = 0x00,
-    RFC_S_PROCESS_PROP_TX_RESULT,
-    RFC_S_PROCESS_PROP_RX_RESULT,
 
     RFC_S_WAIT_RFC_BOOT = 0x10,
     RFC_S_EXEC_RADIO_SETUP,
@@ -168,6 +187,8 @@ typedef enum
     RFC_S_WAIT_CPE_READY = 0x20,
     RFC_S_WAIT_CPE_ACK,
     RFC_S_WAIT_RADIO_OP_EXECUTION,
+
+    RFC_S_WAIT_ERR_ACTION = 0x30,
 
 } rfc_state_t;
 
@@ -183,7 +204,7 @@ typedef struct
     volatile rfc_radioOp_t* radio_op_p;
     uint32_t radio_op_cpe_err_flags;
     uint16_t op_timeout;
-    uint8_t error;
+    rfc_error_t error;
 } rfc_control_t;
 
 extern rfc_control_t rfc;
