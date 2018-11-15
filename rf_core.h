@@ -14,8 +14,6 @@
 #include <driverlib/rf_common_cmd.h>
 #include <inc/hw_rfc_rat.h>
 
-#include "misc.h"
-
 // Timeout values (milliseconds)
 #define RFC_TOUT_DEFAULT                0
 #define RFC_TOUT_BOOT_MSEC              100
@@ -230,25 +228,6 @@ typedef struct
 // RX result flags
 #define RFC_F_RX_CRC_ERR        0x01
 #define RFC_F_RX_TOUT_ERR       0x02
-
-// Macros for printing error information
-#define Rfc_Print_CPE_Err() \
-        PRINTF("ERR: state: %d, RFCPEIFG: %p, CMDSTA: %p\r\n", \
-               rfc.state, (void*)HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG), \
-               (void*)HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDSTA))
-
-#define Rfc_Print_Timeout_Err() \
-        PRINTF("ERR: timeout\r\n")
-
-#define Rfc_Print_Radio_Op_Err(op_p) \
-        PRINTF("ERR: state: %d, commandNo: %04X, CMDSTA: %p, status: %04X, RFCPEIFG: %p\r\n", \
-               rfc.state, (op_p)->commandNo, (void*)HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDSTA), \
-               (op_p)->status, (void*)HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG))
-
-#define Rfc_Print_Direct_Cmd_Err(id) \
-        PRINTF("ERR: state: %d, commandNo: %04X, CMDSTA: %p, RFCPEIFG: %p\r\n", \
-               rfc.state, (uint32_t)id, (void*)HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDSTA), \
-               (void*)HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG))
 
 void Rfc_Init();
 

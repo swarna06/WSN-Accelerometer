@@ -7,6 +7,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #include <driverlib/prcm.h>
 #include <driverlib/sys_ctrl.h>
@@ -25,6 +27,7 @@
 #include "timing.h"
 #include "smartrf_settings.h"
 #include "log.h"
+#include "misc.h"
 
 // RF core control structure
 rfc_control_t rfc;

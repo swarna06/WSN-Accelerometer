@@ -14,6 +14,7 @@
 #include "rf_core.h"
 #include "timing.h"
 #include "log.h"
+#include "printf.h"
 
 // Module variables
 pro_control_t prc;
