@@ -398,9 +398,7 @@ inline bool Rfc_Ready()
 
 uint8_t Rfc_Error()
 {
-    uint8_t ret_val = rfc.error.code;  // TODO set this variable in FSM error handling
-    rfc.error.code = 0;
-    return ret_val;
+    return rfc.error.code;  // TODO return the error structure
 }
 
 // ********************************
