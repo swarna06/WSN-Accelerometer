@@ -63,8 +63,6 @@ void Rfc_Init()
 
 void Rfc_Process()
 {
-    uint32_t cpe_int_flags = (uint32_t)-1;
-
     switch (rfc.state)
     {
     case RFC_S_IDLE: // wait for RF core operation request
@@ -74,7 +72,8 @@ void Rfc_Process()
     // RF core initialization
     // ********************************
     case RFC_S_WAIT_RFC_BOOT: // wait until the RF Core boots
-        cpe_int_flags = Rfc_Get_CPE_Int_Flags();
+    {
+        uint32_t cpe_int_flags = Rfc_Get_CPE_Int_Flags();
 
         if (cpe_int_flags & RFC_DBELL_RFCPEIFG_BOOT_DONE)
         {
@@ -87,6 +86,7 @@ void Rfc_Process()
             Rfc_Handle_Error(RFC_ERR_BOOT_FAILED);
             rfc.state = RFC_S_WAIT_ERR_ACTION;
         }
+    }
         break;
 
     case RFC_S_EXEC_RADIO_SETUP:
@@ -172,7 +172,8 @@ void Rfc_Process()
         break;
 
     case RFC_S_WAIT_RADIO_OP_EXECUTION:
-        cpe_int_flags = Rfc_Get_CPE_Int_Flags();
+    {
+        uint32_t cpe_int_flags = Rfc_Get_CPE_Int_Flags();
 
         if (cpe_int_flags & RFC_M_CPE_COMMAND_DONE)
         {
@@ -200,6 +201,7 @@ void Rfc_Process()
             Rfc_Handle_Error(RFC_ERR_TIMEOUT);
             rfc.state = RFC_S_WAIT_ERR_ACTION;
         }
+    }
         break;
 
     // ********************************
