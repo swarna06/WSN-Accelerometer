@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#define DRIVERLIB_NOROM
+//#define DRIVERLIB_NOROM xxx
 
 #include <driverlib/prcm.h>
 #include <driverlib/sys_ctrl.h>
@@ -42,30 +42,6 @@ void RTC_Int_Handler()
     Tm_Abs_Period_Update();
 }
 
-void
-myTRNGConfigure(uint32_t ui32MinSamplesPerCycle,
-              uint32_t ui32MaxSamplesPerCycle,
-              uint32_t ui32ClocksPerSample)
-{
-    uint32_t ui32Val;
-
-    // Make sure the TRNG is disabled.
-    ui32Val = HWREG(TRNG_BASE + TRNG_O_CTL) & ~TRNG_CTL_TRNG_EN;
-    HWREG(TRNG_BASE + TRNG_O_CTL) = ui32Val;
-
-    // Configure the startup number of samples.
-    ui32Val &= ~TRNG_CTL_STARTUP_CYCLES_M;
-    ui32Val |= ((( ui32MaxSamplesPerCycle >> 8 ) << TRNG_CTL_STARTUP_CYCLES_S ) & TRNG_CTL_STARTUP_CYCLES_M );
-    HWREG(TRNG_BASE + TRNG_O_CTL) = ui32Val;
-
-    // Configure the minimum and maximum number of samples pr generated number
-    // and the number of clocks per sample.
-    HWREG(TRNG_BASE + TRNG_O_CFG0) = (
-        ((( ui32MaxSamplesPerCycle >> 8 ) << TRNG_CFG0_MAX_REFILL_CYCLES_S ) & TRNG_CFG0_MAX_REFILL_CYCLES_M ) |
-        ((( ui32ClocksPerSample         ) << TRNG_CFG0_SMPL_DIV_S          ) & TRNG_CFG0_SMPL_DIV_M          ) |
-        ((( ui32MinSamplesPerCycle >> 6 ) << TRNG_CFG0_MIN_REFILL_CYCLES_S ) & TRNG_CFG0_MIN_REFILL_CYCLES_M )   );
-}
-
 int main(void)
 {
     Startup();
@@ -99,7 +75,7 @@ int main(void)
     PRCMLoadSet();
     while(!PRCMLoadGet());
 
-    myTRNGConfigure(1 << 6, 1 << 8, 15); // min samp num: 2^6, max samp num: 2^8, cycles per sample 16
+    TRNGConfigure(1 << 6, 1 << 8, 15); // min samp num: 2^6, max samp num: 2^8, cycles per sample 16
     TRNGEnable();
     uint32_t trng_status;
     while ((trng_status = TRNGStatusGet()) & TRNG_NEED_CLOCK) {}; // wait while TRNG is busy
