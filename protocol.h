@@ -36,23 +36,31 @@
 // Flags
 #define PRO_F_SYNC_DONE             0x01
 
-// Protocol FSM states
+// Common FSM states
 typedef enum
 {
     PRO_S_IDLE = 0,
     PRO_S_WAIT_RF_CORE_INIT,
     PRO_S_WAIT_RAT_SYNC,
+} pro_common_state_t;
 
-    PRO_S_MSTR_SEND_SYNC_PKT = 0x10,
-    PRO_S_MSTR_WAIT_SYNC_PKT_SENT,
-    PRO_S_MSTR_WAIT_SYNC_RESP,
-    PRO_S_MSTR_WAIT_SYNC_RESULT_SENT,
-
-    PRO_S_SLV_START_RX = 0x20,
+// Sensor node protocol FSM states
+typedef enum
+{
+    PRO_S_SLV_START_RX = 0x10,
     PRO_S_SLV_WAIT_SYNC_PKT,
     PRO_S_SLV_WAIT_RESP_SENT,
     PRO_S_SLV_WAIT_SYNC_RESULT,
-} pro_state_t;
+} pro_sensor_state_t;
+
+// Sink node protocol FSM states
+typedef enum
+{
+    PRO_S_MSTR_SEND_SYNC_PKT = 0x80,
+    PRO_S_MSTR_WAIT_SYNC_PKT_SENT,
+    PRO_S_MSTR_WAIT_SYNC_RESP,
+    PRO_S_MSTR_WAIT_SYNC_RESULT_SENT,
+} pro_sink_state_t;
 
 typedef struct
 {
@@ -63,7 +71,6 @@ typedef struct
              rat_t3,
              rat_t4;
 } timestamps_t;
-
 
 // Structure to hold the state of the protocol module
 typedef struct
@@ -82,7 +89,11 @@ typedef struct
 
 void Pro_Init();
 
-void Pro_Process();
+void Pro_Sensor_Node_FSM();
+
+void Pro_Sink_Node_FSM();
+
+void (*Pro_Process)();
 
 bool Pro_Set_Mode(bool mode);
 

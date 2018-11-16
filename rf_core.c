@@ -401,7 +401,7 @@ inline bool Rfc_Ready()
     return (rfc.state == RFC_S_IDLE);
 }
 
-uint8_t Rfc_Error()
+inline uint8_t Rfc_Error()
 {
     return rfc.error.code;  // TODO return the error structure
 }
