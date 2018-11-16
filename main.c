@@ -64,8 +64,7 @@ int main(void)
     uint32_t ble_addr0 = HWREG(FCFG1_BASE + FCFG1_O_MAC_BLE_0);
     uint32_t ble_addr1 = HWREG(FCFG1_BASE + FCFG1_O_MAC_BLE_1);
 
-    PRINTF("ble_addr0: %p\r\n", ble_addr0);
-    PRINTF("ble_addr1: %p\r\n", ble_addr1);
+    PRINTF("ble_addr: %p%p\r\n", ble_addr1 & 0x0000FFFF, ble_addr0);
 
     while (1)
     {
