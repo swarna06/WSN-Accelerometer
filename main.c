@@ -12,6 +12,10 @@
 
 #include <driverlib/aon_event.h>
 
+#include <driverlib/ccfgread.h>
+#include <inc/hw_ccfg.h>
+#include <inc/hw_fcfg1.h>
+
 #include "board.h"
 #include "timing.h"
 #include "serial_port.h"
@@ -55,6 +59,13 @@ int main(void)
     IntEnable(INT_AON_PROG0);
 
     Rfc_BLE5_Set_PHY_Mode(RFC_PHY_MODE_2MBPS);
+
+    // Read BLE access addr
+    uint32_t ble_addr0 = HWREG(FCFG1_BASE + FCFG1_O_MAC_BLE_0);
+    uint32_t ble_addr1 = HWREG(FCFG1_BASE + FCFG1_O_MAC_BLE_1);
+
+    PRINTF("ble_addr0: %p\r\n", ble_addr0);
+    PRINTF("ble_addr1: %p\r\n", ble_addr1);
 
     while (1)
     {

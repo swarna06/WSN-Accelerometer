@@ -22,10 +22,10 @@ static queue_t log_queue;
  * Modified by Alvaro
  * Non-standard itoa version, adapted for the log module
  */
-static size_t myitoa(int value, char* result)
+static size_t myitoa(uint32_t value, char* result)
 {
     char* ptr = result, *ptr1 = result, tmp_char;
-    int tmp_value;
+    uint32_t tmp_value;
     size_t count = 0;
 
     do {
@@ -35,12 +35,12 @@ static size_t myitoa(int value, char* result)
         count++;
     } while ( value );
 
-    // Apply negative sign
-    if (tmp_value < 0)
-    {
-        *ptr++ = '-';
-        count++;
-    }
+//    // Apply negative sign
+//    if (tmp_value < 0)
+//    {
+//        *ptr++ = '-';
+//        count++;
+//    }
     *ptr-- = '\0';
     while(ptr1 < ptr) {
         tmp_char = *ptr;
