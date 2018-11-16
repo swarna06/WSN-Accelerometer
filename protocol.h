@@ -78,12 +78,6 @@ typedef struct
     rfc_rx_result_t rx_result;
 
     timestamps_t ts;
-
-//    uint32_t rat_sync_time,
-//             rat_timestamp_tx,
-//             rat_timestamp_rx;
-//    uint32_t rtc_sync_time;
-
 } pro_control_t;
 
 void Pro_Init();

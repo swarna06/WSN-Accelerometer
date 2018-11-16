@@ -36,7 +36,7 @@ void Pro_Init()
 void Pro_Process()
 {
     if (Rfc_Error())
-        exit(0); // TODO error handling
+        return; // TODO error handling
 
     if (!Rfc_Ready() || prc.state == PRO_S_IDLE)
         return;
