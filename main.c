@@ -89,6 +89,9 @@ int main(void)
     }
 
     TRNGDisable();
+    PRCMPeripheralRunDisable(PRCM_PERIPH_TRNG);
+    PRCMLoadSet();
+    while(!PRCMLoadGet());
 
     while (1)
     {
