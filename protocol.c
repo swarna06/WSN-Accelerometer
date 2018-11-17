@@ -26,7 +26,7 @@ void Pro_Init()
     prc.state = PRO_S_WAIT_RF_CORE_INIT; // first wait RF core initialization
     prc.flags = 0;
     prc.mode = PRO_MODE_SLV; // default mode
-    Pro_Process = Pro_Sensor_Node_FSM;
+    Pro_Process = Pro_Common_FSM;
     prc.comm_buf_p = pro_comm_buf;
     prc.tx_param.buf = pro_comm_buf;
     prc.rx_result.buf = pro_comm_buf;
@@ -34,7 +34,7 @@ void Pro_Init()
     prc.error_count = PRO_MAX_ERROR_COUNT;
 }
 
-void Pro_Sensor_Node_FSM()
+void Pro_Common_FSM()
 {
     if (Rfc_Error())
         return; // TODO error handling
@@ -54,12 +54,29 @@ void Pro_Sensor_Node_FSM()
     case PRO_S_WAIT_RAT_SYNC:
         prc.error_count = PRO_MAX_ERROR_COUNT;
         if (prc.mode == PRO_MODE_MSTR)
+        {
             prc.state = PRO_S_MSTR_SEND_SYNC_PKT;
+            Pro_Process = Pro_Sink_Node_FSM;
+        }
         else // slave mode
+        {
             prc.state = PRO_S_SLV_START_RX;
-
+            Pro_Process = Pro_Sensor_Node_FSM;
+        }
         break;
+    }
+}
 
+void Pro_Sensor_Node_FSM()
+{
+    if (Rfc_Error())
+        return; // TODO error handling
+
+    if (!Rfc_Ready() || prc.state == PRO_S_IDLE)
+        return;
+
+    switch (prc.state)
+    {
     case PRO_S_SLV_START_RX:
 
         // Start reception
@@ -91,6 +108,7 @@ void Pro_Sensor_Node_FSM()
                 // TODO hanle error
                 prc.flags &= ~PRO_F_SYNC_DONE;
                 prc.state = PRO_S_IDLE;
+                Pro_Process = Pro_Common_FSM;
             }
             else
                 prc.state = PRO_S_SLV_START_RX; // retry
@@ -158,6 +176,7 @@ void Pro_Sensor_Node_FSM()
 
             prc.flags |= PRO_F_SYNC_DONE;
             prc.state = PRO_S_IDLE;
+            Pro_Process = Pro_Common_FSM;
         }
         else
         {
@@ -167,6 +186,7 @@ void Pro_Sensor_Node_FSM()
                 // TODO hanle error
                 prc.flags &= ~PRO_F_SYNC_DONE;
                 prc.state = PRO_S_IDLE;
+                Pro_Process = Pro_Common_FSM;
             }
             else
                 prc.state = PRO_S_SLV_START_RX; // retry
@@ -185,22 +205,6 @@ void Pro_Sink_Node_FSM()
 
     switch (prc.state)
     {
-    case PRO_S_IDLE:
-        break;
-
-    case PRO_S_WAIT_RF_CORE_INIT:
-        prc.state = PRO_S_IDLE;
-        break;
-
-    case PRO_S_WAIT_RAT_SYNC:
-        prc.error_count = PRO_MAX_ERROR_COUNT;
-        if (prc.mode == PRO_MODE_MSTR)
-            prc.state = PRO_S_MSTR_SEND_SYNC_PKT;
-        else // slave mode
-        prc.state = PRO_S_SLV_START_RX;
-
-        break;
-
     case PRO_S_MSTR_SEND_SYNC_PKT:
 
         // Wait for the start of the next RTC period (up to ~30 us)
@@ -254,6 +258,7 @@ void Pro_Sink_Node_FSM()
                 // TODO hanle error
                 prc.flags &= ~PRO_F_SYNC_DONE;
                 prc.state = PRO_S_IDLE;
+                Pro_Process = Pro_Common_FSM;
             }
             else
                 prc.state = PRO_S_MSTR_SEND_SYNC_PKT; // retry
@@ -264,6 +269,7 @@ void Pro_Sink_Node_FSM()
     case PRO_S_MSTR_WAIT_SYNC_RESULT_SENT:
         prc.flags |= PRO_F_SYNC_DONE;
         prc.state = PRO_S_IDLE;
+        Pro_Process = Pro_Common_FSM;
         break;
     }
 }
@@ -274,10 +280,6 @@ bool Pro_Set_Mode(bool mode)
         return false;
 
     prc.mode = mode;
-    if (mode == PRO_MODE_SLV)
-        Pro_Process = Pro_Sensor_Node_FSM;
-    else
-        Pro_Process = Pro_Sink_Node_FSM;
     return true;
 }
 

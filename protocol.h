@@ -89,6 +89,8 @@ typedef struct
 
 void Pro_Init();
 
+void Pro_Common_FSM();
+
 void Pro_Sensor_Node_FSM();
 
 void Pro_Sink_Node_FSM();
