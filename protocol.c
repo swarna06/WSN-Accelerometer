@@ -16,6 +16,8 @@
 #include "log.h"
 #include "printf.h"
 
+#include "misc.h"
+
 // Module variables
 pro_control_t prc;
 static uint8_t pro_comm_buf[PRO_COMM_BUF_LEN];
@@ -36,12 +38,6 @@ void Pro_Init()
 
 void Pro_Common_FSM()
 {
-    if (Rfc_Error())
-        return; // TODO error handling
-
-    if (!Rfc_Ready() || prc.state == PRO_S_IDLE)
-        return;
-
     switch (prc.state)
     {
     case PRO_S_IDLE:
@@ -64,17 +60,14 @@ void Pro_Common_FSM()
             Pro_Process = Pro_Sensor_Node_FSM;
         }
         break;
+
+    default:
+        assertion(!"Pro_Common_FSM: Unknown state");
     }
 }
 
 void Pro_Sensor_Node_FSM()
 {
-    if (Rfc_Error())
-        return; // TODO error handling
-
-    if (!Rfc_Ready() || prc.state == PRO_S_IDLE)
-        return;
-
     switch (prc.state)
     {
     case PRO_S_SLV_START_RX:
@@ -192,17 +185,14 @@ void Pro_Sensor_Node_FSM()
                 prc.state = PRO_S_SLV_START_RX; // retry
         }
         break;
+
+    default:
+        assertion(!"Pro_Sensor_Node_FSM: Unknown state");
     }
 }
 
 void Pro_Sink_Node_FSM()
 {
-    if (Rfc_Error())
-        return; // TODO error handling
-
-    if (!Rfc_Ready() || prc.state == PRO_S_IDLE)
-        return;
-
     switch (prc.state)
     {
     case PRO_S_MSTR_SEND_SYNC_PKT:
@@ -271,7 +261,15 @@ void Pro_Sink_Node_FSM()
         prc.state = PRO_S_IDLE;
         Pro_Process = Pro_Common_FSM;
         break;
+
+    default:
+        assertion(!"Pro_Sensor_Node_FSM: Unknown state");
     }
+}
+
+void Pro_Handle_Error()
+{
+    // TODO
 }
 
 bool Pro_Set_Mode(bool mode)

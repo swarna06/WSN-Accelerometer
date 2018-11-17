@@ -106,7 +106,10 @@ int main(void)
 
         Rfc_Process();
 
-        Pro_Process();
+        if (Rfc_Ready())
+            Pro_Process();
+        else if (Rfc_Error())
+            Pro_Handle_Error();
 
         if (Hif_Data_Received())
             Hif_Process();

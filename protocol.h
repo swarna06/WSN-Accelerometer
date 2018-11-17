@@ -97,6 +97,8 @@ void Pro_Sink_Node_FSM();
 
 void (*Pro_Process)();
 
+void Pro_Handle_Error();
+
 bool Pro_Set_Mode(bool mode);
 
 bool Pro_Start_Synch();
