@@ -27,6 +27,7 @@
 #include "protocol.h"
 #include "log.h"
 #include "coordinator.h"
+#include "power_management.h"
 
 #include "printf.h"
 
@@ -45,6 +46,7 @@ void RTC_Int_Handler()
 int main(void)
 {
     Startup();
+    Pma_Init();
     GPIO_Init();
     Tm_Init();
     Sep_Init();
@@ -58,8 +60,8 @@ int main(void)
     Tm_Enable_Abs_Time_Per();
 
     AONEventMcuSet(AON_EVENT_MCU_EVENT0, AON_EVENT_RTC_CH1);
-    IntRegister(INT_AON_PROG0, RTC_Int_Handler);
-    IntEnable(INT_AON_PROG0);
+//    IntRegister(INT_AON_PROG0, RTC_Int_Handler);
+//    IntEnable(INT_AON_PROG0);
 
     Rfc_BLE5_Set_PHY_Mode(RFC_PHY_MODE_1MBPS);
     Rfc_BLE5_Set_Channel(38);
@@ -95,28 +97,32 @@ int main(void)
 
     while (1)
     {
-        if (Tm_System_Tick())
-            Tm_Update_Time_Events();
-
+//        if (Tm_System_Tick())
+//            Tm_Update_Time_Events();
+//
 //        if (Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
+//        {
 //            GPIO_toggleDio(BRD_LED1);  // heart beat
+//        }
+
+        Pma_Sleep();
 
 //        if (Tm_Abs_Time_Per_Completed())
 //            GPIO_toggleDio(BRD_LED0);  // heart beat
 
-        Rfc_Process();
-
-        if (Rfc_Ready())
-            Pro_Process();
-        else if (Rfc_Error())
-            Pro_Handle_Error();
-
-        if (Hif_Data_Received())
-            Hif_Process();
-
-        Log_Process();
-
-        Crd_Process();
+//        Rfc_Process();
+//
+//        if (Rfc_Ready())
+//            Pro_Process();
+//        else if (Rfc_Error())
+//            Pro_Handle_Error();
+//
+//        if (Hif_Data_Received())
+//            Hif_Process();
+//
+//        Log_Process();
+//
+//        Crd_Process();
     }
 
     return 0;
@@ -130,7 +136,7 @@ void Startup()
 
     // Set clock source
     OSCClockSourceSet(OSC_SRC_CLK_MF | OSC_SRC_CLK_HF, OSC_XOSC_HF);
-    while (OSCClockSourceGet(OSC_SRC_CLK_HF) != OSC_XOSC_HF)
+    if (OSCClockSourceGet(OSC_SRC_CLK_HF) != OSC_XOSC_HF)
     {
         OSCHfSourceSwitch();
     }
