@@ -71,14 +71,6 @@ void Startup()
 
 void GPIO_Init()
 {
-//    // Power peripherals
-//    PRCMPowerDomainOn(PRCM_DOMAIN_PERIPH);
-//    while((PRCMPowerDomainStatus(PRCM_DOMAIN_PERIPH) != PRCM_DOMAIN_POWER_ON));
-//
-//    // Power GPIO
-//    PRCMPeripheralRunEnable(PRCM_PERIPH_GPIO);
-//    PRCMLoadSet();
-//    while(!PRCMLoadGet());
     Pma_Power_On_Peripheral(PMA_PERIPH_GPIO);
 
     // Configure pins as 'standard' output
