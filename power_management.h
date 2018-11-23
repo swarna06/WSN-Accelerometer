@@ -17,9 +17,9 @@ typedef enum
 {
     PMA_PERIPH_RF_CORE = PMA_POWER_DOMAIN_RF_CORE,
 
-    PMA_PERIPH_UART0 = PMA_POWER_DOMAIN_SERIAL & 0x01,
+    PMA_PERIPH_UART0 = PMA_POWER_DOMAIN_SERIAL | 0x01,
 
-    PMA_PERIPH_GPIO = PMA_POWER_DOMAIN_PERIPH & 0x10,
+    PMA_PERIPH_GPIO = PMA_POWER_DOMAIN_PERIPH | 0x10,
 } pma_periph_id_t;
 
 typedef struct
@@ -29,7 +29,7 @@ typedef struct
 
 void Pma_Init();
 
-void Pma_Power_On_Peripheral(uint8_t periph_id);
+void Pma_Power_On_Peripheral(uint16_t periph_id);
 
 void Pma_CPU_Sleep(uint32_t tout_ms);
 

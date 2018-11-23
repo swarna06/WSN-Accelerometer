@@ -48,6 +48,12 @@ int main(void)
         const uint32_t WAKEUP_TIME_MS = 50;
         GPIO_toggleDio(BRD_LED0);
         Pma_MCU_Sleep(Tm_Get_RTC_Time() + WAKEUP_TIME_MS*TM_RTC_TICKS_PER_MSEC);
+
+//        AONRTCEventClear(AON_RTC_CH0);
+//        AONRTCCompareValueSet(AON_RTC_CH0, Tm_Get_RTC_Time() + WAKEUP_TIME_MS*TM_RTC_TICKS_PER_MSEC);
+//        while (!AONRTCEventGet(AON_RTC_CH0));
+
+//        Pma_Power_On_Peripheral(PMA_PERIPH_GPIO);
     }
 
     return 0;
@@ -55,10 +61,6 @@ int main(void)
 
 void Startup()
 {
-    // Power peripherals
-    PRCMPowerDomainOn(PRCM_DOMAIN_PERIPH);
-    while((PRCMPowerDomainStatus(PRCM_DOMAIN_PERIPH) != PRCM_DOMAIN_POWER_ON));
-
     // Set clock source
     OSCClockSourceSet(OSC_SRC_CLK_MF | OSC_SRC_CLK_HF, OSC_XOSC_HF);
     if (OSCClockSourceGet(OSC_SRC_CLK_HF) != OSC_XOSC_HF)
@@ -69,10 +71,15 @@ void Startup()
 
 void GPIO_Init()
 {
-    // Power GPIO
-    PRCMPeripheralRunEnable(PRCM_PERIPH_GPIO);
-    PRCMLoadSet();
-    while(!PRCMLoadGet());
+//    // Power peripherals
+//    PRCMPowerDomainOn(PRCM_DOMAIN_PERIPH);
+//    while((PRCMPowerDomainStatus(PRCM_DOMAIN_PERIPH) != PRCM_DOMAIN_POWER_ON));
+//
+//    // Power GPIO
+//    PRCMPeripheralRunEnable(PRCM_PERIPH_GPIO);
+//    PRCMLoadSet();
+//    while(!PRCMLoadGet());
+    Pma_Power_On_Peripheral(PMA_PERIPH_GPIO);
 
     // Configure pins as 'standard' output
     IOCPinTypeGpioOutput(BRD_LED0);

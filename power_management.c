@@ -70,7 +70,7 @@ void Pma_Init()
     pcs.powered_peripherals = 0;
 }
 
-void Pma_Power_On_Peripheral(uint8_t periph_id)
+void Pma_Power_On_Peripheral(uint16_t periph_id)
 {
     int32_t power_domain = -1;
     int32_t peripheral = -1;
@@ -90,7 +90,7 @@ void Pma_Power_On_Peripheral(uint8_t periph_id)
     }
     else if (periph_id & PMA_POWER_DOMAIN_PERIPH)
     {
-        power_domain = PMA_POWER_DOMAIN_PERIPH;
+        power_domain = PRCM_DOMAIN_PERIPH;
         switch(periph_id)
         {
         case PMA_PERIPH_GPIO: peripheral = PRCM_PERIPH_GPIO; break;
@@ -110,10 +110,11 @@ void Pma_Power_On_Peripheral(uint8_t periph_id)
     {
         PRCMPeripheralRunEnable(peripheral);
         PRCMLoadSet();
+        while(!PRCMLoadGet()); // FIXME deadlock risk ?
     }
 
     // Wait until power domain becomes on
-    while (PRCMPowerDomainStatus(power_domain) != PRCM_DOMAIN_POWER_ON); // TODO deadlock risk ?
+    while (PRCMPowerDomainStatus(power_domain) != PRCM_DOMAIN_POWER_ON); // FIXME deadlock risk ?
 
     // Keep track of powered peripherals
     pcs.powered_peripherals |= periph_id;
@@ -216,24 +217,22 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     // 1. Start forcing on power to AUX
     AONWUCAuxWakeupEvent(AONWUC_AUX_WAKEUP);
 
-    // 2. Turn on power domains - TODO check if power domains are ON
+    // 2. Turn on power domains
     PRCMPowerDomainOn(power_domains);
 
-    // 3. TODO re-enable peripheral clocks (including RF core)
-
-    // 4. Release request for uLDO
+    // 3. Release request for uLDO
     PRCMMcuUldoConfigure(false);
 
-    // 5. Wait until all power domains are back on
+    // 4. Wait until all power domains are back on
     while (PRCMPowerDomainStatus(power_domains) != PRCM_DOMAIN_POWER_ON);
 
-    // 6. Disable IO freeze and ensure RTC shadow value is updated
+    // 5. Disable IO freeze
     AONIOCFreezeDisable();
 
-    // 7. Synchronize with AON domain
+    // 6. Synchronize with AON domain (ensure RTC shadow value is updated)
     SysCtrlAonSync();
 
-    // 8. Wait until AON AUX becomes ready
+    // 7. Wait until AON AUX becomes ready
     while (AONWUCPowerStatusGet() & AONWUC_AUX_POWER_DOWN);
 
     // 8. Enable XOSC - TODO check how to do this properly
