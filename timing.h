@@ -31,7 +31,7 @@
                                 HWREG(AON_RTC_BASE + AON_RTC_O_SYNC);
 
 // Macro to get RTC counter value (32-bit)
-#define Tm_Get_RTC_Time()       AONRTCCurrentCompareValueGet();
+#define Tm_Get_RTC_Time()       AONRTCCurrentCompareValueGet()
 
 // RTC ticks per millisecond
 #define TM_RTC_TICKS_PER_MSEC   64

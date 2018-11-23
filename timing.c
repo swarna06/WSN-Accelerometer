@@ -35,7 +35,7 @@ void Tm_Start_RTC_Period(uint32_t period_ms)
 
     // Configure and enable CH2 (periodic compare)
     AONRTCModeCh2Set(AON_RTC_MODE_CH2_CONTINUOUS);
-    Tm_Synch_With_RTC(); // wait for next RTC cycle
+    Tm_Synch_With_RTC(); // wait for next RTC cycle FIXME can we avoid waiting ?
     curr_time = AONRTCCurrentCompareValueGet();
 
     if (TICKS_PER_PERIOD > curr_time)

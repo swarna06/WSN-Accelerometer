@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-//#define DRIVERLIB_NOROM xxx
+//#define DRIVERLIB_NOROM
 
 #include <driverlib/prcm.h>
 #include <driverlib/sys_ctrl.h>
@@ -37,92 +37,17 @@ const uint32_t DELAY_TIME_USEC = 1000*500; // 100 ms
 void Startup();
 void GPIO_Init();
 
-void RTC_Int_Handler()
-{
-    GPIO_toggleDio(BRD_LED0);  // heart beat
-    Tm_Abs_Period_Update();
-}
-
 int main(void)
 {
-    Startup();
     Pma_Init();
+    Startup();
     GPIO_Init();
-    Tm_Init();
-    Sep_Init();
-    Rfc_Init();
-    Pro_Init();
-    Log_Init();
-    Hif_Init();
-    Crd_Init();
-
-    Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
-    Tm_Enable_Abs_Time_Per();
-
-    AONEventMcuSet(AON_EVENT_MCU_EVENT0, AON_EVENT_RTC_CH1);
-//    IntRegister(INT_AON_PROG0, RTC_Int_Handler);
-//    IntEnable(INT_AON_PROG0);
-
-    Rfc_BLE5_Set_PHY_Mode(RFC_PHY_MODE_1MBPS);
-    Rfc_BLE5_Set_Channel(38);
-
-    // Read BLE access addr
-    uint32_t ble_addr0 = HWREG(FCFG1_BASE + FCFG1_O_MAC_BLE_0);
-    uint32_t ble_addr1 = HWREG(FCFG1_BASE + FCFG1_O_MAC_BLE_1);
-
-    PRINTF("ble_addr: %p%p\r\n", ble_addr1 & 0x0000FFFF, ble_addr0);
-
-    // Get random value from the TRNG
-    PRCMPeripheralRunEnable(PRCM_PERIPH_TRNG);
-    PRCMLoadSet();
-    while(!PRCMLoadGet());
-
-    TRNGConfigure(1 << 6, 1 << 8, 15); // min samp num: 2^6, max samp num: 2^8, cycles per sample 16
-    TRNGEnable();
-    uint32_t trng_status;
-    while ((trng_status = TRNGStatusGet()) & TRNG_NEED_CLOCK) {}; // wait while TRNG is busy
-    PRINTF("trng_status: %p\r\n", trng_status);
-
-    if (trng_status & TRNG_NUMBER_READY)
-    {
-        uint32_t rand_val_low = TRNGNumberGet(TRNG_LOW_WORD);
-        uint32_t rand_val_high = TRNGNumberGet(TRNG_HI_WORD);
-        PRINTF("rand_val: %p%p\r\n", rand_val_high, rand_val_low);
-    }
-
-    TRNGDisable();
-    PRCMPeripheralRunDisable(PRCM_PERIPH_TRNG);
-    PRCMLoadSet();
-    while(!PRCMLoadGet());
 
     while (1)
     {
-//        if (Tm_System_Tick())
-//            Tm_Update_Time_Events();
-//
-//        if (Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
-//        {
-//            GPIO_toggleDio(BRD_LED1);  // heart beat
-//        }
-
-        Pma_Sleep();
-
-//        if (Tm_Abs_Time_Per_Completed())
-//            GPIO_toggleDio(BRD_LED0);  // heart beat
-
-//        Rfc_Process();
-//
-//        if (Rfc_Ready())
-//            Pro_Process();
-//        else if (Rfc_Error())
-//            Pro_Handle_Error();
-//
-//        if (Hif_Data_Received())
-//            Hif_Process();
-//
-//        Log_Process();
-//
-//        Crd_Process();
+        const uint32_t WAKEUP_TIME_MS = 50;
+        GPIO_toggleDio(BRD_LED0);
+        Pma_MCU_Sleep(Tm_Get_RTC_Time() + WAKEUP_TIME_MS*TM_RTC_TICKS_PER_MSEC);
     }
 
     return 0;
