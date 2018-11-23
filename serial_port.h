@@ -12,4 +12,6 @@
 
 void Sep_Init();
 
+void Sep_Wakeup();
+
 #endif /* SERIAL_PORT_H_ */

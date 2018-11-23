@@ -42,18 +42,23 @@ int main(void)
     Pma_Init();
     Startup();
     GPIO_Init();
+    Sep_Init();
+
+    uint8_t count = 0;
 
     while (1)
     {
-        const uint32_t WAKEUP_TIME_MS = 50;
+        const uint32_t WAKEUP_TIME_MS = 500;
         GPIO_toggleDio(BRD_LED0);
         Pma_MCU_Sleep(Tm_Get_RTC_Time() + WAKEUP_TIME_MS*TM_RTC_TICKS_PER_MSEC);
 
-//        AONRTCEventClear(AON_RTC_CH0);
-//        AONRTCCompareValueSet(AON_RTC_CH0, Tm_Get_RTC_Time() + WAKEUP_TIME_MS*TM_RTC_TICKS_PER_MSEC);
-//        while (!AONRTCEventGet(AON_RTC_CH0));
+        Sep_Wakeup();
 
-//        Pma_Power_On_Peripheral(PMA_PERIPH_GPIO);
+        PRINTF("count: %d\r\n", count++);
+
+        AONRTCEventClear(AON_RTC_CH0);
+        AONRTCCompareValueSet(AON_RTC_CH0, Tm_Get_RTC_Time() + WAKEUP_TIME_MS*TM_RTC_TICKS_PER_MSEC);
+        while (!AONRTCEventGet(AON_RTC_CH0));
     }
 
     return 0;

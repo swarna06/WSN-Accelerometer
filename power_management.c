@@ -43,6 +43,10 @@ void Pma_Init()
     if (OSCClockSourceGet(OSC_SRC_CLK_HF) != OSC_XOSC_HF)
         OSCHfSourceSwitch();
 
+    // Use 32768 Hz XOSC
+    OSCClockSourceSet(OSC_SRC_CLK_LF, OSC_XOSC_LF);
+    while(OSCClockSourceGet(OSC_SRC_CLK_LF) != OSC_XOSC_LF);
+
     // Enable RTC if it isn't already running
     if (AONRTCActive() == false)
     {
@@ -175,12 +179,10 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     AONIOCFreezeEnable();
 
     // 2. Switch from XOSC to RCOSC
-    OSCClockSourceSet(OSC_SRC_CLK_MF | OSC_SRC_CLK_HF, OSC_RCOSC_HF);
-    if (OSCClockSourceGet(OSC_SRC_CLK_HF) != OSC_RCOSC_HF)
-        OSCHfSourceSwitch();
-
-    OSCClockSourceSet(OSC_SRC_CLK_LF, OSC_RCOSC_LF);
-    while(OSCClockSourceGet(OSC_SRC_CLK_LF) != OSC_RCOSC_LF);
+//    OSCClockSourceSet(OSC_SRC_CLK_MF | OSC_SRC_CLK_HF, OSC_RCOSC_HF);
+//    if (OSCClockSourceGet(OSC_SRC_CLK_HF) != OSC_RCOSC_HF)
+//        OSCHfSourceSwitch();
+    OSCHF_SwitchToRcOscTurnOffXosc();
 
     // 3. Allow AUX to power down
     AONWUCAuxWakeupEvent(AONWUC_AUX_ALLOW_SLEEP);
@@ -235,9 +237,12 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     while (AONWUCPowerStatusGet() & AONWUC_AUX_POWER_DOWN);
 
     // 8. Enable XOSC - TODO check how to do this properly
-    OSCClockSourceSet(OSC_SRC_CLK_MF | OSC_SRC_CLK_HF, OSC_XOSC_HF);
-    while (OSCClockSourceGet(OSC_SRC_CLK_HF) != OSC_XOSC_HF)
-    {
-        OSCHfSourceSwitch();
-    }
+//    OSCClockSourceSet(OSC_SRC_CLK_MF | OSC_SRC_CLK_HF, OSC_XOSC_HF);
+//    while (OSCClockSourceGet(OSC_SRC_CLK_HF) != OSC_XOSC_HF)
+//    {
+//        OSCHfSourceSwitch();
+//    }
+
+    OSCHF_TurnOnXosc();
+    while (!OSCHF_AttemptToSwitchToXosc());
 }

@@ -16,17 +16,21 @@
 
 #include "board.h"
 #include "serial_port.h"
+#include "power_management.h"
 
 void Sep_Init()
 {
-    // Power serial interfaces
-    PRCMPowerDomainOn(PRCM_DOMAIN_SERIAL); // TODO Should go to Startup code; also needed for I2C and SPI !
-    while((PRCMPowerDomainStatus(PRCM_DOMAIN_SERIAL) != PRCM_DOMAIN_POWER_ON));
+//    // Power serial interfaces
+//    PRCMPowerDomainOn(PRCM_DOMAIN_SERIAL); // TODO Should go to Startup code; also needed for I2C and SPI !
+//    while((PRCMPowerDomainStatus(PRCM_DOMAIN_SERIAL) != PRCM_DOMAIN_POWER_ON));
+//
+//    // Power UART
+//    PRCMPeripheralRunEnable(PRCM_PERIPH_UART0);
+//    PRCMLoadSet();
+//    while(!PRCMLoadGet());
 
     // Power UART
-    PRCMPeripheralRunEnable(PRCM_PERIPH_UART0);
-    PRCMLoadSet();
-    while(!PRCMLoadGet());
+    Pma_Power_On_Peripheral(PMA_PERIPH_UART0);
 
     // Map GPIOs to UART signals
     IOCPinTypeUart(UART0_BASE, BRD_UART_RX, BRD_UART_TX, IOID_UNUSED, IOID_UNUSED);
@@ -38,5 +42,13 @@ void Sep_Init()
     UARTEnable(UART0_BASE);
 
     HWREG(UART0_BASE + UART_O_DR) = '\f';
+}
+
+void Sep_Wakeup()
+{
+    UARTConfigSetExpClk(UART0_BASE, SysCtrlClockGet(), SEP_BAUD_RATE,
+                        UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE);
+    UARTFIFOEnable(UART0_BASE); // enable UART FIFOs
+    UARTEnable(UART0_BASE);
 }
 
