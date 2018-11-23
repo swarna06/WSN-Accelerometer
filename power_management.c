@@ -66,6 +66,15 @@ void Pma_Init()
     IntRegister(INT_AON_PROG0, Pma_RTC_Isr);
     IntPendClear(INT_AON_PROG0);
 
+    // Disable VIMS and cache retention - TODO is this needed ?
+    uint32_t mode_vims;
+    while ((mode_vims = VIMSModeGet(VIMS_BASE)) == VIMS_MODE_CHANGING); // get the current VIMS mode
+
+    if (mode_vims == VIMS_MODE_ENABLED)
+        VIMSModeSet(VIMS_BASE, VIMS_MODE_OFF); // now turn off the VIMS
+
+    PRCMCacheRetentionDisable(); // now disable retention
+
     // Initialize control structure
     pcs.powered_peripherals = 0;
 }
@@ -76,7 +85,7 @@ void Pma_Power_On_Peripheral(uint16_t periph_id)
     int32_t peripheral = -1;
     // Most significant bits of id indicates power domain
     // Least significant bits of id indicates peripheral
-    if (periph_id & PMA_POWER_DOMAIN_RF_CORE)
+    if (periph_id & PMA_POWER_DOMAIN_RF_CORE) // TODO separate RF core powering from other peripherals
     {
         power_domain = PRCM_DOMAIN_RFCORE;
     }
@@ -144,7 +153,6 @@ inline void Pma_CPU_Sleep(uint32_t tout_ms)
 
     // Disable RTC interrupt in case the CPU was awaken by other interrupt source
     IntDisable(INT_AON_PROG0);
-
 }
 
 void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
@@ -192,15 +200,6 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
 
     // 6. Request uLDO during standby
     PRCMMcuUldoConfigure(true);
-
-    // 7. Disable VIMS and cache retention - FIXME is this needed ?
-    uint32_t mode_vims;
-    while ((mode_vims = VIMSModeGet(VIMS_BASE)) == VIMS_MODE_CHANGING); //7.1 Get the current VIMS mode
-
-    if (mode_vims == VIMS_MODE_ENABLED)
-        VIMSModeSet(VIMS_BASE, VIMS_MODE_OFF); // 7.2 Now turn off the VIMS
-
-    PRCMCacheRetentionDisable(); // 7.3 Now disable retention
 
     // 8. Setup recharge parameters
     SysCtrlSetRechargeBeforePowerDown(XOSC_IN_HIGH_POWER_MODE);
