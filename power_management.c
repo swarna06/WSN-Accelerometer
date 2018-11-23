@@ -38,10 +38,9 @@ void Pma_RTC_Isr()
 
 void Pma_Init()
 {
-    // Enable XOSC
-    OSCClockSourceSet(OSC_SRC_CLK_MF | OSC_SRC_CLK_HF, OSC_XOSC_HF);
-    if (OSCClockSourceGet(OSC_SRC_CLK_HF) != OSC_XOSC_HF)
-        OSCHfSourceSwitch();
+    // Enable HF XOSC
+    OSCHF_TurnOnXosc();
+    while (!OSCHF_AttemptToSwitchToXosc());
 
     // Use 32768 Hz XOSC
     OSCClockSourceSet(OSC_SRC_CLK_LF, OSC_XOSC_LF);
@@ -233,7 +232,7 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     // 7. Wait until AON AUX becomes ready
     while (AONWUCPowerStatusGet() & AONWUC_AUX_POWER_DOWN);
 
-    // 8. Enable XOSC - TODO check how to do this properly
+    // 8. Enable XOSC
     OSCHF_TurnOnXosc();
     while (!OSCHF_AttemptToSwitchToXosc());
 }

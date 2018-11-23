@@ -31,47 +31,45 @@
 
 #include "printf.h"
 
-const uint32_t TIMER_TICKS_PER_USEC = 48;
-const uint32_t DELAY_TIME_USEC = 1000*500; // 100 ms
-
-void Startup();
 void GPIO_Init();
 
 int main(void)
 {
     Pma_Init();
-    Startup();
     GPIO_Init();
     Sep_Init();
 
     uint8_t count = 0;
+    Brd_Led_Off(BRD_LED1);
 
     while (1)
     {
         const uint32_t WAKEUP_TIME_MS = 500;
-        GPIO_toggleDio(BRD_LED0);
-        Pma_MCU_Sleep(Tm_Get_RTC_Time() + WAKEUP_TIME_MS*TM_RTC_TICKS_PER_MSEC);
 
-        Sep_Wakeup();
-
-        PRINTF("count: %d\r\n", count++);
-
+        // ********************************
+        // Active interval
+        // ********************************
+        Brd_Led_On(BRD_LED0);
         AONRTCEventClear(AON_RTC_CH0);
         AONRTCCompareValueSet(AON_RTC_CH0, Tm_Get_RTC_Time() + WAKEUP_TIME_MS*TM_RTC_TICKS_PER_MSEC);
-        while (!AONRTCEventGet(AON_RTC_CH0));
+
+        if (!(HWREG(UART0_BASE + UART_O_CTL) & UART_CTL_UARTEN))
+        {
+            Sep_Wakeup();
+            PRINTF("count: %d\r\n", count++);
+        }
+
+        while (!AONRTCEventGet(AON_RTC_CH0)); // busy wait
+
+        // ********************************
+        // Sleep interval
+        // ********************************
+        Brd_Led_Off(BRD_LED0);
+        Pma_MCU_Sleep(Tm_Get_RTC_Time() + WAKEUP_TIME_MS*TM_RTC_TICKS_PER_MSEC); // sleep
+//        Pma_MCU_Sleep(0); // sleep forever
     }
 
     return 0;
-}
-
-void Startup()
-{
-    // Set clock source
-    OSCClockSourceSet(OSC_SRC_CLK_MF | OSC_SRC_CLK_HF, OSC_XOSC_HF);
-    if (OSCClockSourceGet(OSC_SRC_CLK_HF) != OSC_XOSC_HF)
-    {
-        OSCHfSourceSwitch();
-    }
 }
 
 void GPIO_Init()
@@ -81,6 +79,10 @@ void GPIO_Init()
     // Configure pins as 'standard' output
     IOCPinTypeGpioOutput(BRD_LED0);
     IOCPinTypeGpioOutput(BRD_LED1);
+
+    // Set initial values
+    Brd_Led_Off(BRD_LED0);
+    Brd_Led_Off(BRD_LED1);
 }
 
 

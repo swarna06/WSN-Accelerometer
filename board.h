@@ -8,16 +8,14 @@
 #ifndef BOARD_H_
 #define BOARD_H_
 
-#define BOARD_LAUNCHPAD     0
-#define BOARD_SENSOR_NODE   1
+#include <driverlib/gpio.h>
 
-#define BOARD_USED  BOARD_LAUNCHPAD
+#define BRD_LAUNCHPAD           1
+#define BRD_SENSOR_NODE_V1      2
 
-#ifndef BOARD_USED
-    #define BOARD_USED BOARD_LAUNCHPAD
-#endif  // BOARD_USED
+#define BRD_BOARD               BRD_LAUNCHPAD
 
-#if (BOARD_USED == BOARD_LAUNCHPAD)
+#if (BRD_BOARD == BRD_LAUNCHPAD)
 
     #define BRD_LED0            6
     #define BRD_LED1            7
@@ -30,7 +28,11 @@
     #define BRD_UART_TX         3
     #define BRD_UART_RX         2
 
-#elif (BOARD_USED == BOARD_SENSOR_NODE)
+    // LEDs are active high
+    #define Brd_Led_On(l)       GPIO_setDio(l)
+    #define Brd_Led_Off(l)      GPIO_clearDio(l)
+
+#elif (BRD_BOARD == BRD_SENSOR_NODE_V1)
 
     #define BRD_LED0            13
     #define BRD_LED1            14
@@ -42,6 +44,10 @@
 
     #define BRD_UART_TX         4
     #define BRD_UART_RX         5
+
+    // LEDs are active low
+    #define Brd_Led_On(l)       GPIO_clearDio(l)
+    #define Brd_Led_Off(l)      GPIO_setDio(l)
 
 #endif  // #if (BOARD_USED == BOARD_LAUNCHPAD)
 
