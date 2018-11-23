@@ -179,9 +179,6 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     AONIOCFreezeEnable();
 
     // 2. Switch from XOSC to RCOSC
-//    OSCClockSourceSet(OSC_SRC_CLK_MF | OSC_SRC_CLK_HF, OSC_RCOSC_HF);
-//    if (OSCClockSourceGet(OSC_SRC_CLK_HF) != OSC_RCOSC_HF)
-//        OSCHfSourceSwitch();
     OSCHF_SwitchToRcOscTurnOffXosc();
 
     // 3. Allow AUX to power down
@@ -237,12 +234,6 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     while (AONWUCPowerStatusGet() & AONWUC_AUX_POWER_DOWN);
 
     // 8. Enable XOSC - TODO check how to do this properly
-//    OSCClockSourceSet(OSC_SRC_CLK_MF | OSC_SRC_CLK_HF, OSC_XOSC_HF);
-//    while (OSCClockSourceGet(OSC_SRC_CLK_HF) != OSC_XOSC_HF)
-//    {
-//        OSCHfSourceSwitch();
-//    }
-
     OSCHF_TurnOnXosc();
     while (!OSCHF_AttemptToSwitchToXosc());
 }
