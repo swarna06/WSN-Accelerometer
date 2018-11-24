@@ -24,10 +24,6 @@
 #include "printf.h"
 #include "serial_port.h"
 
-#define SLEEP_TIME_MS       10
-
-static volatile pma_control_t pcs;
-
 void Pma_RTC_Isr()
 {
     AONRTCEventClear(AON_RTC_CH0);
@@ -53,14 +49,14 @@ void Pma_Init()
         AONRTCEnable();
     }
 
+    // Enable RTC CH0
+    AONRTCCompareValueSet(AON_RTC_CH0, 0);
+    AONRTCChannelEnable(AON_RTC_CH0);
+
     // Set MCU wake-up RTC event
     AONRTCEventClear(AON_RTC_CH0);
     AONEventMcuSet(AON_EVENT_MCU_EVENT0, AON_EVENT_RTC_CH0);
     AONEventMcuWakeUpSet(AON_EVENT_MCU_WU0, AON_EVENT_RTC_CH0);
-
-    // Enable CH0 of RTC
-    AONRTCCompareValueSet(AON_RTC_CH0, AONRTCCompareValueGet(AON_RTC_CH0) + SLEEP_TIME_MS*TM_RTC_TICKS_PER_MSEC);
-    AONRTCChannelEnable(AON_RTC_CH0);
 
     // Make sure writes take effect
     SysCtrlAonSync();
@@ -77,59 +73,43 @@ void Pma_Init()
         VIMSModeSet(VIMS_BASE, VIMS_MODE_OFF); // now turn off the VIMS
 
     PRCMCacheRetentionDisable(); // now disable retention
-
-    // Initialize control structure
-    pcs.powered_peripherals = 0;
 }
 
-void Pma_Power_On_Peripheral(uint16_t periph_id)
+void Pma_Power_On_Peripheral(uint16_t peripheral)
 {
-    int32_t power_domain = -1;
-    int32_t peripheral = -1;
-    // Most significant bits of id indicates power domain
-    // Least significant bits of id indicates peripheral
-    if (periph_id & PMA_POWER_DOMAIN_RF_CORE) // TODO separate RF core powering from other peripherals
-    {
-        power_domain = PRCM_DOMAIN_RFCORE;
-    }
-    else if (periph_id & PMA_POWER_DOMAIN_SERIAL)
-    {
-        power_domain = PRCM_DOMAIN_SERIAL;
-        switch(periph_id)
-        {
-        case PMA_PERIPH_UART0: peripheral = PRCM_PERIPH_UART0; break;
-        }
-    }
-    else if (periph_id & PMA_POWER_DOMAIN_PERIPH)
-    {
-        power_domain = PRCM_DOMAIN_PERIPH;
-        switch(periph_id)
-        {
-        case PMA_PERIPH_GPIO: peripheral = PRCM_PERIPH_GPIO; break;
-        }
-    }
+    // Most significant bits of 'peripheral' indicate power domain
+    // Least significant bits of 'peripheral' indicate peripheral module
+    uint32_t power_domain;
+    uint32_t periph_module;
 
-    // Check if power_domain was assigned
-    if (power_domain < 0)
-        return;
+    // Assign PRMC value for power domain
+    if (peripheral & PMA_F_DOMAIN_SERIAL)
+        power_domain = PRCM_DOMAIN_SERIAL;
+    else if (peripheral & PMA_F_DOMAIN_PERIPH)
+        power_domain = PRCM_DOMAIN_PERIPH;
+    else
+        return; // invalid peripheral value; do nothing
+
+    // Assign PRMC value for peripheral module
+    switch(peripheral)
+    {
+    case PMA_PERIPH_UART0: periph_module = PRCM_PERIPH_UART0; break;
+    case PMA_PERIPH_GPIO: periph_module = PRCM_PERIPH_GPIO; break;
+    default:
+        return; // invalid peripheral value; do nothing
+    }
 
     // Turn on power domain if not already on
     if (PRCMPowerDomainStatus(power_domain) != PRCM_DOMAIN_POWER_ON)
         PRCMPowerDomainOn(power_domain);
 
     // Enable peripheral's clock only when CPU is running
-    if (peripheral >= 0)
-    {
-        PRCMPeripheralRunEnable(peripheral);
-        PRCMLoadSet();
-        while(!PRCMLoadGet()); // FIXME deadlock risk ?
-    }
+    PRCMPeripheralRunEnable(periph_module);
+    PRCMLoadSet();
+    while(!PRCMLoadGet()); // FIXME deadlock risk ?
 
     // Wait until power domain becomes on
     while (PRCMPowerDomainStatus(power_domain) != PRCM_DOMAIN_POWER_ON); // FIXME deadlock risk ?
-
-    // Keep track of powered peripherals
-    pcs.powered_peripherals |= periph_id;
 }
 
 inline void Pma_CPU_Sleep(uint32_t tout_ms)
@@ -137,7 +117,7 @@ inline void Pma_CPU_Sleep(uint32_t tout_ms)
     if (tout_ms == 0)
         return;
 
-    // Set compare value of RTC channel
+    // Set compare value and enable RTC channel
     AONRTCEventClear(AON_RTC_CH0);
     AONRTCCompareValueSet(AON_RTC_CH0, Tm_Get_RTC_Time() + tout_ms*TM_RTC_TICKS_PER_MSEC);
 
@@ -187,14 +167,14 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     SysCtrlAonSync();
 
     // 5. Request power off all domains in the MCU voltage domain
-    uint32_t power_domains = 0;
-    if (pcs.powered_peripherals & PMA_POWER_DOMAIN_RF_CORE)
-        power_domains |= PRCM_DOMAIN_RFCORE;
-    if (pcs.powered_peripherals & PMA_POWER_DOMAIN_SERIAL)
-        power_domains |= PRCM_DOMAIN_SERIAL;
-    if (pcs.powered_peripherals & PMA_POWER_DOMAIN_PERIPH)
-        power_domains |= PRCM_DOMAIN_PERIPH;
-    PRCMPowerDomainOff(power_domains | PRCM_DOMAIN_CPU);
+    uint32_t powered_domains = 0;
+    if (PRCMPowerDomainStatus(PRCM_DOMAIN_RFCORE) == PRCM_DOMAIN_POWER_ON)
+        powered_domains |= PRCM_DOMAIN_RFCORE;
+    if (PRCMPowerDomainStatus(PRCM_DOMAIN_SERIAL) == PRCM_DOMAIN_POWER_ON)
+        powered_domains |= PRCM_DOMAIN_SERIAL;
+    if (PRCMPowerDomainStatus(PRCM_DOMAIN_PERIPH) == PRCM_DOMAIN_POWER_ON)
+        powered_domains |= PRCM_DOMAIN_PERIPH;
+    PRCMPowerDomainOff(powered_domains | PRCM_DOMAIN_CPU);
 
     // 6. Request uLDO during standby
     PRCMMcuUldoConfigure(true);
@@ -215,13 +195,13 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     AONWUCAuxWakeupEvent(AONWUC_AUX_WAKEUP);
 
     // 2. Turn on power domains
-    PRCMPowerDomainOn(power_domains);
+    PRCMPowerDomainOn(powered_domains);
 
     // 3. Release request for uLDO
     PRCMMcuUldoConfigure(false);
 
     // 4. Wait until all power domains are back on
-    while (PRCMPowerDomainStatus(power_domains) != PRCM_DOMAIN_POWER_ON);
+    while (PRCMPowerDomainStatus(powered_domains) != PRCM_DOMAIN_POWER_ON);
 
     // 5. Disable IO freeze
     AONIOCFreezeDisable();
