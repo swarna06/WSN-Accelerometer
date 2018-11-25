@@ -11,24 +11,40 @@
 #include <driverlib/prcm.h>
 #include <driverlib/timer.h>
 
+// Profiling global variables
+extern uint32_t pfl_tic;
+extern uint32_t pfl_toc;
+extern uint32_t pfl_wcet;
+
+#define PFL_DECLARE_PROFILING_VARIABLES()       uint32_t pfl_tic, pfl_toc, pfl_wcet = 0;
+
 // Hardware definitions (timer number and peripheral id)
-#define PFL_TIMER_BASE                  (GPT3_BASE)
-#define PFL_PRMC_PERIPHERAL             (PRCM_PERIPH_TIMER3)
+#define PFL_TIMER_BASE                          (GPT3_BASE)
+#define PFL_PRMC_PERIPHERAL                     (PRCM_PERIPH_TIMER3)
 
 // Constants for conversion between clock ticks and 'real' time
-#define PFL_TICKS_PER_US                48
-#define PFL_NSEC_PER_TICK               21
+#define PFL_TICKS_PER_US                        48
+#define PFL_NSEC_PER_TICK                       21
 
 // Macro functions for conversion between clock ticks and 'real' time
-#define Pfl_Ticks_To_Microsec(v)        (v/PFL_TICKS_PER_US)
-#define Pfl_Ticks_To_Nanosec(v)         (v*PFL_NSEC_PER_TICK)
+#define Pfl_Ticks_To_Microsec(v)                (v/PFL_TICKS_PER_US)
+#define Pfl_Ticks_To_Nanosec(v)                 (v*PFL_NSEC_PER_TICK)
 
 // Macro functions for profiling
-#define Pfl_Get_Current_Time()          (HWREG(PFL_TIMER_BASE + GPT_O_TAR))  // get counter value
-#define Pfl_Delta_Time32(start, end)    (end > start ? end - start : (((uint32_t)-1) - start) + end) // note: ((uint32_t)-1) = 0xFFFFFFFF
-#define Pfl_WCET(wcet, exec_time)       if (wcet < exec_time) wcet = exec_time; // worst-case execution time
-#define Pfl_BCET(bcet, exec_time)       if (bcet > exec_time) min_time = exec_time; // best-case execution time
-#define Pfl_AET(avg, ns, N)             if (N < (uint32_t)-1) { N++; avg -= avg/N; avg += ns/N; }; // average execution time
+#define Pfl_Get_Current_Time()                  (HWREG(PFL_TIMER_BASE + GPT_O_TAR))  // get counter value
+#define Pfl_Delta_Time32(start, end)            (end > start ? end - start : (((uint32_t)-1) - start) + end) // note: ((uint32_t)-1) = 0xFFFFFFFF
+#define Pfl_Update_WCET(wcet, exec_time)        if (wcet < exec_time) wcet = exec_time; // worst-case execution time
+#define Pfl_Update_BCET(bcet, exec_time)        if (bcet > _exec_time) bcet = exec_time; // best-case execution time
+#define Pfl_Update_AET(avg, ns, N)              if (N < (uint32_t)-1) { N++; avg -= avg/N; avg += ns/N; }; // average execution time
+
+// Macro functions for global time stamps
+#define Pfl_Tic()                               pfl_tic = Pfl_Get_Current_Time();
+#define Pfl_Toc()                               { \
+                                                    pfl_toc = Pfl_Get_Current_Time(); \
+                                                    Pfl_Update_WCET(pfl_wcet, Pfl_Delta_Time32(pfl_tic, pfl_toc)); \
+                                                }
+#define Pfl_Get_Exec_Time()                     Pfl_Delta_Time32(pfl_tic, pfl_toc)
+#define Pfl_Get_WCET()                          (pfl_wcet)
 
 void Pfl_Init()
 {

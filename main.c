@@ -51,12 +51,13 @@ int main(void)
     uint8_t count = 0;
     Brd_Led_Off(BRD_LED1);
 
-    const uint32_t WAKEUP_TIME_MS = 500;
+    const uint32_t WAKEUP_TIME_MS = 100;
     rfc_tx_param_t tx_param;
     tx_param.buf = NULL; // empty packet
     tx_param.rat_start_time = 0; // transmit immediately
 
     uint32_t start_time, end_time, exec_time;
+    uint32_t wcet = 0;
 
     while (1)
     {
@@ -67,7 +68,16 @@ int main(void)
         AONRTCEventClear(AON_RTC_CH0);
         AONRTCCompareValueSet(AON_RTC_CH0, Tm_Get_RTC_Time() + WAKEUP_TIME_MS*TM_RTC_TICKS_PER_MSEC);
 
+        // Wake up serial port and send message
+        if (!(HWREG(UART0_BASE + UART_O_CTL) & UART_CTL_UARTEN))
+        {
+            Sep_Wakeup();
+            PRINTF("count: %d\r\n", count++);
+        }
+
         // Wake up RF core
+        start_time = Pfl_Get_Current_Time();
+
         Rfc_Wakeup();
         do
         {
@@ -75,6 +85,11 @@ int main(void)
             if (Tm_Sys_Tick())
                 Tm_Process();
         } while (!Rfc_Ready());
+
+        end_time = Pfl_Get_Current_Time();
+        exec_time = Pfl_Delta_Time32(start_time, end_time);
+        Pfl_Update_WCET(wcet, exec_time);
+        PRINTF("exec_time: %d ns, wcet: %d ns\r\n", Pfl_Ticks_To_Nanosec(exec_time), Pfl_Ticks_To_Nanosec(wcet));
 
         // Transmit packet
         Rfc_BLE5_Adv_Aux(&tx_param);
@@ -85,17 +100,9 @@ int main(void)
                 Tm_Process();
         } while (!Rfc_Ready());
 
-        if (!(HWREG(UART0_BASE + UART_O_CTL) & UART_CTL_UARTEN))
-        {
-            Sep_Wakeup();
-            PRINTF("count: %d\r\n", count++);
-        }
-
         // Blink LED using the timing module
-        start_time = Pfl_Get_Current_Time();
-
-        Tm_Start_Timeout(TM_TOUT_TEST_ID, 300);
-        Tm_Start_Period(TM_PER_HEARTBEAT_ID, 50);
+        Tm_Start_Timeout(TM_TOUT_TEST_ID, 90);
+        Tm_Start_Period(TM_PER_HEARTBEAT_ID, 30);
         Brd_Led_On(BRD_LED1);
         do
         {
@@ -106,10 +113,6 @@ int main(void)
                 Brd_Led_Toggle(BRD_LED1);
         } while (!Tm_Timeout_Completed(TM_TOUT_TEST_ID));
         Brd_Led_Off(BRD_LED1);
-
-        end_time = Pfl_Get_Current_Time();
-        exec_time = Pfl_Delta_Time32(start_time, end_time);
-        PRINTF("exec_time: %d ns\r\n", Pfl_Ticks_To_Nanosec(exec_time));
 
         while (!AONRTCEventGet(AON_RTC_CH0)); // busy wait
 
