@@ -65,6 +65,8 @@ int main(void)
         do
         {
             Rfc_Process();
+            if (Tm_Sys_Tick())
+                Tm_Process();
         } while (!Rfc_Ready());
 
         // Transmit packet
@@ -72,6 +74,8 @@ int main(void)
         do
         {
             Rfc_Process();
+            if (Tm_Sys_Tick())
+                Tm_Process();
         } while (!Rfc_Ready());
 
         if (!(HWREG(UART0_BASE + UART_O_CTL) & UART_CTL_UARTEN))
@@ -80,6 +84,7 @@ int main(void)
             PRINTF("count: %d\r\n", count++);
         }
 
+        // Blink LED using the timing module
         Tm_Start_Timeout(TM_TOUT_TEST_ID, 300);
         Tm_Start_Period(TM_PER_HEARTBEAT_ID, 50);
         Brd_Led_On(BRD_LED1);
