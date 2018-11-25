@@ -16,6 +16,8 @@
 #define BRD_BOARD               BRD_LAUNCHPAD
 //#define BRD_BOARD               BRD_SENSOR_NODE_V1
 
+#define Brd_Led_Toggle(l)       GPIO_toggleDio(l)
+
 #if (BRD_BOARD == BRD_LAUNCHPAD)
 
     #define BRD_LED0            6

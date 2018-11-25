@@ -37,6 +37,7 @@ int main(void)
 {
     Pma_Init();
     GPIO_Init();
+    Tm_Init();
     Sep_Init();
     Rfc_Init();
 
@@ -45,7 +46,7 @@ int main(void)
     uint8_t count = 0;
     Brd_Led_Off(BRD_LED1);
 
-    const uint32_t WAKEUP_TIME_MS = 50;
+    const uint32_t WAKEUP_TIME_MS = 500;
     rfc_tx_param_t tx_param;
     tx_param.buf = NULL; // empty packet
     tx_param.rat_start_time = 0; // transmit immediately
@@ -58,12 +59,6 @@ int main(void)
         Brd_Led_On(BRD_LED0);
         AONRTCEventClear(AON_RTC_CH0);
         AONRTCCompareValueSet(AON_RTC_CH0, Tm_Get_RTC_Time() + WAKEUP_TIME_MS*TM_RTC_TICKS_PER_MSEC);
-
-        if (!(HWREG(UART0_BASE + UART_O_CTL) & UART_CTL_UARTEN))
-        {
-            Sep_Wakeup();
-            PRINTF("count: %d\r\n", count++);
-        }
 
         // Wake up RF core
         Rfc_Wakeup();
@@ -78,6 +73,26 @@ int main(void)
         {
             Rfc_Process();
         } while (!Rfc_Ready());
+
+        if (!(HWREG(UART0_BASE + UART_O_CTL) & UART_CTL_UARTEN))
+        {
+            Sep_Wakeup();
+            PRINTF("count: %d\r\n", count++);
+        }
+
+        Tm_Start_Timeout(TM_TOUT_TEST_ID, 300);
+        Tm_Start_Period(TM_PER_HEARTBEAT_ID, 50);
+        Brd_Led_On(BRD_LED1);
+        do
+        {
+            if (Tm_Sys_Tick())
+                Tm_Process();
+
+            if (Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
+                Brd_Led_Toggle(BRD_LED1);
+        } while (!Tm_Timeout_Completed(TM_TOUT_TEST_ID));
+        Brd_Led_Off(BRD_LED1);
+
 
         while (!AONRTCEventGet(AON_RTC_CH0)); // busy wait
 

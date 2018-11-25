@@ -10,6 +10,12 @@
 
 #include <driverlib/aon_rtc.h>
 
+// RTC ticks per millisecond
+#define TM_RTC_TICKS_PER_MSEC   64
+
+// Number of RTC clocks used to generate the system ticks
+#define TM_SYS_TICK_RTC_CYCLES  TM_RTC_TICKS_PER_MSEC*1 // ~1 ms
+
 // Total number of periods and timeouts
 #define TM_PER_NUM              2       // xxx do not forget to update !
 #define TM_TOUT_NUM             2       // xxx do not forget to update !
@@ -33,15 +39,9 @@
 // Macro to get RTC counter value (32-bit)
 #define Tm_Get_RTC_Time()       AONRTCCurrentCompareValueGet()
 
-// RTC ticks per millisecond
-#define TM_RTC_TICKS_PER_MSEC   64
-
 // RTC CH1 period
 #define TM_ABS_TIME_PERIOD_MS   200
 #define TM_ABS_TIME_PER_TICKS   (TM_ABS_TIME_PERIOD_MS*TM_RTC_TICKS_PER_MSEC)
-
-// Macro for getting system tick
-#define Tm_System_Tick()        Tm_RTC_Period_Completed()
 
 // Macro for getting the delta time between two time stamps
 #define Tm_Delta_Time32(start, end) (end > start ? end - start : (0xFFFFFFFF - start) + end)
@@ -67,9 +67,7 @@ typedef struct
 
 void Tm_Init_RTC();
 
-void Tm_Start_RTC_Period(uint32_t period_ms);
-
-bool Tm_RTC_Period_Completed();
+bool Tm_Sys_Tick();
 
 void Tm_Enable_Abs_Time_Per();
 
@@ -79,9 +77,7 @@ void Tm_Abs_Period_Update();
 
 void Tm_Init();
 
-void Tm_Adjust_Counters();
-
-void Tm_Update_Time_Events();
+void Tm_Process();
 
 void Tm_Start_Period(uint8_t per_idx, uint16_t per_val);
 
