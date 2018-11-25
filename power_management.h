@@ -9,14 +9,17 @@
 #define POWER_MANAGEMENT_H_
 
 // Power domain flags
-#define PMA_F_DOMAIN_SERIAL         0x8000
-#define PMA_F_DOMAIN_PERIPH         0x4000
+#define PMA_F_DOMAIN_RF_CORE        0x8000
+#define PMA_F_DOMAIN_SERIAL         0x4000
+#define PMA_F_DOMAIN_PERIPH         0x2000
 
 typedef enum
 {
-    PMA_PERIPH_UART0 = PMA_F_DOMAIN_SERIAL | 0x01,
+    PMA_PERIPH_RF_CORE = PMA_F_DOMAIN_RF_CORE,
 
-    PMA_PERIPH_GPIO = PMA_F_DOMAIN_PERIPH | 0x10,
+    PMA_PERIPH_UART0 = PMA_F_DOMAIN_SERIAL,
+
+    PMA_PERIPH_GPIO = PMA_F_DOMAIN_PERIPH,
 } pma_peripherals_t;
 
 void Pma_Init();

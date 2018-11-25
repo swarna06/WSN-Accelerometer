@@ -38,14 +38,20 @@ int main(void)
     Pma_Init();
     GPIO_Init();
     Sep_Init();
+    Rfc_Init();
+
+    Rfc_Set_Tx_Power(RFC_TX_POW_0dBm);
 
     uint8_t count = 0;
     Brd_Led_Off(BRD_LED1);
 
+    const uint32_t WAKEUP_TIME_MS = 50;
+    rfc_tx_param_t tx_param;
+    tx_param.buf = NULL; // empty packet
+    tx_param.rat_start_time = 0; // transmit immediately
+
     while (1)
     {
-        const uint32_t WAKEUP_TIME_MS = 500;
-
         // ********************************
         // Active interval
         // ********************************
@@ -58,6 +64,20 @@ int main(void)
             Sep_Wakeup();
             PRINTF("count: %d\r\n", count++);
         }
+
+        // Wake up RF core
+        Rfc_Wakeup();
+        do
+        {
+            Rfc_Process();
+        } while (!Rfc_Ready());
+
+        // Transmit packet
+        Rfc_BLE5_Adv_Aux(&tx_param);
+        do
+        {
+            Rfc_Process();
+        } while (!Rfc_Ready());
 
         while (!AONRTCEventGet(AON_RTC_CH0)); // busy wait
 

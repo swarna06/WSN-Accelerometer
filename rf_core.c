@@ -28,6 +28,7 @@
 #include "smartrf_settings.h"
 #include "log.h"
 #include "misc.h"
+#include "power_management.h"
 
 // RF core control structure
 rfc_control_t rfc;
@@ -47,16 +48,53 @@ static volatile rfc_dataEntryPointer_t data_entry_ptr;
 static volatile dataQueue_t data_queue;
 static volatile rfc_ble5ScanInitOutput_t ble5_scan_init_output;
 
-static void Rfc_HW_Setup();
 static void Rfc_Init_CPE_Structs();
 static void Rfc_Handle_Error(uint8_t err_code);
 
 void Rfc_Init()
 {
-    Rfc_HW_Setup();
+    // Clear interrupt flags
+    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG) = 0;
+    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = 0;
+
+    // Set RF mode - note: the RF core must be off before setting the mode
+    HWREG(PRCM_BASE + PRCM_O_RFCMODESEL) = PRCM_RFCMODESEL_CURR_MODE1; // BLE
+
+    // Power on the RF core
+    Pma_Power_On_Peripheral(PMA_PERIPH_RF_CORE);
+
+    // Enable clock domain
+    PRCMDomainEnable(PRCM_DOMAIN_RFCORE);
+    PRCMLoadSet();
+    while(!PRCMLoadGet());
+
+    // Enable RF core clock
+    RFCClockEnable();
+
+    // Initialize the Command and Packet Engine (CPE) data structures
     Rfc_Init_CPE_Structs();
 
+    // Initialize the modules control structure
     memset(&rfc, 0, sizeof(rfc_control_t));
+    rfc.state = RFC_S_WAIT_RFC_BOOT;
+    Tm_Start_Timeout(TM_RFC_TOUT_ID, RFC_TOUT_BOOT_MSEC);
+}
+
+void Rfc_Wakeup()
+{
+    // Clear interrupt flags
+    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG) = 0;
+    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = 0;
+
+    // Enable clock domain
+    PRCMDomainEnable(PRCM_DOMAIN_RFCORE);
+    PRCMLoadSet();
+    while(!PRCMLoadGet());
+
+    // Enable RF core clock
+    RFCClockEnable();
+
+    // Wait until the RF core boots in the FSM
     rfc.state = RFC_S_WAIT_RFC_BOOT;
     Tm_Start_Timeout(TM_RFC_TOUT_ID, RFC_TOUT_BOOT_MSEC);
 }
@@ -409,30 +447,6 @@ inline uint8_t Rfc_Error()
 // ********************************
 // Static functions
 // ********************************
-static void Rfc_HW_Setup()
-{
-    // Turn off RF core
-    PRCMPowerDomainOff(PRCM_DOMAIN_RFCORE);
-    while (PRCMPowerDomainStatus(PRCM_DOMAIN_RFCORE) == PRCM_DOMAIN_POWER_ON);
-
-    // Clear interrupt flags
-    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG) = 0;
-
-    // Set RF mode
-    HWREG(PRCM_BASE + PRCM_O_RFCMODESEL) = PRCM_RFCMODESEL_CURR_MODE1; // BLE
-
-    // Turn on power domains and enable clock domain
-    PRCMPowerDomainOn(PRCM_DOMAIN_RFCORE);
-    while (PRCMPowerDomainStatus(PRCM_DOMAIN_RFCORE) != PRCM_DOMAIN_POWER_ON);
-    PRCMDomainEnable(PRCM_DOMAIN_RFCORE);
-    PRCMLoadSet();
-    while(!PRCMLoadGet());
-
-    // Enable RF core clock
-    RFCClockEnable();
-    PRCMLoadSet();
-    while(!PRCMLoadGet());
-}
 
 static void Rfc_Init_CPE_Structs()
 {

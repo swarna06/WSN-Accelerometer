@@ -14,15 +14,11 @@
 #include <driverlib/cpu.h>
 #include <driverlib/aon_rtc.h>
 #include <driverlib/sys_ctrl.h>
-#include <driverlib/ioc.h>
 
 #include "power_management.h"
 #include "timing.h"
 
-#include <driverlib/gpio.h>
 #include "board.h"
-#include "printf.h"
-#include "serial_port.h"
 
 void Pma_RTC_Isr()
 {
@@ -83,7 +79,9 @@ void Pma_Power_On_Peripheral(uint16_t peripheral)
     uint32_t periph_module;
 
     // Assign PRMC value for power domain
-    if (peripheral & PMA_F_DOMAIN_SERIAL)
+    if (peripheral & PMA_F_DOMAIN_RF_CORE)
+        power_domain = PRCM_DOMAIN_RFCORE;
+    else if (peripheral & PMA_F_DOMAIN_SERIAL)
         power_domain = PRCM_DOMAIN_SERIAL;
     else if (peripheral & PMA_F_DOMAIN_PERIPH)
         power_domain = PRCM_DOMAIN_PERIPH;
@@ -93,6 +91,7 @@ void Pma_Power_On_Peripheral(uint16_t peripheral)
     // Assign PRMC value for peripheral module
     switch(peripheral)
     {
+    case PMA_PERIPH_RF_CORE: periph_module = (uint32_t)-1; // value doesn't matter
     case PMA_PERIPH_UART0: periph_module = PRCM_PERIPH_UART0; break;
     case PMA_PERIPH_GPIO: periph_module = PRCM_PERIPH_GPIO; break;
     default:
@@ -104,9 +103,12 @@ void Pma_Power_On_Peripheral(uint16_t peripheral)
         PRCMPowerDomainOn(power_domain);
 
     // Enable peripheral's clock only when CPU is running
-    PRCMPeripheralRunEnable(periph_module);
-    PRCMLoadSet();
-    while(!PRCMLoadGet()); // FIXME deadlock risk ?
+    if (peripheral != PMA_PERIPH_RF_CORE)
+    {
+        PRCMPeripheralRunEnable(periph_module);
+        PRCMLoadSet();
+        while(!PRCMLoadGet()); // FIXME deadlock risk ?
+    }
 
     // Wait until power domain becomes on
     while (PRCMPowerDomainStatus(power_domain) != PRCM_DOMAIN_POWER_ON); // FIXME deadlock risk ?

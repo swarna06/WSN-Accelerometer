@@ -250,6 +250,8 @@ typedef struct
 // ********************************
 void Rfc_Init();
 
+void Rfc_Wakeup();
+
 void Rfc_Process();
 
 void Rfc_Set_Tx_Power(rfc_tx_power_t tx_power);

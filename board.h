@@ -14,6 +14,7 @@
 #define BRD_SENSOR_NODE_V1      2
 
 #define BRD_BOARD               BRD_LAUNCHPAD
+//#define BRD_BOARD               BRD_SENSOR_NODE_V1
 
 #if (BRD_BOARD == BRD_LAUNCHPAD)
 
