@@ -65,17 +65,9 @@ typedef struct
   uint16_t timeout[TM_TOUT_NUM];
 } tm_control_t;
 
-void Tm_Init_RTC();
+void Tm_Init();
 
 bool Tm_Sys_Tick();
-
-void Tm_Enable_Abs_Time_Per();
-
-bool Tm_Abs_Time_Per_Completed();
-
-void Tm_Abs_Period_Update();
-
-void Tm_Init();
 
 void Tm_Process();
 
@@ -88,5 +80,11 @@ void Tm_End_Period(uint8_t per_idx);
 void Tm_Start_Timeout(uint8_t tout_idx, uint16_t tout_val);
 
 bool Tm_Timeout_Completed(uint8_t tout_idx);
+
+void Tm_Enable_Abs_Time_Per();
+
+bool Tm_Abs_Time_Per_Completed();
+
+void Tm_Abs_Period_Update();
 
 #endif /* TIMING_H_ */

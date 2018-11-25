@@ -17,76 +17,7 @@
 static tm_control_t tcs;
 
 static void Tm_Start_System_Tick();
-
-void Tm_Init_RTC()
-{
-    // Enable 16 kHz signal used to sync up with the Radio Timer (RAT)
-    HWREG(AON_RTC_BASE + AON_RTC_O_CTL) |= AON_RTC_CTL_RTC_UPD_EN;
-
-    // Enable RTC if it isn't already running
-    if (AONRTCActive() == false)
-    {
-        AONRTCReset();
-        AONRTCEnable();
-    }
-
-    // Make sure writes take effect
-    SysCtrlAonSync();
-
-    // Reset RTC
-    AONRTCReset();
-}
-
-void Tm_Enable_Abs_Time_Per()
-{
-    const uint32_t TICKS_PER_PERIOD = TM_ABS_TIME_PERIOD_MS*TM_RTC_TICKS_PER_MSEC;
-    uint32_t curr_time, cmp_val;
-
-    // Configure and enable CH2 (periodic compare)
-    AONRTCModeCh1Set(AON_RTC_MODE_CH1_COMPARE);
-    Tm_Synch_With_RTC(); // wait for next RTC cycle
-    curr_time = AONRTCCurrentCompareValueGet();
-
-    if (TICKS_PER_PERIOD > curr_time)
-        cmp_val = TICKS_PER_PERIOD;
-    else
-        cmp_val = curr_time + (TICKS_PER_PERIOD - (curr_time % TICKS_PER_PERIOD));
-
-    AONRTCCompareValueSet(AON_RTC_CH1, cmp_val);
-    AONRTCChannelEnable(AON_RTC_CH1);
-}
-
-bool Tm_Abs_Time_Per_Completed()
-{
-    if (AONRTCEventGet(AON_RTC_CH1))
-    {
-        const uint32_t TICKS_PER_PERIOD = TM_ABS_TIME_PERIOD_MS*TM_RTC_TICKS_PER_MSEC;
-        AONRTCEventClear(AON_RTC_CH1);
-        AONRTCCompareValueSet(AON_RTC_CH1, AONRTCCompareValueGet(AON_RTC_CH1) + TICKS_PER_PERIOD);
-
-        return true;
-    }
-    else
-        return false;
-}
-
-void Tm_Abs_Period_Update()
-{
-    const uint32_t TICKS_PER_PERIOD = TM_ABS_TIME_PERIOD_MS*TM_RTC_TICKS_PER_MSEC;
-    AONRTCEventClear(AON_RTC_CH1);
-    AONRTCCompareValueSet(AON_RTC_CH1, AONRTCCompareValueGet(AON_RTC_CH1) + TICKS_PER_PERIOD);
-}
-
-bool Tm_Sys_Tick()
-{
-    if (AONRTCEventGet(AON_RTC_CH2))
-    {
-        AONRTCEventClear(AON_RTC_CH2);
-        return true;
-    }
-    else
-        return false;
-}
+static void Tm_Init_RTC();
 
 void Tm_Init()
 {
@@ -104,6 +35,19 @@ void Tm_Init()
 
     Tm_Init_RTC();
     Tm_Start_System_Tick(1); // system tick (~1 msec)
+}
+
+bool Tm_Sys_Tick()
+{
+    // Check if RTC CH2 has generated an event
+    // The return value of this function indicates if the time events should be updated
+    if (AONRTCEventGet(AON_RTC_CH2))
+    {
+        AONRTCEventClear(AON_RTC_CH2);
+        return true;
+    }
+    else
+        return false;
 }
 
 void Tm_Process()
@@ -176,9 +120,68 @@ bool Tm_Timeout_Completed(uint8_t tout_idx)
     return (!(tcs.timeout[tout_idx]));
 }
 
+void Tm_Enable_Abs_Time_Per()
+{
+    const uint32_t TICKS_PER_PERIOD = TM_ABS_TIME_PERIOD_MS*TM_RTC_TICKS_PER_MSEC;
+    uint32_t curr_time, cmp_val;
+
+    // Configure and enable CH2 (periodic compare)
+    AONRTCModeCh1Set(AON_RTC_MODE_CH1_COMPARE);
+    Tm_Synch_With_RTC(); // wait for next RTC cycle
+    curr_time = AONRTCCurrentCompareValueGet();
+
+    if (TICKS_PER_PERIOD > curr_time)
+        cmp_val = TICKS_PER_PERIOD;
+    else
+        cmp_val = curr_time + (TICKS_PER_PERIOD - (curr_time % TICKS_PER_PERIOD));
+
+    AONRTCCompareValueSet(AON_RTC_CH1, cmp_val);
+    AONRTCChannelEnable(AON_RTC_CH1);
+}
+
+bool Tm_Abs_Time_Per_Completed()
+{
+    if (AONRTCEventGet(AON_RTC_CH1))
+    {
+        const uint32_t TICKS_PER_PERIOD = TM_ABS_TIME_PERIOD_MS*TM_RTC_TICKS_PER_MSEC;
+        AONRTCEventClear(AON_RTC_CH1);
+        AONRTCCompareValueSet(AON_RTC_CH1, AONRTCCompareValueGet(AON_RTC_CH1) + TICKS_PER_PERIOD);
+
+        return true;
+    }
+    else
+        return false;
+}
+
+void Tm_Abs_Period_Update()
+{
+    const uint32_t TICKS_PER_PERIOD = TM_ABS_TIME_PERIOD_MS*TM_RTC_TICKS_PER_MSEC;
+    AONRTCEventClear(AON_RTC_CH1);
+    AONRTCCompareValueSet(AON_RTC_CH1, AONRTCCompareValueGet(AON_RTC_CH1) + TICKS_PER_PERIOD);
+}
+
 // ********************************
 // Static functions
 // ********************************
+
+static void Tm_Init_RTC()
+{
+    // Enable 16 kHz signal used to sync up with the Radio Timer (RAT)
+    HWREG(AON_RTC_BASE + AON_RTC_O_CTL) |= AON_RTC_CTL_RTC_UPD_EN;
+
+    // Enable RTC if it isn't already running
+    if (AONRTCActive() == false)
+    {
+        AONRTCReset();
+        AONRTCEnable();
+    }
+
+    // Make sure writes take effect
+    SysCtrlAonSync();
+
+    // Reset RTC
+    AONRTCReset();
+}
 
 static void Tm_Start_System_Tick()
 {
