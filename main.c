@@ -28,6 +28,7 @@
 #include "log.h"
 #include "coordinator.h"
 #include "power_management.h"
+#include "profiling.h"
 
 #include "printf.h"
 
@@ -41,6 +42,10 @@ int main(void)
     Sep_Init();
     Rfc_Init();
 
+    #if (BRD_BOARD == BRD_LAUNCHPAD)
+    Pfl_Init(); // FIXME disable to reduce power consumption
+    #endif
+
     Rfc_Set_Tx_Power(RFC_TX_POW_0dBm);
 
     uint8_t count = 0;
@@ -50,6 +55,8 @@ int main(void)
     rfc_tx_param_t tx_param;
     tx_param.buf = NULL; // empty packet
     tx_param.rat_start_time = 0; // transmit immediately
+
+    uint32_t start_time, end_time, exec_time;
 
     while (1)
     {
@@ -85,6 +92,8 @@ int main(void)
         }
 
         // Blink LED using the timing module
+        start_time = Pfl_Get_Current_Time();
+
         Tm_Start_Timeout(TM_TOUT_TEST_ID, 300);
         Tm_Start_Period(TM_PER_HEARTBEAT_ID, 50);
         Brd_Led_On(BRD_LED1);
@@ -98,6 +107,9 @@ int main(void)
         } while (!Tm_Timeout_Completed(TM_TOUT_TEST_ID));
         Brd_Led_Off(BRD_LED1);
 
+        end_time = Pfl_Get_Current_Time();
+        exec_time = Pfl_Delta_Time32(start_time, end_time);
+        PRINTF("exec_time: %d ns\r\n", Pfl_Ticks_To_Nanosec(exec_time));
 
         while (!AONRTCEventGet(AON_RTC_CH0)); // busy wait
 
