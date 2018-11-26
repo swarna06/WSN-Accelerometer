@@ -32,6 +32,8 @@
 
 #include "printf.h"
 
+PFL_DECLARE_PROFILING_VARIABLES();
+
 void GPIO_Init();
 
 int main(void)
@@ -39,7 +41,7 @@ int main(void)
     Pma_Init();
     GPIO_Init();
     Tm_Init();
-    Sep_Init();
+    Sep_Init(); // FIXME disable to reduce power consumption
     Rfc_Init();
 
     #if (BRD_BOARD == BRD_LAUNCHPAD)
@@ -47,6 +49,8 @@ int main(void)
     #endif
 
     Rfc_Set_Tx_Power(RFC_TX_POW_0dBm);
+    Rfc_BLE5_Set_PHY_Mode(RFC_PHY_MODE_2MBPS);
+    Rfc_BLE5_Set_Channel(17);
 
     uint8_t count = 0;
     Brd_Led_Off(BRD_LED1);
@@ -56,8 +60,7 @@ int main(void)
     tx_param.buf = NULL; // empty packet
     tx_param.rat_start_time = 0; // transmit immediately
 
-    uint32_t start_time, end_time, exec_time;
-    uint32_t wcet = 0;
+    uint32_t exec_time, wcet = 0;
 
     while (1)
     {
@@ -76,7 +79,7 @@ int main(void)
         }
 
         // Wake up RF core
-        start_time = Pfl_Get_Current_Time();
+        Pfl_Tic();
 
         Rfc_Wakeup();
         do
@@ -86,9 +89,9 @@ int main(void)
                 Tm_Process();
         } while (!Rfc_Ready());
 
-        end_time = Pfl_Get_Current_Time();
-        exec_time = Pfl_Delta_Time32(start_time, end_time);
-        Pfl_Update_WCET(wcet, exec_time);
+        Pfl_Toc();
+        exec_time = Pfl_Get_Exec_Time();
+        wcet = Pfl_Get_WCET();
         PRINTF("exec_time: %d ns, wcet: %d ns\r\n", Pfl_Ticks_To_Nanosec(exec_time), Pfl_Ticks_To_Nanosec(wcet));
 
         // Transmit packet
