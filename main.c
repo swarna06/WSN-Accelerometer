@@ -43,6 +43,7 @@ int main(void)
     Tm_Init();
     Sep_Init(); // FIXME disable to reduce power consumption
     Rfc_Init();
+    Log_Init();
 
     #if (BRD_BOARD == BRD_LAUNCHPAD)
     Pfl_Init(); // FIXME disable to reduce power consumption
@@ -62,8 +63,25 @@ int main(void)
 
     uint32_t exec_time, wcet = 0;
 
+    Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
+
     while (1)
     {
+        if (Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
+        {
+            Brd_Led_Toggle(BRD_LED0);
+            Log_Value("count: ", count++);
+        }
+
+        if (Tm_Sys_Tick())
+            Tm_Process();
+
+        Log_Process();
+
+        Rfc_Process();
+
+        continue;
+
         // ********************************
         // Active interval
         // ********************************
