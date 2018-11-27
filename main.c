@@ -26,7 +26,6 @@
 #include "host_interface.h"
 #include "protocol.h"
 #include "log.h"
-#include "coordinator.h"
 #include "power_management.h"
 #include "profiling.h"
 
