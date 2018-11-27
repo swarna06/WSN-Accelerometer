@@ -46,7 +46,7 @@ extern uint32_t pfl_wcet;
 #define Pfl_Get_Exec_Time()                     Pfl_Delta_Time32(pfl_tic, pfl_toc)
 #define Pfl_Get_WCET()                          (pfl_wcet)
 
-void Pfl_Init()
+static inline void Pfl_Init()
 {
     // Power timer and enable module clock
     if (PRCMPowerDomainStatus(PRCM_DOMAIN_TIMER) != PRCM_DOMAIN_POWER_ON)
