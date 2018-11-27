@@ -71,13 +71,6 @@ int main(void)
         AONRTCEventClear(AON_RTC_CH0);
         AONRTCCompareValueSet(AON_RTC_CH0, Tm_Get_RTC_Time() + WAKEUP_TIME_MS*TM_RTC_TICKS_PER_MSEC);
 
-        // Wake up serial port and send message
-        if (!(HWREG(UART0_BASE + UART_O_CTL) & UART_CTL_UARTEN))
-        {
-            Sep_Wakeup();
-            PRINTF("count: %d\r\n", count++);
-        }
-
         // Wake up RF core
         Pfl_Tic();
 
@@ -92,6 +85,13 @@ int main(void)
         Pfl_Toc();
         exec_time = Pfl_Get_Exec_Time();
         wcet = Pfl_Get_WCET();
+
+        // Wake up serial port and send message
+        if (!(HWREG(UART0_BASE + UART_O_CTL) & UART_CTL_UARTEN))
+        {
+            Sep_Wakeup();
+            PRINTF("count: %d\r\n", count++);
+        }
         PRINTF("exec_time: %d ns, wcet: %d ns\r\n", Pfl_Ticks_To_Nanosec(exec_time), Pfl_Ticks_To_Nanosec(wcet));
 
         // Transmit packet
