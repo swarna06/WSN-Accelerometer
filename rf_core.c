@@ -505,11 +505,11 @@ static void Rfc_Handle_Error(uint8_t err_code)
 
     // Log error
     Log_Line("RFC err:");
-    Log_Value("\tcode: ", rfc.error.code);
-    Log_Value("\tfsm_st: ", rfc.error.fsm_state);
-    Log_Value("\tCMDSTA: ", rfc.error.CMDSTA);
-    Log_Value("\tRFHWIFG: ", rfc.error.RFHWIFG);
-    Log_Value("\tRFCPEIFG: ", rfc.error.RFCPEIFG);
-    Log_Value("\tcmd_num: ", rfc.error.cmd_num);
-    Log_Value("\tcmd_sta: ", rfc.error.cmd_status);
+    Log_Val_Hex32("\tcode: ", rfc.error.code);
+    Log_Val_Hex32("\tfsm_st: ", rfc.error.fsm_state);
+    Log_Val_Hex32("\tCMDSTA: ", rfc.error.CMDSTA);
+    Log_Val_Hex32("\tRFHWIFG: ", rfc.error.RFHWIFG);
+    Log_Val_Hex32("\tRFCPEIFG: ", rfc.error.RFCPEIFG);
+    Log_Val_Hex32("\tcmd_num: ", rfc.error.cmd_num);
+    Log_Val_Hex32("\tcmd_sta: ", rfc.error.cmd_status);
 }
