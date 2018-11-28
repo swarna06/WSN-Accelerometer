@@ -44,6 +44,8 @@ extern uint32_t pfl_wcet;
                                                     Pfl_Update_WCET(pfl_wcet, Pfl_Delta_Time32(pfl_tic, pfl_toc)); \
                                                 }
 #define Pfl_Get_Exec_Time()                     Pfl_Delta_Time32(pfl_tic, pfl_toc)
+#define Pfl_Get_Exec_Time_Microsec()            (Pfl_Ticks_To_Microsec(Pfl_Get_Exec_Time()))
+#define Pfl_Get_Exec_Time_Nanosec()             (Pfl_Ticks_To_Nanosec(Pfl_Get_Exec_Time()))
 #define Pfl_Get_WCET()                          (pfl_wcet)
 
 static inline void Pfl_Init()
