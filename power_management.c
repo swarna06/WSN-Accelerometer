@@ -17,6 +17,8 @@
 
 #include "power_management.h"
 #include "timing.h"
+#include "rf_core.h"
+#include "serial_port.h"
 
 #include "board.h"
 
@@ -69,6 +71,8 @@ void Pma_Init()
         VIMSModeSet(VIMS_BASE, VIMS_MODE_OFF); // now turn off the VIMS
 
     PRCMCacheRetentionDisable(); // now disable retention
+
+    Brd_Led_On(BRD_LED0); // FIXME remove
 }
 
 void Pma_Power_On_Peripheral(uint16_t peripheral)
@@ -142,6 +146,9 @@ inline void Pma_CPU_Sleep(uint32_t tout_ms)
 
 void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
 {
+    Brd_Led_Off(BRD_LED0);  // FIXME remove
+    while (!Sep_UART_Idle()); // wait until the UART FIFO becomes FIXME remove
+
     // Put MCU in standby mode
     // Sequence taken from TI's power driver (PowerCC26XX.c)
 
@@ -217,4 +224,16 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     // 8. Enable XOSC
     OSCHF_TurnOnXosc();
     while (!OSCHF_AttemptToSwitchToXosc());
+
+    // 9. Wake up modules
+    Pma_MCU_Wakeup();
+
+    Brd_Led_On(BRD_LED0);  // FIXME remove
+}
+
+
+void Pma_MCU_Wakeup()
+{
+    Rfc_Wakeup();
+    Sep_Wakeup();
 }
