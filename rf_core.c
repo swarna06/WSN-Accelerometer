@@ -82,21 +82,24 @@ void Rfc_Init()
 
 void Rfc_Wakeup()
 {
-    // Clear interrupt flags
-    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG) = 0;
-    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = 0;
+    if (!(HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG) & RFC_DBELL_RFCPEIFG_BOOT_DONE))
+    {
+        // Clear interrupt flags
+        HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG) = 0;
+        HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = 0;
 
-    // Enable clock domain
-    PRCMDomainEnable(PRCM_DOMAIN_RFCORE);
-    PRCMLoadSet();
-    while(!PRCMLoadGet());
+        // Enable clock domain
+        PRCMDomainEnable(PRCM_DOMAIN_RFCORE);
+        PRCMLoadSet();
+        while(!PRCMLoadGet());
 
-    // Enable RF core clock
-    RFCClockEnable();
+        // Enable RF core clock
+        RFCClockEnable();
 
-    // Wait until the RF core boots in the FSM
-    rfc.state = RFC_S_WAIT_RFC_BOOT;
-    Tm_Start_Timeout(TM_RFC_TOUT_ID, RFC_TOUT_BOOT_MSEC);
+        // Wait until the RF core boots in the FSM
+        rfc.state = RFC_S_WAIT_RFC_BOOT;
+        Tm_Start_Timeout(TM_RFC_TOUT_ID, RFC_TOUT_BOOT_MSEC);
+    }
 }
 
 void Rfc_Process()
@@ -249,6 +252,11 @@ void Rfc_Process()
         break;
 
     }
+}
+
+inline uint8_t Rfc_Get_FSM_State()
+{
+    return rfc.state;
 }
 
 void Rfc_Set_Tx_Power(rfc_tx_power_t tx_power)

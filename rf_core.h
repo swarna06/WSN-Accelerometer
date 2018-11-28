@@ -257,6 +257,8 @@ void Rfc_Wakeup();
 
 void Rfc_Process();
 
+uint8_t Rfc_Get_FSM_State();
+
 void Rfc_Set_Tx_Power(rfc_tx_power_t tx_power);
 
 void Rfc_BLE5_Set_PHY_Mode(uint8_t ble5_mode);
