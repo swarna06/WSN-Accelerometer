@@ -41,6 +41,7 @@ typedef enum
 {
     PTC_S_IDLE = 0,
     PTC_S_WAIT_RF_CORE_INIT,
+    PTC_S_WAIT_RFC_RAT_SYNC,
 
     // Common states for both device roles
     PTC_S_WAIT_START_OF_FRAME = 0x10,
@@ -62,6 +63,10 @@ typedef struct
     uint32_t ble_access_l, ble_access_h;
 
     uint16_t random_seeds[PTC_RAND_SEEDS_NUM];
+
+    uint16_t tx_power;
+    uint8_t phy_mode;
+    uint8_t channel;
 
     rfc_tx_param_t tx_param;
     rfc_rx_result_t rx_result;

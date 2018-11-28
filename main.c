@@ -41,19 +41,15 @@ int main(void)
     Pma_Init();
     GPIO_Init();
     Tm_Init();
-    Sep_Init(); // FIXME disable to reduce power consumption
-    Rfc_Init();
-    Log_Init();
 
+    Sep_Init(); // FIXME disable to reduce power consumption
+    Log_Init();
     #if (BRD_BOARD == BRD_LAUNCHPAD)
     Pfl_Init(); // FIXME disable to reduce power consumption
     #endif
 
-    Pfl_Tic();
+    Rfc_Init();
     Ptc_Init();
-    Pfl_Toc();
-
-    PRINTF("exec_time: %d ns, wcet: %d ns\r\n", Pfl_Ticks_To_Nanosec(Pfl_Get_Exec_Time()), Pfl_Ticks_To_Nanosec(Pfl_Get_WCET()));
 
     uint8_t count = 0;
     Brd_Led_Off(BRD_LED1);
@@ -72,7 +68,7 @@ int main(void)
         if (Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
         {
             Brd_Led_Toggle(BRD_LED0);
-            Log_Value("count: ", count++);
+            Log_Val_Uint32("count: ", count++);
         }
 
         if (Tm_Sys_Tick())
@@ -81,6 +77,9 @@ int main(void)
         Log_Process();
 
         Rfc_Process();
+
+        if (Rfc_Ready())
+            Ptc_Process();
 
         continue;
 

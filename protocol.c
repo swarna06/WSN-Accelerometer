@@ -29,8 +29,8 @@ static bool Ptc_Init_Random_Seeds();
 void Ptc_Init()
 {
     ptc.flags = 0;
-    ptc.next_state = PTC_S_IDLE;
     ptc.state = PTC_S_WAIT_RF_CORE_INIT;
+    ptc.next_state = PTC_S_IDLE;
 
     // Set bits in 'absent_nodes' for all nodes in the network
     ptc.absent_nodes = (PTC_SENSOR_NODES_NUM >= 32) ? (uint32_t)-1 : (((uint32_t)1 << PTC_SENSOR_NODES_NUM) - 1);
@@ -40,7 +40,7 @@ void Ptc_Init()
     // The secondary BLE address is written using the TI UniFlash tool
     uint32_t secondary_ble_addr_l = HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0);
     ptc.dev_id = (uint8_t)secondary_ble_addr_l;
-    Log_Value("dev_id: ", ptc.dev_id);
+    Log_Val_Uint32("dev_id: ", ptc.dev_id);
 
     // Read and store the BLE primary access address - TODO move this to a packet buffer
     ptc.ble_access_l = HWREG(FCFG1_BASE + FCFG1_O_MAC_BLE_0);
@@ -49,18 +49,22 @@ void Ptc_Init()
     // Initialize random seeds using the True Random Number Generator (TRNG)
     Ptc_Init_Random_Seeds();
 
+    // Set transmission power, PHY mode and frequency channel
+    ptc.tx_power = RFC_TX_POW_0dBm;
+    ptc.phy_mode = RFC_PHY_MODE_125KBPS;
+    ptc.channel = 37; // advertising channel
+
+    Rfc_Set_Tx_Power(ptc.tx_power);
+    Rfc_BLE5_Set_PHY_Mode(ptc.phy_mode);
+    Rfc_BLE5_Set_Channel(ptc.channel);
+
     // Initialize transmission and reception structures
-    ptc.tx_param.buf = ptc.tx_buf;
-    ptc.tx_param.len = PTC_RXTX_BUF_LEN;
+    ptc.tx_param.buf = NULL; // empty packet
+    ptc.tx_param.len = 0;
     ptc.tx_param.rat_start_time = 0;
 
     ptc.rx_result.buf = ptc.rx_buf;
     ptc.rx_result.buf_len = PTC_RXTX_BUF_LEN;
-
-    // Set communication parameters
-    Rfc_Set_Tx_Power(RFC_TX_POW_0dBm);
-    Rfc_BLE5_Set_PHY_Mode(RFC_PHY_MODE_125KBPS); // coded
-    Rfc_BLE5_Set_Channel(37); // advertising channel
 }
 
 void Ptc_Process()
@@ -71,12 +75,13 @@ void Ptc_Process()
         break;
 
     case PTC_S_WAIT_RF_CORE_INIT:
-        if (Ptc_Dev_Is_Sink_Node())
-        {
-        }
-        else
-        {
-        }
+        Rfc_Synchronize_RAT();
+        ptc.state = PTC_S_WAIT_RFC_RAT_SYNC;
+        break;
+
+    case PTC_S_WAIT_RFC_RAT_SYNC:
+
+        ptc.state = PTC_S_IDLE;
         break;
     }
 }
