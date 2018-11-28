@@ -26,6 +26,9 @@
 #define RFC_TOUT_TX_MSEC                100 // maximum TX time
 #define RFC_TOUT_RX_MSEC                100 // minimum RX time
 
+// RF Core wake up time
+#define RFC_WAKEUP_TIME_USEC            1000
+
 // Macro functions for interfacing with the RAdio Timer (RAT)
 #define Rfc_Get_RAT_Time()              HWREG(RFC_RAT_BASE + RFC_RAT_O_RATCNT)
 

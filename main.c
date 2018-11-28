@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 //#define DRIVERLIB_NOROM
+#define SET_CCFG_IEEE_BLE_0
 
 #include <driverlib/prcm.h>
 #include <driverlib/sys_ctrl.h>
@@ -48,9 +49,11 @@ int main(void)
     Pfl_Init(); // FIXME disable to reduce power consumption
     #endif
 
-    Rfc_Set_Tx_Power(RFC_TX_POW_0dBm);
-    Rfc_BLE5_Set_PHY_Mode(RFC_PHY_MODE_2MBPS);
-    Rfc_BLE5_Set_Channel(17);
+    Pfl_Tic();
+    Ptc_Init();
+    Pfl_Toc();
+
+    PRINTF("exec_time: %d ns, wcet: %d ns\r\n", Pfl_Ticks_To_Nanosec(Pfl_Get_Exec_Time()), Pfl_Ticks_To_Nanosec(Pfl_Get_WCET()));
 
     uint8_t count = 0;
     Brd_Led_Off(BRD_LED1);
