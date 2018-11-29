@@ -14,4 +14,6 @@ void Sep_Init();
 
 void Sep_Wakeup();
 
+bool Sep_UART_Idle();
+
 #endif /* SERIAL_PORT_H_ */

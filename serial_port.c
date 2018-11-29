@@ -47,3 +47,8 @@ void Sep_Wakeup()
     }
 }
 
+inline bool Sep_UART_Idle()
+{
+    return (HWREG(UART0_BASE + UART_O_FR) & UART_FR_TXFE);
+}
+
