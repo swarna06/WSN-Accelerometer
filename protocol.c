@@ -16,10 +16,13 @@
 
 #include "protocol.h"
 #include "rf_core.h"
+#include "power_management.h"
+#include "timing.h"
 
 #include "printf.h"
 #include "profiling.h"
 #include "log.h"
+#include "misc.h"
 
 ptc_control_t ptc;
 
@@ -28,10 +31,6 @@ static bool Ptc_Init_Random_Seeds();
 
 void Ptc_Init()
 {
-    ptc.flags = 0;
-    ptc.state = PTC_S_WAIT_RF_CORE_INIT;
-    ptc.next_state = PTC_S_IDLE;
-
     // Set bits in 'absent_nodes' for all nodes in the network
     ptc.absent_nodes = (PTC_SENSOR_NODES_NUM >= 32) ? (uint32_t)-1 : (((uint32_t)1 << PTC_SENSOR_NODES_NUM) - 1);
 
@@ -65,27 +64,111 @@ void Ptc_Init()
 
     ptc.rx_result.buf = ptc.rx_buf;
     ptc.rx_result.buf_len = PTC_RXTX_BUF_LEN;
+
+    // Set start time of the first frame
+    ptc.start_of_next_frame = PTC_RTC_FRAME_TIME;
+
+    // Initialize FSM variables
+    ptc.flags = 0;
+    ptc.state = PTC_S_WAIT_RF_CORE_INIT;
+
+    if (Ptc_Dev_Is_Sink_Node())
+    {
+        Ptc_Process = Ptc_Process_Sink_Init;
+        ptc.next_state = PTC_S_IDLE;
+    }
 }
 
-void Ptc_Process()
+void Ptc_Process_Sink_Init()
 {
     switch (ptc.state)
     {
+    // Common states for both device roles
     case PTC_S_IDLE:
         break;
 
     case PTC_S_WAIT_RF_CORE_INIT:
+        ptc.state = PTC_S_WAIT_START_OF_FRAME;
+        break;
+
+    case PTC_S_WAIT_RF_CORE_WAKEUP:
         Rfc_Synchronize_RAT();
-        ptc.state = PTC_S_WAIT_RFC_RAT_SYNC;
+        ptc.state = ptc.next_state;
         break;
 
-    case PTC_S_WAIT_RFC_RAT_SYNC:
+    case PTC_S_WAIT_START_OF_FRAME:
+    {
+        // Calculate wake up time and go to sleep
+        uint32_t wakeup_time = ptc.start_of_next_frame - PTC_RTC_TOTAL_WAKEUP_TIME;
 
-        ptc.state = PTC_S_IDLE;
+        Log_Val_Uint32("wakeup_time: ", wakeup_time);
+
+        Pma_MCU_Sleep(wakeup_time);
+
+        Log_Val_Uint32("rtc_time: ", Tm_Get_RTC_Time());
+
+        Pfl_Tic();
+
+        ptc.start_of_next_frame += PTC_RTC_FRAME_TIME;
+
+        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
+        ptc.next_state = PTC_S_SCHEDULE_BEACON_TX;
+    }
+    break;
+
+    case PTC_S_SCHEDULE_BEACON_TX:
+    {
+        //
+        // Calculate time of the start of transmission and request the RF core to send the packet
+        //
+
+        // Wait for the start of the next RTC period (up to ~30 us)
+        Tm_Synch_With_RTC();
+
+        uint32_t rat_timestamp = Rfc_Get_RAT_Time();
+        uint32_t rtc_timestamp = Tm_Get_RTC_Time();
+
+        Pfl_Toc();
+        Log_Val_Uint32("exec_time_ns: ", Pfl_Get_Exec_Time_Nanosec());
+
+        Log_Val_Uint32("rtc_timestamp: ", rtc_timestamp);
+
+//        uint32_t rat_beacon_time;
+//        uint32_t rtc_beacon_time;
+
+        if (rat_timestamp & rtc_timestamp) (void)0;
+
+        Tm_Start_Timeout(TM_TOUT_PTC_ID, 100);
+        ptc.state = PTC_S_WAIT_TIMEOUT;
+    }
+    break;
+
+    case PTC_S_WAIT_TIMEOUT:
+
+        if (Tm_Timeout_Completed(TM_TOUT_PTC_ID))
+        {
+            ptc.state = PTC_S_WAIT_START_OF_FRAME;
+        }
         break;
+
+    default:
+        assertion(!"Ptc_Process_Sink_Init: Unknown state!");
     }
 }
 
+inline uint8_t Ptc_Get_FSM_State()
+{
+    return ptc.state;
+}
+
+void Ptc_Handle_Error()
+{
+    // TODO
+}
+
+// ********************************
+// Static functions
+// ********************************
 
 static bool Ptc_Init_Random_Seeds()
 {

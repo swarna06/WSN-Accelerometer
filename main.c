@@ -40,6 +40,7 @@ int main(void)
 {
     Pma_Init();
     GPIO_Init();
+    Brd_Led_On(BRD_LED0); // FIXME remove
     Tm_Init();
 
     Sep_Init(); // FIXME disable to reduce power consumption
@@ -63,12 +64,17 @@ int main(void)
 
     Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
 
+    uint8_t fsm_state = (uint8_t)-1;
+    uint8_t new_fsm_state = fsm_state;
+
     while (1)
     {
+//        goto test;
+
         if (Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
         {
-            Brd_Led_Toggle(BRD_LED0);
-            Log_Val_Uint32("count: ", count++);
+            Brd_Led_Toggle(BRD_LED1);
+//            Log_Val_Uint32("count: ", count++);
         }
 
         if (Tm_Sys_Tick())
@@ -78,10 +84,20 @@ int main(void)
 
         Rfc_Process();
 
+        if (fsm_state != (new_fsm_state = Ptc_Get_FSM_State()))
+        {
+            fsm_state = new_fsm_state;
+            Log_Val_Hex32("s:", fsm_state);
+        }
+
         if (Rfc_Ready())
             Ptc_Process();
+        else if (Rfc_Error())
+            Ptc_Handle_Error();
 
         continue;
+
+//        test:
 
         // ********************************
         // Active interval
@@ -90,6 +106,9 @@ int main(void)
         AONRTCEventClear(AON_RTC_CH0);
         AONRTCCompareValueSet(AON_RTC_CH0, Tm_Get_RTC_Time() + WAKEUP_TIME_MS*TM_RTC_TICKS_PER_MSEC);
 
+        // Wake up serial port
+        Sep_Wakeup();
+
         // Wake up RF core
         Pfl_Tic();
 
@@ -97,6 +116,7 @@ int main(void)
         do
         {
             Rfc_Process();
+            Log_Process();
             if (Tm_Sys_Tick())
                 Tm_Process();
         } while (!Rfc_Ready());
@@ -105,12 +125,7 @@ int main(void)
         exec_time = Pfl_Get_Exec_Time();
         wcet = Pfl_Get_WCET();
 
-        // Wake up serial port and send message
-        if (!(HWREG(UART0_BASE + UART_O_CTL) & UART_CTL_UARTEN))
-        {
-            Sep_Wakeup();
-            PRINTF("count: %d\r\n", count++);
-        }
+        PRINTF("count: %d\r\n", count++);
         PRINTF("exec_time: %d ns, wcet: %d ns\r\n", Pfl_Ticks_To_Nanosec(exec_time), Pfl_Ticks_To_Nanosec(wcet));
 
         // Transmit packet
@@ -118,6 +133,7 @@ int main(void)
         do
         {
             Rfc_Process();
+            Log_Process();
             if (Tm_Sys_Tick())
                 Tm_Process();
         } while (!Rfc_Ready());

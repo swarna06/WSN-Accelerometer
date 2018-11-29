@@ -10,20 +10,24 @@
 
 #include "timing.h"
 #include "rf_core.h"
+#include "power_management.h"
 
 // Number of sensor nodes
 #define PTC_SENSOR_NODES_NUM        10
 
 // Frame duration
-#define PTC_FRAME_TIME_USEC         (1000000)
-#define PTC_BEAC_SLOT_TIME_USEC     (1000*20)
-#define PTC_DATA_SLOT_TIME_USEC     (1000*80)
-#define PTC_GUARD_TIME_USEC         (100)
+#define PTC_FRAME_TIME_SEC          (1)
+#define PTC_BEAC_SLOT_TIME_MSEC     (20)
+#define PTC_DATA_SLOT_TIME_MSEC     (80)
 
-#define PTC_RTC_FRAME_TIME          (TM_RTC_TICKS_PER_MSEC * PTC_FRAME_TIME_USEC)
-#define PTC_RTC_BEAC_SLOT_TIME      (TM_RTC_TICKS_PER_MSEC * PTC_BEAC_SLOT_TIME_USEC)
-#define PTC_RTC_DATA_SLOT_TIME      (TM_RTC_TICKS_PER_MSEC * PTC_DATA_SLOT_TIME_USEC)
+#define PTC_RTC_FRAME_TIME          (TM_RTC_TICKS_PER_SEC * PTC_FRAME_TIME_SEC)
+#define PTC_RTC_BEAC_SLOT_TIME      (TM_RTC_TICKS_PER_MSEC * PTC_BEAC_SLOT_TIME_MSEC)
+#define PTC_RTC_DATA_SLOT_TIME      (TM_RTC_TICKS_PER_MSEC * PTC_DATA_SLOT_TIME_MSEC)
 #define PTC_RTC_GUARD_TIME          (TM_RTC_TICKS_PER_MSEC * PTC_GUARD_TIME_USEC)
+
+#define PTC_RTC_MCU_WAKEUP_TIME     (PMA_WAKEUP_TIME_USEC / TM_RTC_USEC_PER_TICK)
+#define PTC_RTC_RADIO_WAKEUP_TIME   (TM_RTC_TICKS_PER_MSEC * RFC_WAKEUP_TIME_MSEC)
+#define PTC_RTC_TOTAL_WAKEUP_TIME   (PTC_RTC_MCU_WAKEUP_TIME + PTC_RTC_RADIO_WAKEUP_TIME)
 
 // Size of reception-transmission buffer
 #define PTC_RXTX_BUF_LEN            256
@@ -39,17 +43,22 @@
 // FSM states
 typedef enum
 {
+    // Common states for both device roles
     PTC_S_IDLE = 0,
     PTC_S_WAIT_RF_CORE_INIT,
-    PTC_S_WAIT_RFC_RAT_SYNC,
+    PTC_S_WAIT_RF_CORE_WAKEUP,
 
-    // Common states for both device roles
     PTC_S_WAIT_START_OF_FRAME = 0x10,
+    PTC_S_SCHEDULE_BEACON_TX,
     PTC_S_WAIT_START_OF_SLOT,
 
-    PTC_S_WAIT_FIRST_BEACON = 0x20,
+    // Initialization states for 'sink' role
+    PTC_S_SCHEDULE_COMM = 0X20,
 
-    PTC_S_WAIT_INIT_PERIOD = 0x30,
+    // Initialization states 'sensor' role
+    PTC_S_WAIT_FIRST_BEACON = 0x30,
+
+    PTC_S_WAIT_TIMEOUT = 0xF0,
 } ptc_state_t;
 
 // Structure to hold the state of the protocol module
@@ -63,6 +72,7 @@ typedef struct
     uint32_t ble_access_l, ble_access_h;
 
     uint16_t random_seeds[PTC_RAND_SEEDS_NUM];
+    uint32_t start_of_next_frame;
 
     uint16_t tx_power;
     uint8_t phy_mode;
@@ -77,6 +87,18 @@ typedef struct
 
 void Ptc_Init();
 
-void Ptc_Process();
+void Ptc_Process_Sink_Init();
+
+void Ptc_Process_Sensor_Init();
+
+void Ptc_Process_Sink_Normal_Op();
+
+void Ptc_Process_Sensor_Normal_Op();
+
+void (*Ptc_Process)();
+
+uint8_t Ptc_Get_FSM_State();
+
+void Ptc_Handle_Error();
 
 #endif /* PROTOCOL_H_ */
