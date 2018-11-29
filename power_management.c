@@ -71,8 +71,6 @@ void Pma_Init()
         VIMSModeSet(VIMS_BASE, VIMS_MODE_OFF); // now turn off the VIMS
 
     PRCMCacheRetentionDisable(); // now disable retention
-
-    Brd_Led_On(BRD_LED0); // FIXME remove
 }
 
 void Pma_Power_On_Peripheral(uint16_t peripheral)
