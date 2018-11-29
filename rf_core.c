@@ -82,7 +82,7 @@ void Rfc_Init()
 
 void Rfc_Wakeup()
 {
-    if (!(HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG) & RFC_DBELL_RFCPEIFG_BOOT_DONE))
+    if (!(HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG) & RFC_DBELL_RFCPEIFG_BOOT_DONE)) // TODO is this the proper way to check if the RFC is active ?
     {
         // Clear interrupt flags
         HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG) = 0;
