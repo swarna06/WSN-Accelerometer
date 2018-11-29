@@ -12,25 +12,30 @@
 
 // RTC ticks per millisecond
 #define TM_RTC_TICKS_PER_MSEC   64
+#define TM_RTC_TICKS_PER_SEC    (1 << 16)
+#define TM_RTC_TICKS_PER_CYCLE  2 // the RTC counter is incremented by 2 units with each LF XOSC cycle
+#define TM_RTC_USEC_PER_TICK    (30/TM_RTC_TICKS_PER_CYCLE) // RTC XOSC cycle time is 1/32768 = 30.5 us
 
 // Number of RTC clocks used to generate the system ticks
-#define TM_SYS_TICK_RTC_CYCLES  TM_RTC_TICKS_PER_MSEC*1 // ~1 ms
+#define TM_SYS_TICK_RTC_CYCLES  (TM_RTC_TICKS_PER_MSEC*1) // ~1 ms
 
 // Total number of periods and timeouts
 #define TM_PER_NUM              2       // xxx do not forget to update !
-#define TM_TOUT_NUM             2       // xxx do not forget to update !
+#define TM_TOUT_NUM             3       // xxx do not forget to update !
 
 // List of periods, values in milliseconds
 #define TM_PER_HEARTBEAT_ID     0
 #define TM_PER_HEARTBEAT_VAL    1000
 
-#define TM_PER_COORD_ID         1
+#define TM_PER_PTC_ID           1
 
 // List of timeouts, values in milliseconds
 #define TM_TOUT_TEST_ID         0
 #define TM_TOUT_TEST_VAL        500
 
 #define TM_RFC_TOUT_ID          1
+
+#define TM_TOUT_PTC_ID          2
 
 // Synchronize with RTC (write to SYNC register prior reading to force a wait until next SCLK_LF edge)
 #define Tm_Synch_With_RTC()     HWREG(AON_RTC_BASE + AON_RTC_O_SYNC) = 1; \

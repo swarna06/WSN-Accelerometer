@@ -348,7 +348,7 @@ bool Rfc_BLE5_Adv_Aux(rfc_tx_param_t* tx_param_p)
         // Calculate the timeout of the operation considering delayed timeout
         uint32_t rat_curr_time = Rfc_Get_RAT_Time();
         uint32_t deta_time = Tm_Delta_Time32(rat_curr_time, tx_param_p->rat_start_time);
-        timeout_ms += (deta_time / RAD_RAT_TICKS_PER_MSEC);
+        timeout_ms += (deta_time / RFC_RAT_TICKS_PER_MSEC);
 
         cmd_ble5_adv_aux_p->startTrigger.triggerType = TRIG_ABSTIME;
         cmd_ble5_adv_aux_p->startTime = tx_param_p->rat_start_time;
@@ -381,7 +381,7 @@ bool Rfc_BLE5_Scanner(uint32_t timeout_usec)
     data_queue.pCurrEntry = (uint8_t*)&data_entry_ptr;
 
     // Set command end time (Radio Timer)
-    cmd_ble5_scanner_p->pParams->timeoutTime = timeout_usec * RAD_RAT_TICKS_PER_USEC; // end time relative to start of command
+    cmd_ble5_scanner_p->pParams->timeoutTime = timeout_usec * RFC_RAT_TICKS_PER_USEC; // end time relative to start of command
 
     // Calculate FSM operation timeout
     uint16_t tout_ms = timeout_usec/1000 + RFC_TOUT_RX_MSEC; // timeout in case the RF core is unresponsive

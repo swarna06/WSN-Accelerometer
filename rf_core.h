@@ -34,14 +34,14 @@
 #define Rfc_Get_RAT_Time()              HWREG(RFC_RAT_BASE + RFC_RAT_O_RATCNT)
 
 // RAT time conversion
-#define RAD_RAT_NSEC_PER_TICK           250
-#define RAD_RAT_USEC_PER_TICK           (RAD_RAT_NSEC_PER_TICK * 1000)
-#define RAD_RAT_MSEC_PER_TICK           (RAD_RAT_USEC_PER_TICK * 1000)
+#define RFC_RAT_NSEC_PER_TICK           250
+#define RFC_RAT_USEC_PER_TICK           (RFC_RAT_NSEC_PER_TICK * 1000)
+#define RFC_RAT_MSEC_PER_TICK           (RFC_RAT_USEC_PER_TICK * 1000)
 
-#define RAD_RAT_TICKS_PER_USEC          (1000 / RAD_RAT_NSEC_PER_TICK)
-#define RAD_RAT_TICKS_PER_MSEC          (RAD_RAT_TICKS_PER_USEC * 1000)
+#define RFC_RAT_TICKS_PER_USEC          (1000 / RFC_RAT_NSEC_PER_TICK)
+#define RFC_RAT_TICKS_PER_MSEC          (RFC_RAT_TICKS_PER_USEC * 1000)
 
-#define RAD_RAT_TICKS_PER_RTC_TICK      (122)
+#define RFC_RAT_TICKS_PER_RTC_TICK      (122)
 
 // ********************************
 // RF Core interface

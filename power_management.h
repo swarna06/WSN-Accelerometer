@@ -8,6 +8,9 @@
 #ifndef POWER_MANAGEMENT_H_
 #define POWER_MANAGEMENT_H_
 
+// Wake up procedure execution time
+#define PMA_WAKEUP_TIME_USEC        400
+
 // Power domain flags
 #define PMA_F_DOMAIN_RF_CORE        0x8000
 #define PMA_F_DOMAIN_SERIAL         0x4000
