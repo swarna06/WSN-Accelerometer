@@ -457,7 +457,7 @@ bool Rfc_Set_RAT_Compare(uint8_t rat_ch, uint32_t rat_compare_time)
         return false;
 
     // Clear corresponding interrupt flag
-    uint32_t mask = ~(1 << (rat_ch + 13)); // bits 12-19 correspond to the RAT channel (0-7) interrupt flags
+    uint32_t mask = ~(1 << (rat_ch + 12)); // bits 12-19 correspond to the RAT channel (0-7) interrupt flags
     HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = mask;
 
     cmd_set_rat_cmp_p->ratCh = rat_ch;
