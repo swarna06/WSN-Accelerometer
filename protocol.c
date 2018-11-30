@@ -92,9 +92,10 @@ void Ptc_Init()
 void Ptc_RFC_Hwi()
 {
     Brd_Led_Off(BRD_LED1);
-    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~RFC_DBELL_RFHWIFG_RATCH7; // clear interrupt flag
+    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~(1 << (PTC_RAT_CH + 12)); // clear interrupt flag
     IntPendClear(INT_RFC_HW_COMB);
 }
+
 
 void Ptc_Process_Sink_Init()
 {
@@ -123,8 +124,8 @@ void Ptc_Process_Sink_Init()
 
         Log_Val_Uint32("wakeup_time: ", wakeup_time);
 
-//        Pma_MCU_Sleep(wakeup_time);
-        Pma_Dummy_MCU_Sleep(wakeup_time);
+        Pma_MCU_Sleep(wakeup_time);
+//        Pma_Dummy_MCU_Sleep(wakeup_time);
 
         Log_Val_Uint32("rtc_time: ", Tm_Get_RTC_Time());
 
@@ -155,18 +156,18 @@ void Ptc_Process_Sink_Init()
 
         Log_Val_Uint32("rtc_timestamp: ", rtc_timestamp);
 
-        HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~RFC_DBELL_RFHWIFG_RATCH7; // clear interrupt flag
-        HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIEN) |= RFC_DBELL_RFHWIEN_RATCH7; // enable interrupt
+        HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~(1 << (PTC_RAT_CH + 12)); // clear interrupt flag
+        HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIEN) |= (1 << (PTC_RAT_CH + 12)); // enable interrupt
 
         IntPendClear(INT_RFC_HW_COMB);
         IntRegister(INT_RFC_HW_COMB, Ptc_RFC_Hwi);
         IntEnable(INT_RFC_HW_COMB);
 
-//        Rfc_Set_RAT_Compare(7, rat_timestamp + 40000*2); // interrupt after 10 ms
-        rfc_tx_param_t tx_param;
-        tx_param.buf = NULL;
-        tx_param.rat_start_time = rat_timestamp + 40000*2;
-        Rfc_BLE5_Adv_Aux(&tx_param);
+        Rfc_Set_RAT_Compare(PTC_RAT_CH, rat_timestamp + 40000*2); // interrupt after 10 ms
+//        rfc_tx_param_t tx_param;
+//        tx_param.buf = NULL;
+//        tx_param.rat_start_time = rat_timestamp + 40000*2;
+//        Rfc_BLE5_Adv_Aux(&tx_param);
 
 //        uint32_t rat_beacon_time;
 //        uint32_t rtc_beacon_time;
@@ -176,17 +177,13 @@ void Ptc_Process_Sink_Init()
         Log_Val_Hex32("RFHWIFG: ", HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG));
 
         Tm_Start_Timeout(TM_TOUT_PTC_ID, 30);
-        ptc.state = PTC_S_WAIT_TIMEOUT;
+        ptc.state = PTC_S_WAIT_SET_RAT_CMP;
     }
     break;
 
     case PTC_S_WAIT_SET_RAT_CMP:
 
-//        IOCPortConfigureSet(BRD_RFC_GPO_PIN, IOC_PORT_RFC_GPO3, IOC_STD_OUTPUT);
-//        HWREG(RFC_DBELL_BASE + RFC_DBELL_O_SYSGPOCTL) |= 0x0000ffff;
-
-        Rfc_Set_RAT_Output(7, 3, RFC_RAT_OUTPUT_PULSE);
-
+        Rfc_Set_RAT_Output(PTC_RAT_CH, PTC_RAT_GPO, PTC_RAT_OUTP_MODE);
         ptc.state = PTC_S_WAIT_RTC_CMP;
         break;
 
@@ -195,6 +192,11 @@ void Ptc_Process_Sink_Init()
         if (AONRTCEventGet(AON_RTC_CH1))
         {
 //            Brd_Led_Toggle(BRD_LED1);
+
+            rfc_tx_param_t tx_param;
+            tx_param.buf = NULL;
+            tx_param.rat_start_time = 0;
+            Rfc_BLE5_Adv_Aux(&tx_param);
             ptc.state = PTC_S_WAIT_TIMEOUT;
         }
 
@@ -204,10 +206,9 @@ void Ptc_Process_Sink_Init()
 
         if (Tm_Timeout_Completed(TM_TOUT_PTC_ID))
         {
-            if (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) & RFC_DBELL_RFHWIFG_RATCH7)
+            if ( HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) & (1 << (PTC_RAT_CH + 12)) )
             {
                 Log_Val_Hex32("RFHWIFG: ", HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG));
-                HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~RFC_DBELL_RFHWIFG_RATCH7;
             }
 
             ptc.state = PTC_S_WAIT_START_OF_FRAME;

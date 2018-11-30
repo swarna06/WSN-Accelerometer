@@ -19,6 +19,7 @@
 #include <inc/hw_ccfg.h>
 #include <inc/hw_fcfg1.h>
 #include <driverlib/trng.h>
+#include <inc/hw_rfc_dbell.h>
 
 #include "board.h"
 #include "timing.h"
@@ -68,14 +69,14 @@ int main(void)
     uint8_t new_fsm_state = fsm_state;
 
     // Setup pin as rat output
-//    IOCPortConfigureSet(21, IOC_PORT_RFC_GPO3, IOC_STD_OUTPUT);
-
     Tm_Enable_LF_Clock_Output();
 
     // Setup pin as RFC GPO
-    IOCPortConfigureSet(BRD_RFC_GPO_PIN, IOC_PORT_RFC_GPO3, IOC_STD_OUTPUT);
-
-//    GPIO_setOutputEnableDio(BRD_LED1, GPIO_OUTPUT_ENABLE);
+    IOCPortConfigureSet(BRD_RFC_GPO_PIN, IOC_PORT_RFC_GPO2, IOC_STD_OUTPUT);
+#if (PTC_RFC_GPO == 2 && PTC_RAT_GPO == 2)
+    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_SYSGPOCTL) &= ~RFC_DBELL_SYSGPOCTL_GPOCTL2_RATGPO2;
+    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_SYSGPOCTL) += RFC_DBELL_SYSGPOCTL_GPOCTL2_RATGPO2;
+#endif
 
     while (1)
     {

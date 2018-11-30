@@ -12,6 +12,11 @@
 #include "rf_core.h"
 #include "power_management.h"
 
+#define PTC_RAT_CH                  5
+#define PTC_RAT_GPO                 2
+#define PTC_RFC_GPO                 2
+#define PTC_RAT_OUTP_MODE           0
+
 // Number of sensor nodes
 #define PTC_SENSOR_NODES_NUM        10
 
