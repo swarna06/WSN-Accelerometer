@@ -31,6 +31,8 @@
     #define BRD_UART_TX         3
     #define BRD_UART_RX         2
 
+    #define BRD_LF_OSC_PIN      21
+
     // LEDs are active high
     #define Brd_Led_On(l)       GPIO_setDio(l)
     #define Brd_Led_Off(l)      GPIO_clearDio(l)

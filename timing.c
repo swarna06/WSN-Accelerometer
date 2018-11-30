@@ -9,9 +9,11 @@
 #include <driverlib/aux_timer.h>
 #include <driverlib/aon_event.h>
 #include <driverlib/sys_ctrl.h>
+#include <driverlib/ioc.h>
 
 #include "timing.h"
 #include "misc.h"
+#include "board.h"
 
 // Control structure to keep the state of the timing module
 static tm_control_t tcs;
@@ -118,6 +120,12 @@ bool Tm_Timeout_Completed(uint8_t tout_idx)
 {
     assertion(tout_idx < TM_TOUT_NUM);
     return (!(tcs.timeout[tout_idx]));
+}
+
+void Tm_Enable_LF_Clock_Output()
+{
+    IOCPortConfigureSet(BRD_LF_OSC_PIN, IOC_PORT_AON_CLK32K, IOC_STD_OUTPUT);
+    AONIOC32kHzOutputEnable();
 }
 
 void Tm_Enable_Abs_Time_Per()
