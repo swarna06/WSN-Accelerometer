@@ -229,9 +229,20 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     Brd_Led_On(BRD_LED0);  // FIXME remove
 }
 
-
 void Pma_MCU_Wakeup()
 {
     Rfc_Wakeup();
     Sep_Wakeup();
+}
+
+void Pma_Dummy_MCU_Sleep(uint32_t rtc_wakeup_time)
+{
+    Brd_Led_Off(BRD_LED0);  // FIXME remove
+
+    AONRTCEventClear(AON_RTC_CH0);
+    AONRTCCompareValueSet(AON_RTC_CH0, rtc_wakeup_time);
+
+    while (!AONRTCEventGet(AON_RTC_CH0)); // busy wait
+
+    Brd_Led_On(BRD_LED0);  // FIXME remove
 }

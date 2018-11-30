@@ -35,4 +35,6 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time);
 
 void Pma_MCU_Wakeup();
 
+void Pma_Dummy_MCU_Sleep(uint32_t rtc_wakeup_time);
+
 #endif /* POWER_MANAGEMENT_H_ */
