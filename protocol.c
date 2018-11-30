@@ -123,7 +123,8 @@ void Ptc_Process_Sink_Init()
 
         Log_Val_Uint32("wakeup_time: ", wakeup_time);
 
-        Pma_MCU_Sleep(wakeup_time);
+//        Pma_MCU_Sleep(wakeup_time);
+        Pma_Dummy_MCU_Sleep(wakeup_time);
 
         Log_Val_Uint32("rtc_time: ", Tm_Get_RTC_Time());
 
@@ -161,7 +162,11 @@ void Ptc_Process_Sink_Init()
         IntRegister(INT_RFC_HW_COMB, Ptc_RFC_Hwi);
         IntEnable(INT_RFC_HW_COMB);
 
-        Rfc_Set_RAT_Compare(7, rat_timestamp + 40000); // interrupt after 10 ms
+//        Rfc_Set_RAT_Compare(7, rat_timestamp + 40000*2); // interrupt after 10 ms
+        rfc_tx_param_t tx_param;
+        tx_param.buf = NULL;
+        tx_param.rat_start_time = rat_timestamp + 40000*2;
+        Rfc_BLE5_Adv_Aux(&tx_param);
 
 //        uint32_t rat_beacon_time;
 //        uint32_t rtc_beacon_time;
@@ -171,16 +176,16 @@ void Ptc_Process_Sink_Init()
         Log_Val_Hex32("RFHWIFG: ", HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG));
 
         Tm_Start_Timeout(TM_TOUT_PTC_ID, 30);
-        ptc.state = PTC_S_WAIT_SET_RAT_CMP;
+        ptc.state = PTC_S_WAIT_TIMEOUT;
     }
     break;
 
     case PTC_S_WAIT_SET_RAT_CMP:
 
-        HWREG(RFC_DBELL_BASE + RFC_DBELL_O_SYSGPOCTL) |= 0x0000f000;
-        IOCPortConfigureSet(21, IOC_PORT_RFC_GPO3, IOC_STD_OUTPUT);
+//        IOCPortConfigureSet(BRD_RFC_GPO_PIN, IOC_PORT_RFC_GPO3, IOC_STD_OUTPUT);
+//        HWREG(RFC_DBELL_BASE + RFC_DBELL_O_SYSGPOCTL) |= 0x0000ffff;
 
-        Rfc_Set_RAT_Output(7, 3, RFC_RAT_OUTPUT_TOGGLE);
+        Rfc_Set_RAT_Output(7, 3, RFC_RAT_OUTPUT_PULSE);
 
         ptc.state = PTC_S_WAIT_RTC_CMP;
         break;
@@ -202,7 +207,7 @@ void Ptc_Process_Sink_Init()
             if (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) & RFC_DBELL_RFHWIFG_RATCH7)
             {
                 Log_Val_Hex32("RFHWIFG: ", HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG));
-//                HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~RFC_DBELL_RFHWIFG_RATCH7;
+                HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~RFC_DBELL_RFHWIFG_RATCH7;
             }
 
             ptc.state = PTC_S_WAIT_START_OF_FRAME;

@@ -68,7 +68,13 @@ int main(void)
     uint8_t new_fsm_state = fsm_state;
 
     // Setup pin as rat output
-    IOCPortConfigureSet(21, IOC_PORT_RFC_GPO3, IOC_STD_OUTPUT);
+//    IOCPortConfigureSet(21, IOC_PORT_RFC_GPO3, IOC_STD_OUTPUT);
+
+    Tm_Enable_LF_Clock_Output();
+
+    // Setup pin as RFC GPO
+    IOCPortConfigureSet(BRD_RFC_GPO_PIN, IOC_PORT_RFC_GPO3, IOC_STD_OUTPUT);
+
 //    GPIO_setOutputEnableDio(BRD_LED1, GPIO_OUTPUT_ENABLE);
 
     while (1)
@@ -176,8 +182,6 @@ void GPIO_Init()
     // Configure pins as 'standard' output
     IOCPinTypeGpioOutput(BRD_LED0);
     IOCPinTypeGpioOutput(BRD_LED1);
-
-    IOCPinTypeGpioOutput(21); // TODO remove
 
     // Set initial values
     Brd_Led_Off(BRD_LED0);
