@@ -14,6 +14,11 @@
 #include <inc/hw_fcfg1.h>
 #include <driverlib/trng.h>
 
+#include <inc/hw_rfc_dbell.h>
+#include <driverlib/ioc.h>
+#include <driverlib/event.h>
+#include <driverlib/interrupt.h>
+
 #include "protocol.h"
 #include "rf_core.h"
 #include "power_management.h"
@@ -23,6 +28,7 @@
 #include "profiling.h"
 #include "log.h"
 #include "misc.h"
+#include "board.h"
 
 ptc_control_t ptc;
 
@@ -77,6 +83,17 @@ void Ptc_Init()
         Ptc_Process = Ptc_Process_Sink_Init;
         ptc.next_state = PTC_S_IDLE;
     }
+
+    // TODO remove the following lines
+    AONRTCCompareValueSet(AON_RTC_CH1, 0);
+    AONRTCChannelEnable(AON_RTC_CH1);
+}
+
+void Ptc_RFC_Hwi()
+{
+    Brd_Led_Off(BRD_LED1);
+    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~RFC_DBELL_RFHWIFG_RATCH7; // clear interrupt flag
+    IntPendClear(INT_RFC_HW_COMB);
 }
 
 void Ptc_Process_Sink_Init()
@@ -100,6 +117,9 @@ void Ptc_Process_Sink_Init()
     {
         // Calculate wake up time and go to sleep
         uint32_t wakeup_time = ptc.start_of_next_frame - PTC_RTC_TOTAL_WAKEUP_TIME;
+
+        AONRTCEventClear(AON_RTC_CH1); // TODO remove
+        AONRTCCompareValueSet(AON_RTC_CH1, ptc.start_of_next_frame); // TODO remove
 
         Log_Val_Uint32("wakeup_time: ", wakeup_time);
 
@@ -127,28 +147,67 @@ void Ptc_Process_Sink_Init()
 
         uint32_t rat_timestamp = Rfc_Get_RAT_Time();
         uint32_t rtc_timestamp = Tm_Get_RTC_Time();
+        Brd_Led_On(BRD_LED1);
 
         Pfl_Toc();
         Log_Val_Uint32("exec_time_ns: ", Pfl_Get_Exec_Time_Nanosec());
 
         Log_Val_Uint32("rtc_timestamp: ", rtc_timestamp);
 
+        HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~RFC_DBELL_RFHWIFG_RATCH7; // clear interrupt flag
+        HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIEN) |= RFC_DBELL_RFHWIEN_RATCH7; // enable interrupt
+
+        IntPendClear(INT_RFC_HW_COMB);
+        IntRegister(INT_RFC_HW_COMB, Ptc_RFC_Hwi);
+        IntEnable(INT_RFC_HW_COMB);
+
+        Rfc_Set_RAT_Compare(7, rat_timestamp + 40000); // interrupt after 10 ms
+
 //        uint32_t rat_beacon_time;
 //        uint32_t rtc_beacon_time;
 
         if (rat_timestamp & rtc_timestamp) (void)0;
 
-        Tm_Start_Timeout(TM_TOUT_PTC_ID, 100);
-        ptc.state = PTC_S_WAIT_TIMEOUT;
+        Log_Val_Hex32("RFHWIFG: ", HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG));
+
+        Tm_Start_Timeout(TM_TOUT_PTC_ID, 30);
+        ptc.state = PTC_S_WAIT_SET_RAT_CMP;
     }
     break;
+
+    case PTC_S_WAIT_SET_RAT_CMP:
+
+        HWREG(RFC_DBELL_BASE + RFC_DBELL_O_SYSGPOCTL) |= 0x0000f000;
+        IOCPortConfigureSet(21, IOC_PORT_RFC_GPO3, IOC_STD_OUTPUT);
+
+        Rfc_Set_RAT_Output(7, 3, RFC_RAT_OUTPUT_TOGGLE);
+
+        ptc.state = PTC_S_WAIT_RTC_CMP;
+        break;
+
+    case PTC_S_WAIT_RTC_CMP:
+
+        if (AONRTCEventGet(AON_RTC_CH1))
+        {
+//            Brd_Led_Toggle(BRD_LED1);
+            ptc.state = PTC_S_WAIT_TIMEOUT;
+        }
+
+        break;
 
     case PTC_S_WAIT_TIMEOUT:
 
         if (Tm_Timeout_Completed(TM_TOUT_PTC_ID))
         {
+            if (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) & RFC_DBELL_RFHWIFG_RATCH7)
+            {
+                Log_Val_Hex32("RFHWIFG: ", HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG));
+//                HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~RFC_DBELL_RFHWIFG_RATCH7;
+            }
+
             ptc.state = PTC_S_WAIT_START_OF_FRAME;
         }
+
         break;
 
     default:
