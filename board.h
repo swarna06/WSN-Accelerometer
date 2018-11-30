@@ -33,6 +33,8 @@
 
     #define BRD_LF_OSC_PIN      21
 
+    #define BRD_RFC_GPO_PIN     22
+
     // LEDs are active high
     #define Brd_Led_On(l)       GPIO_setDio(l)
     #define Brd_Led_Off(l)      GPIO_clearDio(l)
