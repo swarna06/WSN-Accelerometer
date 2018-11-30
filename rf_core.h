@@ -43,6 +43,14 @@
 
 #define RFC_RAT_TICKS_PER_RTC_TICK      (122)
 
+// RAT output modes
+#define RFC_RAT_OUTPUT_PULSE            (0b000)
+#define RFC_RAT_OUTPUT_TOGGLE           (0b011)
+#define RFC_RAT_OUTPUT_SET              (0b001)
+#define RFC_RAT_OUTPUT_CLEAR            (0b010)
+#define RFC_RAT_OUTPUT_ALWAYS_1         (0b101)
+#define RFC_RAT_OUTPUT_ALWAYS_0         (0b100)
+
 // ********************************
 // RF Core interface
 // ********************************
@@ -273,6 +281,10 @@ bool Rfc_BLE5_Scanner(uint32_t timeout_usec);
 void Rfc_BLE5_Get_Scanner_Result(rfc_rx_result_t* dest);
 
 bool Rfc_Synchronize_RAT();
+
+bool Rfc_Set_RAT_Compare(uint8_t rat_ch, uint32_t rat_compare_time);
+
+bool Rfc_Set_RAT_Output(uint8_t rat_ch, uint8_t output_sel, uint8_t output_mode);
 
 bool Rfc_Ready();
 

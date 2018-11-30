@@ -33,6 +33,9 @@
 // RF core control structure
 rfc_control_t rfc;
 
+static rfc_CMD_SET_RAT_CMP_t cmd_set_rat_cmp = {.commandNo = CMD_SET_RAT_CMP,};
+static rfc_CMD_SET_RAT_OUTPUT_t cmd_set_rat_output = {.commandNo = CMD_SET_RAT_OUTPUT,};
+
 // RF core radio operation structures
 static volatile rfc_CMD_BLE5_RADIO_SETUP_t* cmd_ble5_radio_setup_p = &RF_cmdBle5RadioSetup;
 static volatile rfc_CMD_FS_t* cmd_fs_p = &RF_cmdFs;
@@ -40,6 +43,8 @@ static volatile rfc_CMD_BLE5_ADV_AUX_t* cmd_ble5_adv_aux_p = &RF_cmdBle5AdvAux;
 static volatile rfc_CMD_BLE5_SCANNER_t* cmd_ble5_scanner_p = &RF_cmdBle5Scanner;
 static volatile rfc_CMD_SYNC_STOP_RAT_t* cmd_sync_stop_rat_p = &RF_cmdSyncStopRat;
 static volatile rfc_CMD_SYNC_START_RAT_t* cmd_sync_start_rat_p = &RF_cmdSyncStartRat;
+static volatile rfc_CMD_SET_RAT_CMP_t* cmd_set_rat_cmp_p = &cmd_set_rat_cmp;
+static volatile rfc_CMD_SET_RAT_OUTPUT_t* cmd_set_rat_output_p = &cmd_set_rat_output;
 
 // Buffers, data entries and queues used by the RF core
 static volatile rfc_ble5ExtAdvEntry_t ble5_ext_adv_entry;
@@ -438,6 +443,51 @@ bool Rfc_Synchronize_RAT()
 
     Rfc_Start_Radio_Op(cmd_sync_stop_rat_p, RFC_TOUT_DEFAULT);
     rfc.next_state = RFC_S_EXEC_SYNC_START_RAT;
+
+    return true;
+}
+
+bool Rfc_Set_RAT_Compare(uint8_t rat_ch, uint32_t rat_compare_time)
+{
+    if (!Rfc_Ready())
+        return false;
+
+    // Only channels 5-7 are available to the user
+    if (rat_ch < 5 || rat_ch > 7)
+        return false;
+
+    // Clear corresponding interrupt flag
+    uint32_t mask = ~(1 << (rat_ch + 13)); // bits 12-19 correspond to the RAT channel (0-7) interrupt flags
+    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = mask;
+
+    cmd_set_rat_cmp_p->ratCh = rat_ch;
+    cmd_set_rat_cmp_p->compareTime = rat_compare_time;
+
+    Rfc_Start_Immediate_Cmd(cmd_set_rat_cmp_p);
+    rfc.next_state = RFC_S_IDLE;
+
+    return true;
+}
+
+bool Rfc_Set_RAT_Output(uint8_t rat_ch, uint8_t output_sel, uint8_t output_mode)
+{
+    if (!Rfc_Ready())
+        return false;
+
+    // Only channels 5-7 are available to the user
+    if (rat_ch < 5 || rat_ch > 7)
+        return false;
+
+    // Only output events 1-3 are available to the user
+    if (output_sel < 1 || output_sel > 3)
+        return false;
+
+    cmd_set_rat_output_p->config.ratCh = rat_ch;
+    cmd_set_rat_output_p->config.outputSel = output_sel;
+    cmd_set_rat_output_p->config.outputMode = output_mode;
+
+    Rfc_Start_Immediate_Cmd(cmd_set_rat_cmp_p);
+    rfc.next_state = RFC_S_IDLE;
 
     return true;
 }
