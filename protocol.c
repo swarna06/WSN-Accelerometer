@@ -167,7 +167,9 @@ void Ptc_Process_Sink_Init()
 
         rat_ticks_to_start_of_frame = ((rtc_ticks_to_start_of_frame / 2)*15625) / 128;
         if ((rat_ticks_to_start_of_frame % 128) > (128/2)) // round up
-            rat_tx_start++;
+            rat_ticks_to_start_of_frame++;
+
+        rat_ticks_to_start_of_frame -= 647;
 
         rat_tx_start = rat_current_time + rat_ticks_to_start_of_frame;
 
