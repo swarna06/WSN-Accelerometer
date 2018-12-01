@@ -17,6 +17,8 @@
 #define PTC_RFC_GPO                 2
 #define PTC_RAT_OUTP_MODE           0
 
+#define PTC_DUMMY_SLEEP             true
+
 // Start of transmission offset (value measured ~160 microseconds)
 #define PTC_RAT_TX_START_OFFSET     (647)
 
@@ -28,8 +30,9 @@
 #define PTC_BEAC_SLOT_TIME_MSEC     (20)
 #define PTC_DATA_SLOT_TIME_MSEC     (80)
 
-//#define PTC_RTC_FRAME_TIME          (TM_RTC_TICKS_PER_SEC * PTC_FRAME_TIME_SEC)
-#define PTC_RTC_FRAME_TIME          (TM_RTC_TICKS_PER_SEC * PTC_FRAME_TIME_SEC)/8
+#define PTC_RTC_FRAME_TIME          (TM_RTC_TICKS_PER_SEC * PTC_FRAME_TIME_SEC)
+//#define PTC_RTC_FRAME_TIME          (TM_RTC_TICKS_PER_SEC * PTC_FRAME_TIME_SEC)/8
+#define PTC_RTC_SLOT_TIME           (PTC_RTC_FRAME_TIME/4)
 #define PTC_RTC_BEAC_SLOT_TIME      (TM_RTC_TICKS_PER_MSEC * PTC_BEAC_SLOT_TIME_MSEC)
 #define PTC_RTC_DATA_SLOT_TIME      (TM_RTC_TICKS_PER_MSEC * PTC_DATA_SLOT_TIME_MSEC)
 #define PTC_RTC_GUARD_TIME          (TM_RTC_TICKS_PER_MSEC * PTC_GUARD_TIME_USEC)
@@ -58,8 +61,9 @@ typedef enum
     PTC_S_WAIT_RF_CORE_WAKEUP,
 
     PTC_S_WAIT_START_OF_FRAME = 0x10,
-    PTC_S_SCHEDULE_BEACON_TX,
+    PTC_S_SCHEDULE_BEACON_RADIO_OP,
     PTC_S_WAIT_START_OF_SLOT,
+    PTC_S_SCHEDULE_SLOT_RADIO_OP,
 
     // Initialization states for 'sink' role
     PTC_S_SCHEDULE_COMM = 0X20,
@@ -84,6 +88,7 @@ typedef struct
 
     uint16_t random_seeds[PTC_RAND_SEEDS_NUM];
     uint32_t start_of_next_frame;
+    uint32_t start_of_next_slot;
 
     uint16_t tx_power;
     uint8_t phy_mode;

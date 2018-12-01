@@ -125,12 +125,21 @@ void Ptc_Process_Sink_Init()
 
     case PTC_S_WAIT_START_OF_FRAME:
     {
-        // Calculate wake up time and go to sleep
+        // Calculate time of start of next frame and next slot
         ptc.start_of_next_frame += PTC_RTC_FRAME_TIME;
-        uint32_t wakeup_time = ptc.start_of_next_frame - PTC_RTC_TOTAL_WAKEUP_TIME;
 
+        if (Ptc_Dev_Is_Sink_Node())
+            ptc.start_of_next_slot = ptc.start_of_next_frame + PTC_RTC_SLOT_TIME;
+        else
+            ptc.start_of_next_slot = ptc.start_of_next_frame + (PTC_RTC_SLOT_TIME * ptc.dev_id);
+
+        // Calculate wake up time and go to sleep
+        uint32_t wakeup_time = ptc.start_of_next_frame - PTC_RTC_TOTAL_WAKEUP_TIME;
+        #ifndef PTC_DUMMY_SLEEP
         Pma_MCU_Sleep(wakeup_time);
-//        Pma_Dummy_MCU_Sleep(wakeup_time);
+        #else
+        Pma_Dummy_MCU_Sleep(wakeup_time);
+        #endif
 
         AONRTCEventClear(AON_RTC_CH1); // TODO remove
         AONRTCCompareValueSet(AON_RTC_CH1, ptc.start_of_next_frame); // TODO remove
@@ -138,11 +147,11 @@ void Ptc_Process_Sink_Init()
         Log_Val_Uint32("rtc_SoNF: ", ptc.start_of_next_frame);
 
         ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
-        ptc.next_state = PTC_S_SCHEDULE_BEACON_TX;
+        ptc.next_state = PTC_S_SCHEDULE_BEACON_RADIO_OP;
     }
     break;
 
-    case PTC_S_SCHEDULE_BEACON_TX:
+    case PTC_S_SCHEDULE_BEACON_RADIO_OP:
     {
         //
         // Calculate time of the start of transmission and request the RF core to send the packet
@@ -166,8 +175,8 @@ void Ptc_Process_Sink_Init()
         uint32_t rat_ticks_to_start_of_frame = ((rtc_ticks_to_start_of_frame / TM_RTC_TICKS_PER_CYCLE)*15625) / 128;
 
         // 5. Round up (if modulus is greater than half of the divisor; > 0.5 clock periods)
-        if ((rat_ticks_to_start_of_frame % 128) > (128/2)) // round up
-            rat_ticks_to_start_of_frame++;
+//        if ((rat_ticks_to_start_of_frame % 128) > (128/2)) // round up
+//            rat_ticks_to_start_of_frame++;
 
         // 6. Remove measured offset in the start of transmission (~160 microseconds)
         rat_ticks_to_start_of_frame -= PTC_RAT_TX_START_OFFSET;
@@ -180,12 +189,14 @@ void Ptc_Process_Sink_Init()
         Log_Val_Uint32("rat_txs: ", rat_tx_start);
 
         // 8. Request the RF core the transmission of the beacon
-        ptc.tx_param.buf = NULL;
+        ptc.tx_param.buf = NULL; // TODO buffer contents
         ptc.tx_param.rat_start_time = rat_tx_start;
         Rfc_BLE5_Adv_Aux(&ptc.tx_param);
 
-        Tm_Start_Timeout(TM_TOUT_PTC_ID, 30);
+        Tm_Start_Timeout(TM_TOUT_PTC_ID, 30); // TODO remove
         ptc.state = PTC_S_WAIT_TIMEOUT;
+//        ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
+        ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
     }
     break;
 
@@ -198,10 +209,74 @@ void Ptc_Process_Sink_Init()
                 Log_Val_Hex32("RFHWIFG: ", HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG));
             }
 
-            ptc.state = PTC_S_WAIT_START_OF_FRAME;
+            ptc.state = ptc.next_state;
         }
 
         break;
+
+    case PTC_S_WAIT_START_OF_SLOT:
+    {
+        // Calculate wake up time and go to sleep
+        uint32_t wakeup_time = ptc.start_of_next_slot - PTC_RTC_TOTAL_WAKEUP_TIME;
+        #ifndef PTC_DUMMY_SLEEP
+        Pma_MCU_Sleep(wakeup_time);
+        #else
+        Pma_Dummy_MCU_Sleep(wakeup_time);
+        #endif
+
+        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
+        ptc.next_state = PTC_S_SCHEDULE_SLOT_RADIO_OP;
+    }
+    break;
+
+    case PTC_S_SCHEDULE_SLOT_RADIO_OP:
+    {
+        //
+        // Calculate time of the start of transmission and request the RF core to send the packet
+        //
+
+        // 1. Synchronize with RTC; wait for the start of the next RTC period (up to ~30 us)
+        Tm_Synch_With_RTC();
+
+        // 2. Get current time (RTC and RAT)
+        uint32_t rat_current_time = Rfc_Get_RAT_Time();
+        uint32_t rtc_current_time = Tm_Get_RTC_Time();
+
+        Log_Val_Uint32("rat_ct: ", rat_current_time);
+        Log_Val_Uint32("rtc_ct: ", rtc_current_time);
+
+        // 3. Calculate the number of RTC ticks left for the start of transmission
+        uint32_t rtc_ticks_to_start_of_frame = ptc.start_of_next_slot - rtc_current_time;
+
+        // 4. Convert RTC ticks into RAT ticks: 1 RTC tick = 4e6/32768 RAT ticks = 15625/128 RAT ticks
+        //    One RTC clock cycle is equal to 2 units of the RTC counter
+        uint32_t rat_ticks_to_start_of_frame = ((rtc_ticks_to_start_of_frame / TM_RTC_TICKS_PER_CYCLE)*15625) / 128;
+
+        // 5. Round up (if modulus is greater than half of the divisor; > 0.5 clock periods)
+//        if ((rat_ticks_to_start_of_frame % 128) > (128/2)) // round up
+//            rat_ticks_to_start_of_frame++;
+
+        // 6. Remove measured offset in the start of transmission (~160 microseconds)
+        rat_ticks_to_start_of_frame -= PTC_RAT_TX_START_OFFSET;
+
+        // 7. Calculate absolute time of start of transmission
+        uint32_t rat_tx_start = rat_current_time + rat_ticks_to_start_of_frame;
+
+        Log_Val_Uint32("rtc_TtSoF: ", rtc_ticks_to_start_of_frame);
+        Log_Val_Uint32("rat_TtSoF: ", rat_ticks_to_start_of_frame);
+        Log_Val_Uint32("rat_txs: ", rat_tx_start);
+
+        // 8. Request the RF core the transmission of the beacon
+        ptc.tx_param.buf = NULL; // TODO buffer contents
+        ptc.tx_param.rat_start_time = rat_tx_start;
+        Rfc_BLE5_Adv_Aux(&ptc.tx_param);
+
+        Tm_Start_Timeout(TM_TOUT_PTC_ID, 30); // TODO remove
+        ptc.state = PTC_S_WAIT_TIMEOUT;
+        //        ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
+        ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
+    }
+    break;
 
     default:
         assertion(!"Ptc_Process_Sink_Init: Unknown state!");
