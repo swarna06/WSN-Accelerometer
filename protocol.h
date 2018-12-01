@@ -17,6 +17,9 @@
 #define PTC_RFC_GPO                 2
 #define PTC_RAT_OUTP_MODE           0
 
+// Start of transmission offset (value measured ~160 microseconds)
+#define PTC_RAT_TX_START_OFFSET     (647)
+
 // Number of sensor nodes
 #define PTC_SENSOR_NODES_NUM        10
 
