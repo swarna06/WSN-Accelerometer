@@ -15,9 +15,11 @@
 #include <driverlib/trng.h>
 
 #include <inc/hw_rfc_dbell.h>
+#include <inc/hw_aon_rtc.h>
 #include <driverlib/ioc.h>
 #include <driverlib/event.h>
 #include <driverlib/interrupt.h>
+#include <driverlib/sys_ctrl.h>
 
 #include "protocol.h"
 #include "rf_core.h"
@@ -34,6 +36,14 @@ ptc_control_t ptc;
 
 // Auxiliary functions
 static bool Ptc_Init_Random_Seeds();
+
+void Ptc_RTC_Isr()
+{
+    Brd_Led_Toggle(BRD_RTC_OUT_PIN);
+    SysCtrlAonSync();
+    AONRTCEventClear(AON_RTC_CH1);
+    IntPendClear(INT_AON_RTC_COMB);
+}
 
 void Ptc_Init()
 {
@@ -72,7 +82,7 @@ void Ptc_Init()
     ptc.rx_result.buf_len = PTC_RXTX_BUF_LEN;
 
     // Set start time of the first frame
-    ptc.start_of_next_frame = PTC_RTC_FRAME_TIME;
+    ptc.start_of_next_frame = 0;
 
     // Initialize FSM variables
     ptc.flags = 0;
@@ -86,16 +96,15 @@ void Ptc_Init()
 
     // TODO remove the following lines
     AONRTCCompareValueSet(AON_RTC_CH1, 0);
+    AONRTCCombinedEventConfig(AON_RTC_CH1);
     AONRTCChannelEnable(AON_RTC_CH1);
-}
 
-void Ptc_RFC_Hwi()
-{
-    Brd_Led_Off(BRD_LED1);
-    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~(1 << (PTC_RAT_CH + 12)); // clear interrupt flag
-    IntPendClear(INT_RFC_HW_COMB);
-}
+    IntRegister(INT_AON_RTC_COMB, Ptc_RTC_Isr);
+    IntPendClear(INT_AON_RTC_COMB);
+    IntEnable(INT_AON_RTC_COMB);
 
+    IOCPinTypeGpioOutput(BRD_RTC_OUT_PIN);
+}
 
 void Ptc_Process_Sink_Init()
 {
@@ -117,21 +126,14 @@ void Ptc_Process_Sink_Init()
     case PTC_S_WAIT_START_OF_FRAME:
     {
         // Calculate wake up time and go to sleep
+        ptc.start_of_next_frame += PTC_RTC_FRAME_TIME;
         uint32_t wakeup_time = ptc.start_of_next_frame - PTC_RTC_TOTAL_WAKEUP_TIME;
-
-        AONRTCEventClear(AON_RTC_CH1); // TODO remove
-        AONRTCCompareValueSet(AON_RTC_CH1, ptc.start_of_next_frame); // TODO remove
-
-        Log_Val_Uint32("wakeup_time: ", wakeup_time);
 
         Pma_MCU_Sleep(wakeup_time);
 //        Pma_Dummy_MCU_Sleep(wakeup_time);
 
-        Log_Val_Uint32("rtc_time: ", Tm_Get_RTC_Time());
-
-        Pfl_Tic();
-
-        ptc.start_of_next_frame += PTC_RTC_FRAME_TIME;
+        AONRTCEventClear(AON_RTC_CH1); // TODO remove
+        AONRTCCompareValueSet(AON_RTC_CH1, ptc.start_of_next_frame); // TODO remove
 
         ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
         ptc.next_state = PTC_S_SCHEDULE_BEACON_TX;
@@ -149,58 +151,21 @@ void Ptc_Process_Sink_Init()
 
         uint32_t rat_timestamp = Rfc_Get_RAT_Time();
         uint32_t rtc_timestamp = Tm_Get_RTC_Time();
-        Brd_Led_On(BRD_LED1);
 
-        Pfl_Toc();
-        Log_Val_Uint32("exec_time_ns: ", Pfl_Get_Exec_Time_Nanosec());
-
-        Log_Val_Uint32("rtc_timestamp: ", rtc_timestamp);
-
-        HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~(1 << (PTC_RAT_CH + 12)); // clear interrupt flag
-        HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIEN) |= (1 << (PTC_RAT_CH + 12)); // enable interrupt
-
-        IntPendClear(INT_RFC_HW_COMB);
-        IntRegister(INT_RFC_HW_COMB, Ptc_RFC_Hwi);
-        IntEnable(INT_RFC_HW_COMB);
-
-        Rfc_Set_RAT_Compare(PTC_RAT_CH, rat_timestamp + 40000*2); // interrupt after 10 ms
-//        rfc_tx_param_t tx_param;
-//        tx_param.buf = NULL;
-//        tx_param.rat_start_time = rat_timestamp + 40000*2;
-//        Rfc_BLE5_Adv_Aux(&tx_param);
+        rfc_tx_param_t tx_param;
+        tx_param.buf = NULL;
+        tx_param.rat_start_time = rat_timestamp + 40000*2;
+        Rfc_BLE5_Adv_Aux(&tx_param);
 
 //        uint32_t rat_beacon_time;
 //        uint32_t rtc_beacon_time;
 
         if (rat_timestamp & rtc_timestamp) (void)0;
 
-        Log_Val_Hex32("RFHWIFG: ", HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG));
-
         Tm_Start_Timeout(TM_TOUT_PTC_ID, 30);
-        ptc.state = PTC_S_WAIT_SET_RAT_CMP;
+        ptc.state = PTC_S_WAIT_TIMEOUT;
     }
     break;
-
-    case PTC_S_WAIT_SET_RAT_CMP:
-
-        Rfc_Set_RAT_Output(PTC_RAT_CH, PTC_RAT_GPO, PTC_RAT_OUTP_MODE);
-        ptc.state = PTC_S_WAIT_RTC_CMP;
-        break;
-
-    case PTC_S_WAIT_RTC_CMP:
-
-        if (AONRTCEventGet(AON_RTC_CH1))
-        {
-//            Brd_Led_Toggle(BRD_LED1);
-
-            rfc_tx_param_t tx_param;
-            tx_param.buf = NULL;
-            tx_param.rat_start_time = 0;
-            Rfc_BLE5_Adv_Aux(&tx_param);
-            ptc.state = PTC_S_WAIT_TIMEOUT;
-        }
-
-        break;
 
     case PTC_S_WAIT_TIMEOUT:
 
