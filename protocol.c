@@ -155,7 +155,7 @@ void Ptc_Process_Sink_Init()
     case PTC_S_SCHEDULE_BEACON_RADIO_OP:
     {
         //
-        // Calculate time of the start of transmission and request the RF core to send the packet
+        // Calculate time of the start of radio operation and request its execution to the RF Core
         //
 
         // 1. Synchronize with RTC; wait for the start of the next RTC period (up to ~30 us)
@@ -165,9 +165,6 @@ void Ptc_Process_Sink_Init()
         uint32_t rat_current_time = Rfc_Get_RAT_Time();
         uint32_t rtc_current_time = Tm_Get_RTC_Time();
 
-        Log_Val_Uint32("rat_ct: ", rat_current_time);
-        Log_Val_Uint32("rtc_ct: ", rtc_current_time);
-
         // 3. Calculate the number of RTC ticks left for the start of transmission
         uint32_t rtc_ticks_to_event = ptc.start_of_next_frame - rtc_current_time;
 
@@ -176,10 +173,6 @@ void Ptc_Process_Sink_Init()
 
         // 5. Calculate absolute time of start of transmission
         uint32_t rat_tx_start = rat_current_time + rat_ticks_to_event;
-
-        Log_Val_Uint32("rtc_TtSoF: ", rtc_ticks_to_event);
-        Log_Val_Uint32("rat_TtSoF: ", rat_ticks_to_event);
-        Log_Val_Uint32("rat_txs: ", rat_tx_start);
 
         // 6. Request the RF core the transmission of the beacon
         ptc.tx_param.buf = NULL; // TODO buffer contents
@@ -225,7 +218,7 @@ void Ptc_Process_Sink_Init()
     case PTC_S_SCHEDULE_SLOT_RADIO_OP:
     {
         //
-        // Calculate time of the start of transmission and request the RF core to send the packet
+        // Calculate time of the start of radio operation and request its execution to the RF Core
         //
 
         // 1. Synchronize with RTC; wait for the start of the next RTC period (up to ~30 us)
@@ -235,9 +228,6 @@ void Ptc_Process_Sink_Init()
         uint32_t rat_current_time = Rfc_Get_RAT_Time();
         uint32_t rtc_current_time = Tm_Get_RTC_Time();
 
-        Log_Val_Uint32("rat_ct: ", rat_current_time);
-        Log_Val_Uint32("rtc_ct: ", rtc_current_time);
-
         // 3. Calculate the number of RTC ticks left for the start of transmission
         uint32_t rtc_ticks_to_event = ptc.start_of_next_slot - rtc_current_time;
 
@@ -246,10 +236,6 @@ void Ptc_Process_Sink_Init()
 
         // 5. Calculate absolute time of start of transmission
         uint32_t rat_tx_start = rat_current_time + rat_ticks_to_event;
-
-        Log_Val_Uint32("rtc_TtSoF: ", rtc_ticks_to_event);
-        Log_Val_Uint32("rat_TtSoF: ", rat_ticks_to_event);
-        Log_Val_Uint32("rat_txs: ", rat_tx_start);
 
         // 6. Request the RF core the transmission of the beacon TODO receive or transmit depending on device id
         ptc.tx_param.buf = NULL; // TODO buffer contents
