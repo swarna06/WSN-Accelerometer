@@ -20,7 +20,7 @@
 #define PTC_DUMMY_SLEEP             true
 
 // Start of transmission offset (value measured ~160 microseconds)
-#define PTC_RAT_TX_START_OFFSET     (647)
+#define PTC_RAT_TX_START_OFFSET     (-648)
 
 // Number of sensor nodes
 #define PTC_SENSOR_NODES_NUM        10

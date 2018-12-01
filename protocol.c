@@ -36,6 +36,7 @@ ptc_control_t ptc;
 
 // Auxiliary functions
 static bool Ptc_Init_Random_Seeds();
+static uint32_t Ptc_RAT_Ticks_To_Event(uint32_t rtc_ticks_to_event, int32_t offset);
 
 void Ptc_RTC_Isr()
 {
@@ -168,35 +169,27 @@ void Ptc_Process_Sink_Init()
         Log_Val_Uint32("rtc_ct: ", rtc_current_time);
 
         // 3. Calculate the number of RTC ticks left for the start of transmission
-        uint32_t rtc_ticks_to_start_of_frame = ptc.start_of_next_frame - rtc_current_time;
+        uint32_t rtc_ticks_to_event = ptc.start_of_next_frame - rtc_current_time;
 
-        // 4. Convert RTC ticks into RAT ticks: 1 RTC tick = 4e6/32768 RAT ticks = 15625/128 RAT ticks
-        //    One RTC clock cycle is equal to 2 units of the RTC counter
-        uint32_t rat_ticks_to_start_of_frame = ((rtc_ticks_to_start_of_frame / TM_RTC_TICKS_PER_CYCLE)*15625) / 128;
+        // 4. Convert RTC ticks to RAT ticks (apply measured offset ~160 microseconds)
+        uint32_t rat_ticks_to_event = Ptc_RAT_Ticks_To_Event(rtc_ticks_to_event, PTC_RAT_TX_START_OFFSET);
 
-        // 5. Round up (if modulus is greater than half of the divisor; > 0.5 clock periods)
-//        if ((rat_ticks_to_start_of_frame % 128) > (128/2)) // round up
-//            rat_ticks_to_start_of_frame++;
+        // 5. Calculate absolute time of start of transmission
+        uint32_t rat_tx_start = rat_current_time + rat_ticks_to_event;
 
-        // 6. Remove measured offset in the start of transmission (~160 microseconds)
-        rat_ticks_to_start_of_frame -= PTC_RAT_TX_START_OFFSET;
-
-        // 7. Calculate absolute time of start of transmission
-        uint32_t rat_tx_start = rat_current_time + rat_ticks_to_start_of_frame;
-
-        Log_Val_Uint32("rtc_TtSoF: ", rtc_ticks_to_start_of_frame);
-        Log_Val_Uint32("rat_TtSoF: ", rat_ticks_to_start_of_frame);
+        Log_Val_Uint32("rtc_TtSoF: ", rtc_ticks_to_event);
+        Log_Val_Uint32("rat_TtSoF: ", rat_ticks_to_event);
         Log_Val_Uint32("rat_txs: ", rat_tx_start);
 
-        // 8. Request the RF core the transmission of the beacon
+        // 6. Request the RF core the transmission of the beacon
         ptc.tx_param.buf = NULL; // TODO buffer contents
         ptc.tx_param.rat_start_time = rat_tx_start;
         Rfc_BLE5_Adv_Aux(&ptc.tx_param);
 
         Tm_Start_Timeout(TM_TOUT_PTC_ID, 30); // TODO remove
         ptc.state = PTC_S_WAIT_TIMEOUT;
-//        ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
-        ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
+        ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
+//        ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
     }
     break;
 
@@ -358,3 +351,18 @@ static bool Ptc_Init_Random_Seeds()
     return result;
 }
 
+static uint32_t Ptc_RAT_Ticks_To_Event(uint32_t rtc_ticks_to_event, int32_t offset)
+{
+    // Convert RTC ticks into RAT ticks: 1 RTC tick = 4e6/32768 RAT ticks = 15625/128 RAT ticks
+    // One RTC clock cycle is equal to 2 units of the RTC counter
+    uint32_t rat_ticks_to_event = ((rtc_ticks_to_event / TM_RTC_TICKS_PER_CYCLE)*15625) / 128;
+
+    // Round up (if modulus is greater than half of the divisor; > 0.5 clock periods)
+    //        if ((rat_ticks_to_start_of_frame % 128) > (128/2)) // round up
+    //            rat_ticks_to_start_of_frame++;
+
+    // Compensate for offset
+    rat_ticks_to_event += offset;
+
+    return rat_ticks_to_event;
+}
