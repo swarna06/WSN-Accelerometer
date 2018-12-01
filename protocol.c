@@ -135,6 +135,8 @@ void Ptc_Process_Sink_Init()
         AONRTCEventClear(AON_RTC_CH1); // TODO remove
         AONRTCCompareValueSet(AON_RTC_CH1, ptc.start_of_next_frame); // TODO remove
 
+        Log_Val_Uint32("rtc_SoNF: ", ptc.start_of_next_frame);
+
         ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
         ptc.next_state = PTC_S_SCHEDULE_BEACON_TX;
     }
@@ -146,21 +148,36 @@ void Ptc_Process_Sink_Init()
         // Calculate time of the start of transmission and request the RF core to send the packet
         //
 
-        // Wait for the start of the next RTC period (up to ~30 us)
+        // Synchronize with RTC; wait for the start of the next RTC period (up to ~30 us)
         Tm_Synch_With_RTC();
 
-        uint32_t rat_timestamp = Rfc_Get_RAT_Time();
-        uint32_t rtc_timestamp = Tm_Get_RTC_Time();
+        // Get current time (RTC and RAT)
+        uint32_t rat_current_time = Rfc_Get_RAT_Time();
+        uint32_t rtc_current_time = Tm_Get_RTC_Time();
 
-        rfc_tx_param_t tx_param;
-        tx_param.buf = NULL;
-        tx_param.rat_start_time = rat_timestamp + 40000*2;
-        Rfc_BLE5_Adv_Aux(&tx_param);
+        Log_Val_Uint32("rat_ct: ", rat_current_time);
+        Log_Val_Uint32("rtc_ct: ", rtc_current_time);
 
-//        uint32_t rat_beacon_time;
-//        uint32_t rtc_beacon_time;
+        // Calculate time for the start of transmission (RAT)
+        uint32_t rtc_ticks_to_start_of_frame;
+        uint32_t rat_ticks_to_start_of_frame;
+        uint32_t rat_tx_start;
 
-        if (rat_timestamp & rtc_timestamp) (void)0;
+        rtc_ticks_to_start_of_frame = ptc.start_of_next_frame - rtc_current_time;
+
+        rat_ticks_to_start_of_frame = ((rtc_ticks_to_start_of_frame / 2)*15625) / 128;
+        if ((rat_ticks_to_start_of_frame % 128) > (128/2)) // round up
+            rat_tx_start++;
+
+        rat_tx_start = rat_current_time + rat_ticks_to_start_of_frame;
+
+        Log_Val_Uint32("rtc_TtSoF: ", rtc_ticks_to_start_of_frame);
+        Log_Val_Uint32("rat_TtSoF: ", rat_ticks_to_start_of_frame);
+        Log_Val_Uint32("rat_txs: ", rat_tx_start);
+
+        ptc.tx_param.buf = NULL;
+        ptc.tx_param.rat_start_time = rat_tx_start;
+        Rfc_BLE5_Adv_Aux(&ptc.tx_param);
 
         Tm_Start_Timeout(TM_TOUT_PTC_ID, 30);
         ptc.state = PTC_S_WAIT_TIMEOUT;

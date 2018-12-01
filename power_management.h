@@ -9,7 +9,8 @@
 #define POWER_MANAGEMENT_H_
 
 // Wake up procedure execution time
-#define PMA_WAKEUP_TIME_USEC        400
+//#define PMA_WAKEUP_TIME_USEC        400
+#define PMA_WAKEUP_TIME_USEC        500 // xxx measure this time again later and update this constant
 
 // Power domain flags
 #define PMA_F_DOMAIN_RF_CORE        0x8000
