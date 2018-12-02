@@ -11,6 +11,7 @@
 #include "timing.h"
 #include "rf_core.h"
 #include "power_management.h"
+#include "configuration.h"
 
 #define PTC_RAT_CH                  5
 #define PTC_RAT_GPO                 2
@@ -18,6 +19,9 @@
 #define PTC_RAT_OUTP_MODE           0
 
 //#define PTC_DUMMY_SLEEP
+
+// Number of sensor nodes in the network
+#define PTC_SENSOR_NODE_NUM         CFG_SENSOR_NODE_NUM
 
 // Start of transmission offset (value measured ~160 microseconds)
 #define PTC_RAT_TX_START_OFFSET     (-647)
@@ -83,7 +87,7 @@ typedef struct
     uint8_t state, next_state;
     uint32_t absent_nodes;
 
-    uint8_t dev_id;
+    uint8_t dev_id, dev_index;
     uint32_t ble_access_l, ble_access_h;
 
     uint16_t random_seeds[PTC_RAND_SEEDS_NUM];

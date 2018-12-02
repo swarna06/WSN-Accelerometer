@@ -130,7 +130,10 @@ void Ptc_Process_Sink_Init()
         ptc.start_of_next_frame += PTC_RTC_FRAME_TIME;
 
         if (Ptc_Dev_Is_Sink_Node())
+        {
             ptc.start_of_next_slot = ptc.start_of_next_frame + PTC_RTC_SLOT_TIME;
+            ptc.dev_index = 1;
+        }
         else
             ptc.start_of_next_slot = ptc.start_of_next_frame + (PTC_RTC_SLOT_TIME * ptc.dev_id);
 
@@ -260,8 +263,19 @@ void Ptc_Process_Sink_Init()
 
         Tm_Start_Timeout(TM_TOUT_PTC_ID, 30); // TODO remove
         ptc.state = PTC_S_WAIT_TIMEOUT;
-        //        ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
-        ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
+
+        if (Ptc_Dev_Is_Sink_Node())
+        {
+            ptc.dev_index++;
+            if (ptc.dev_index > PTC_SENSOR_NODE_NUM)
+                ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
+            else
+            {
+                ptc.start_of_next_slot += PTC_RTC_SLOT_TIME;
+                ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
+            }
+        }
+        else {}; // TODO
     }
     break;
 

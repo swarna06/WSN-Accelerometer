@@ -77,7 +77,7 @@
 //
 //*****************************************************************************
 
-#include "device_config.h"
+#include "configuration.h"
 
 //#####################################
 // Alternative DC/DC settings
