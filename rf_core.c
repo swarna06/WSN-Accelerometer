@@ -22,6 +22,7 @@
 #include <driverlib/rf_ble_cmd.h>
 
 #include <driverlib/aon_rtc.h>
+#include <driverlib/ioc.h>
 
 #include "rf_core.h"
 #include "timing.h"
@@ -29,6 +30,7 @@
 #include "log.h"
 #include "misc.h"
 #include "power_management.h"
+#include "board.h"
 
 // RF core control structure
 rfc_control_t rfc;
@@ -500,6 +502,17 @@ inline bool Rfc_Ready()
 inline uint8_t Rfc_Error()
 {
     return rfc.error.code;  // TODO return the error structure
+}
+
+void Rfc_Enable_Output_Signals()
+{
+    // Map transmission output signal (RFC_GPO3)
+    // Goes high when a transmission is initiated and low when the transmission is done.
+    IOCPortConfigureSet(BRD_RFC_GPO_PIN, IOC_PORT_RFC_GPO3, IOC_STD_OUTPUT);
+
+    // Map RTC GPO to RAT GPO (check TI's "Routing RF core signals to physical pins")
+//    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_SYSGPOCTL) &= ~RFC_DBELL_SYSGPOCTL_GPOCTL2_RATGPO2;
+//    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_SYSGPOCTL) += RFC_DBELL_SYSGPOCTL_GPOCTL2_RATGPO2;
 }
 
 // ********************************

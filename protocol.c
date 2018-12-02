@@ -38,13 +38,16 @@ ptc_control_t ptc;
 static bool Ptc_Init_Random_Seeds();
 static uint32_t Ptc_RAT_Ticks_To_Event(uint32_t rtc_ticks_to_event, int32_t offset);
 
+#ifdef PTC_START_OF_FRAME_OUT
 void Ptc_RTC_Isr()
 {
+    // Toggle bit at the start of each frame
     Brd_Led_Toggle(BRD_RTC_OUT_PIN);
     SysCtrlAonSync();
     AONRTCEventClear(AON_RTC_CH1);
     IntPendClear(INT_AON_RTC_COMB);
 }
+#endif // #ifdef PTC_START_OF_FRAME_OUT
 
 void Ptc_Init()
 {
@@ -95,7 +98,9 @@ void Ptc_Init()
         ptc.next_state = PTC_S_IDLE;
     }
 
-    // TODO remove the following lines
+    #ifdef PTC_START_OF_FRAME_OUT
+    // Configure an RTC CH in compare mode and enable interrupt
+    // to toggle a pin at the start of each frame
     AONRTCCompareValueSet(AON_RTC_CH1, 0);
     AONRTCCombinedEventConfig(AON_RTC_CH1);
     AONRTCChannelEnable(AON_RTC_CH1);
@@ -105,6 +110,7 @@ void Ptc_Init()
     IntEnable(INT_AON_RTC_COMB);
 
     IOCPinTypeGpioOutput(BRD_RTC_OUT_PIN);
+    #endif // #ifdef PTC_START_OF_FRAME_OUT
 }
 
 void Ptc_Process_Sink_Init()
@@ -143,10 +149,13 @@ void Ptc_Process_Sink_Init()
         Pma_MCU_Sleep(wakeup_time);
         #else
         Pma_Dummy_MCU_Sleep(wakeup_time);
-        #endif
+        #endif // #ifndef PTC_DUMMY_SLEEP
 
-        AONRTCEventClear(AON_RTC_CH1); // TODO remove
-        AONRTCCompareValueSet(AON_RTC_CH1, ptc.start_of_next_frame); // TODO remove
+        #ifdef PTC_START_OF_FRAME_OUT
+        // Set RTC compare value to match the start of next frame
+        AONRTCEventClear(AON_RTC_CH1);
+        AONRTCCompareValueSet(AON_RTC_CH1, ptc.start_of_next_frame);
+        #endif // #ifdef PTC_START_OF_FRAME_OUT
 
         Log_Val_Uint32("rtc_SoNF: ", ptc.start_of_next_frame);
 

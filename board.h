@@ -31,10 +31,9 @@
     #define BRD_UART_TX         3
     #define BRD_UART_RX         2
 
+    #define BRD_SLEEP_PIN       BRD_LED0
     #define BRD_LF_OSC_PIN      21
-
     #define BRD_RFC_GPO_PIN     22
-
     #define BRD_RTC_OUT_PIN     BRD_LED1
 
     // LEDs are active high

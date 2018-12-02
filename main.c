@@ -30,6 +30,7 @@
 #include "log.h"
 #include "power_management.h"
 #include "profiling.h"
+#include "configuration.h"
 
 #include "printf.h"
 
@@ -41,7 +42,6 @@ int main(void)
 {
     Pma_Init();
     GPIO_Init();
-    Brd_Led_On(BRD_LED0); // FIXME remove
     Tm_Init();
 
     Sep_Init(); // FIXME disable to reduce power consumption
@@ -68,14 +68,13 @@ int main(void)
     uint8_t fsm_state = (uint8_t)-1;
     uint8_t new_fsm_state = fsm_state;
 
-    // Setup pin as rat output
+    // Enable debug output signals according to configuration
+#if (CFG_DEBUG_LF_OSC_OUT == CFG_SETTING_ENABLED)
     Tm_Enable_LF_Clock_Output();
-
-    // Setup pin as RFC GPO
-    IOCPortConfigureSet(BRD_RFC_GPO_PIN, IOC_PORT_RFC_GPO3, IOC_STD_OUTPUT);
-    // Map RTC GPO to RAT GPO (check TI's "Routing RF core signals to physical pins")
-//    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_SYSGPOCTL) &= ~RFC_DBELL_SYSGPOCTL_GPOCTL2_RATGPO2;
-//    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_SYSGPOCTL) += RFC_DBELL_SYSGPOCTL_GPOCTL2_RATGPO2;
+#endif
+#if (CFG_DEBUG_RADIO_OUT == CFG_SETTING_ENABLED)
+    Rfc_Enable_Output_Signals();
+#endif
 
     while (1)
     {

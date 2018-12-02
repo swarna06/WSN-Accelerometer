@@ -14,6 +14,7 @@
 #include <driverlib/cpu.h>
 #include <driverlib/aon_rtc.h>
 #include <driverlib/sys_ctrl.h>
+#include <driverlib/ioc.h>
 
 #include "power_management.h"
 #include "timing.h"
@@ -71,6 +72,12 @@ void Pma_Init()
         VIMSModeSet(VIMS_BASE, VIMS_MODE_OFF); // now turn off the VIMS
 
     PRCMCacheRetentionDisable(); // now disable retention
+
+    #ifdef PMA_SLEEP_OUT
+    Pma_Power_On_Peripheral(PMA_PERIPH_GPIO);
+    IOCPinTypeGpioOutput(BRD_SLEEP_PIN);
+    Brd_Led_On(BRD_SLEEP_PIN);
+    #endif // #ifdef PMA_SLEEP_OUT
 }
 
 void Pma_Power_On_Peripheral(uint16_t peripheral)
@@ -144,7 +151,10 @@ inline void Pma_CPU_Sleep(uint32_t tout_ms)
 
 void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
 {
-    Brd_Led_Off(BRD_LED0);  // FIXME remove
+    #ifdef PMA_SLEEP_OUT
+    Brd_Led_Off(BRD_SLEEP_PIN);
+    #endif // #ifdef PMA_SLEEP_OUT
+
     while (!Sep_UART_Idle()); // wait until the UART FIFO becomes FIXME remove
 
     // Put MCU in standby mode
@@ -226,7 +236,9 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     // 9. Wake up modules
     Pma_MCU_Wakeup();
 
-    Brd_Led_On(BRD_LED0);  // FIXME remove
+    #ifdef PMA_SLEEP_OUT
+    Brd_Led_On(BRD_SLEEP_PIN);
+    #endif // #ifdef PMA_SLEEP_OUT
 }
 
 void Pma_MCU_Wakeup()
@@ -237,12 +249,16 @@ void Pma_MCU_Wakeup()
 
 void Pma_Dummy_MCU_Sleep(uint32_t rtc_wakeup_time)
 {
-    Brd_Led_Off(BRD_LED0);  // FIXME remove
+    #ifdef PMA_SLEEP_OUT
+    Brd_Led_Off(BRD_SLEEP_PIN);
+    #endif // #ifdef PMA_SLEEP_OUT
 
     AONRTCEventClear(AON_RTC_CH0);
     AONRTCCompareValueSet(AON_RTC_CH0, rtc_wakeup_time);
 
     while (!AONRTCEventGet(AON_RTC_CH0)); // busy wait
 
-    Brd_Led_On(BRD_LED0);  // FIXME remove
+    #ifdef PMA_SLEEP_OUT
+    Brd_Led_On(BRD_SLEEP_PIN);
+    #endif // #ifdef PMA_SLEEP_OUT
 }

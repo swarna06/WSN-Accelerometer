@@ -8,6 +8,13 @@
 #ifndef POWER_MANAGEMENT_H_
 #define POWER_MANAGEMENT_H_
 
+#include "configuration.h"
+
+// Debug signal; indicates active and sleep states
+#if (CFG_DEBUG_SLEEP_OUT == CFG_SETTING_ENABLED)
+#define PMA_SLEEP_OUT
+#endif // #if (CFG_DEBUG_SLEEP_OUT == CFG_SETTING_ENABLED)
+
 // Wake up procedure execution time
 //#define PMA_WAKEUP_TIME_USEC        400
 #define PMA_WAKEUP_TIME_USEC        600 // xxx measure this time again later and update this constant

@@ -18,7 +18,13 @@
 #define PTC_RFC_GPO                 2
 #define PTC_RAT_OUTP_MODE           0
 
-//#define PTC_DUMMY_SLEEP
+#if (CFG_DEBUG_DUMMY_SLEEP == CFG_SETTING_ENABLED)
+#define PTC_DUMMY_SLEEP
+#endif
+
+#if (CFG_DEBUG_START_OF_FRAME_OUT == CFG_SETTING_ENABLED)
+#define PTC_START_OF_FRAME_OUT
+#endif
 
 // Number of sensor nodes in the network
 #define PTC_SENSOR_NODE_NUM         CFG_SENSOR_NODE_NUM
