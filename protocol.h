@@ -113,15 +113,7 @@ typedef struct
 
 void Ptc_Init();
 
-void Ptc_Process_Sink_Init();
-
-void Ptc_Process_Sensor_Init();
-
-void Ptc_Process_Sink_Normal_Op();
-
-void Ptc_Process_Sensor_Normal_Op();
-
-void (*Ptc_Process)();
+void Ptc_Process();
 
 uint8_t Ptc_Get_FSM_State();
 

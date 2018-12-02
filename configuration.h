@@ -8,12 +8,16 @@
 #ifndef CONFIGURATION_H_
 #define CONFIGURATION_H_
 
+// Values to enable/disable settings
 #define CFG_SETTING_DISABLED            0
 #define CFG_SETTING_ENABLED             1
 
 // Network parameters
-#define CFG_DEFAULT_DEV_ID              0
+#define CFG_DEFAULT_DEV_ID              3
 #define CFG_SENSOR_NODE_NUM             3
+#if (CFG_DEFAULT_DEV_ID > CFG_SENSOR_NODE_NUM)
+#error Device id is greater than total number of sensors
+#endif // #if (CFG_DEFAULT_DEV_ID > CFG_SENSOR_NODE_NUM)
 
 // Debug settings
 #define CFG_DEBUG_DUMMY_SLEEP           CFG_SETTING_DISABLED

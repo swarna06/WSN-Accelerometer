@@ -91,12 +91,7 @@ void Ptc_Init()
     // Initialize FSM variables
     ptc.flags = 0;
     ptc.state = PTC_S_WAIT_RF_CORE_INIT;
-
-    if (Ptc_Dev_Is_Sink_Node())
-    {
-        Ptc_Process = Ptc_Process_Sink_Init;
-        ptc.next_state = PTC_S_IDLE;
-    }
+    ptc.next_state = PTC_S_IDLE;
 
     #ifdef PTC_START_OF_FRAME_OUT
     // Configure an RTC CH in compare mode and enable interrupt
@@ -113,7 +108,7 @@ void Ptc_Init()
     #endif // #ifdef PTC_START_OF_FRAME_OUT
 }
 
-void Ptc_Process_Sink_Init()
+void Ptc_Process()
 {
     switch (ptc.state)
     {
@@ -183,9 +178,8 @@ void Ptc_Process_Sink_Init()
         rtc_ticks_to_event = ptc.start_of_next_frame - rtc_current_time;
 
         // 4. Convert RTC ticks to RAT ticks (apply measured offset ~160 microseconds)
-        if (Ptc_Dev_Is_Sink_Node())
-            rat_ticks_to_event = Ptc_RAT_Ticks_To_Event(rtc_ticks_to_event, PTC_RAT_TX_START_OFFSET);
-        else {}; // TODO
+        int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_TX_START_OFFSET; // TODO RX offset
+        rat_ticks_to_event = Ptc_RAT_Ticks_To_Event(rtc_ticks_to_event, offset);
 
         // 5. Calculate absolute time of start of transmission
         rat_start_time = rat_current_time + rat_ticks_to_event;
@@ -197,11 +191,16 @@ void Ptc_Process_Sink_Init()
             ptc.tx_param.rat_start_time = rat_start_time;
             Rfc_BLE5_Adv_Aux(&ptc.tx_param);
         }
-        else {}; // TODO
+        else
+        {
+            // TODO reception
+            ptc.tx_param.buf = NULL; // TODO buffer contents
+            ptc.tx_param.rat_start_time = rat_start_time;
+            Rfc_BLE5_Adv_Aux(&ptc.tx_param);
+        };
 
         Tm_Start_Timeout(TM_TOUT_PTC_ID, 30); // TODO remove
         ptc.state = PTC_S_WAIT_TIMEOUT;
-//        ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
         ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
     }
     break;
@@ -254,9 +253,8 @@ void Ptc_Process_Sink_Init()
         rtc_ticks_to_event = ptc.start_of_next_slot - rtc_current_time;
 
         // 4. Convert RTC ticks to RAT ticks (apply measured offset ~160 microseconds)
-        if (Ptc_Dev_Is_Sink_Node())
-            rat_ticks_to_event = Ptc_RAT_Ticks_To_Event(rtc_ticks_to_event, PTC_RAT_TX_START_OFFSET);
-        else {}; // TODO
+        int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_TX_START_OFFSET; // TODO RX offset
+        rat_ticks_to_event = Ptc_RAT_Ticks_To_Event(rtc_ticks_to_event, offset);
 
         // 5. Calculate absolute time of start of transmission
         rat_start_time = rat_current_time + rat_ticks_to_event;
@@ -268,7 +266,13 @@ void Ptc_Process_Sink_Init()
             ptc.tx_param.rat_start_time = rat_start_time;
             Rfc_BLE5_Adv_Aux(&ptc.tx_param);
         }
-        else {}; // TODO
+        else
+        {
+            // TODO reception
+            ptc.tx_param.buf = NULL; // TODO buffer contents
+            ptc.tx_param.rat_start_time = rat_start_time;
+            Rfc_BLE5_Adv_Aux(&ptc.tx_param);
+        };
 
         Tm_Start_Timeout(TM_TOUT_PTC_ID, 30); // TODO remove
         ptc.state = PTC_S_WAIT_TIMEOUT;
@@ -284,7 +288,8 @@ void Ptc_Process_Sink_Init()
                 ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
             }
         }
-        else {}; // TODO
+        else
+            ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
     }
     break;
 
