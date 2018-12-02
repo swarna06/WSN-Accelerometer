@@ -157,27 +157,35 @@ void Ptc_Process_Sink_Init()
         //
         // Calculate time of the start of radio operation and request its execution to the RF Core
         //
+        uint32_t rtc_current_time, rtc_ticks_to_event;
+        uint32_t rat_current_time, rat_ticks_to_event, rat_start_time;
 
         // 1. Synchronize with RTC; wait for the start of the next RTC period (up to ~30 us)
         Tm_Synch_With_RTC();
 
         // 2. Get current time (RTC and RAT)
-        uint32_t rat_current_time = Rfc_Get_RAT_Time();
-        uint32_t rtc_current_time = Tm_Get_RTC_Time();
+        rat_current_time = Rfc_Get_RAT_Time();
+        rtc_current_time = Tm_Get_RTC_Time();
 
         // 3. Calculate the number of RTC ticks left for the start of transmission
-        uint32_t rtc_ticks_to_event = ptc.start_of_next_frame - rtc_current_time;
+        rtc_ticks_to_event = ptc.start_of_next_frame - rtc_current_time;
 
         // 4. Convert RTC ticks to RAT ticks (apply measured offset ~160 microseconds)
-        uint32_t rat_ticks_to_event = Ptc_RAT_Ticks_To_Event(rtc_ticks_to_event, PTC_RAT_TX_START_OFFSET);
+        if (Ptc_Dev_Is_Sink_Node())
+            rat_ticks_to_event = Ptc_RAT_Ticks_To_Event(rtc_ticks_to_event, PTC_RAT_TX_START_OFFSET);
+        else {}; // TODO
 
         // 5. Calculate absolute time of start of transmission
-        uint32_t rat_tx_start = rat_current_time + rat_ticks_to_event;
+        rat_start_time = rat_current_time + rat_ticks_to_event;
 
-        // 6. Request the RF core the transmission of the beacon
-        ptc.tx_param.buf = NULL; // TODO buffer contents
-        ptc.tx_param.rat_start_time = rat_tx_start;
-        Rfc_BLE5_Adv_Aux(&ptc.tx_param);
+        // 6. Request radio operation to the RF core
+        if (Ptc_Dev_Is_Sink_Node())
+        {
+            ptc.tx_param.buf = NULL; // TODO buffer contents
+            ptc.tx_param.rat_start_time = rat_start_time;
+            Rfc_BLE5_Adv_Aux(&ptc.tx_param);
+        }
+        else {}; // TODO
 
         Tm_Start_Timeout(TM_TOUT_PTC_ID, 30); // TODO remove
         ptc.state = PTC_S_WAIT_TIMEOUT;
@@ -220,27 +228,35 @@ void Ptc_Process_Sink_Init()
         //
         // Calculate time of the start of radio operation and request its execution to the RF Core
         //
+        uint32_t rtc_current_time, rtc_ticks_to_event;
+        uint32_t rat_current_time, rat_ticks_to_event, rat_start_time;
 
         // 1. Synchronize with RTC; wait for the start of the next RTC period (up to ~30 us)
         Tm_Synch_With_RTC();
 
         // 2. Get current time (RTC and RAT)
-        uint32_t rat_current_time = Rfc_Get_RAT_Time();
-        uint32_t rtc_current_time = Tm_Get_RTC_Time();
+        rat_current_time = Rfc_Get_RAT_Time();
+        rtc_current_time = Tm_Get_RTC_Time();
 
         // 3. Calculate the number of RTC ticks left for the start of transmission
-        uint32_t rtc_ticks_to_event = ptc.start_of_next_slot - rtc_current_time;
+        rtc_ticks_to_event = ptc.start_of_next_slot - rtc_current_time;
 
         // 4. Convert RTC ticks to RAT ticks (apply measured offset ~160 microseconds)
-        uint32_t rat_ticks_to_event = Ptc_RAT_Ticks_To_Event(rtc_ticks_to_event, PTC_RAT_TX_START_OFFSET);
+        if (Ptc_Dev_Is_Sink_Node())
+            rat_ticks_to_event = Ptc_RAT_Ticks_To_Event(rtc_ticks_to_event, PTC_RAT_TX_START_OFFSET);
+        else {}; // TODO
 
         // 5. Calculate absolute time of start of transmission
-        uint32_t rat_tx_start = rat_current_time + rat_ticks_to_event;
+        rat_start_time = rat_current_time + rat_ticks_to_event;
 
-        // 6. Request the RF core the transmission of the beacon TODO receive or transmit depending on device id
-        ptc.tx_param.buf = NULL; // TODO buffer contents
-        ptc.tx_param.rat_start_time = rat_tx_start;
-        Rfc_BLE5_Adv_Aux(&ptc.tx_param);
+        // 6. Request radio operation to the RF core
+        if (Ptc_Dev_Is_Sink_Node())
+        {
+            ptc.tx_param.buf = NULL; // TODO buffer contents
+            ptc.tx_param.rat_start_time = rat_start_time;
+            Rfc_BLE5_Adv_Aux(&ptc.tx_param);
+        }
+        else {}; // TODO
 
         Tm_Start_Timeout(TM_TOUT_PTC_ID, 30); // TODO remove
         ptc.state = PTC_S_WAIT_TIMEOUT;
