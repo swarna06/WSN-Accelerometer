@@ -14,6 +14,13 @@
 #include <driverlib/rf_common_cmd.h>
 #include <inc/hw_rfc_rat.h>
 
+#include "configuration.h"
+
+// Configuration
+#if (CFG_DEBUG_RADIO_OUT == CFG_SETTING_ENABLED)
+#define RFC_ENABLE_TXRX_PHY_PINS
+#endif
+
 // ********************************
 // Timing
 // ********************************
@@ -87,6 +94,7 @@
 #define Rfc_Send_To_CPE(op)             HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDR) = (uint32_t)op;
 #define Rfc_CPE_Ack()                   (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFACKIFG))
 #define Rfc_Get_CPE_CMDSTA()            (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDSTA))
+#define Rfc_Set_GPO_Mapping(map)        (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_SYSGPOCTL) = map)
 
 // Radio operation status field error flag
 #define RFC_F_RADIO_OP_STATUS_ERR       0x0800
@@ -163,6 +171,9 @@ typedef struct
     int8_t rssi_db;
     uint8_t err_flags;
 } rfc_rx_result_t;
+
+// Mapping of transmission and reception events signals to RFC output signal (GPO)
+#define RFC_GPO_MAPPING             0x0000CD10
 
 // ********************************
 // Error handling

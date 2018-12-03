@@ -70,20 +70,18 @@ typedef enum
     PTC_S_WAIT_RF_CORE_INIT,
     PTC_S_WAIT_RF_CORE_WAKEUP,
 
-    PTC_S_WAIT_START_OF_FRAME = 0x10,
+    // Initialization states
+    PTC_S_SCHEDULE_BEACON_RX = 0x10,
+    PTC_S_WAIT_FIRST_BEACON,
+
+    // 'Steady-state' states
+    PTC_S_WAIT_START_OF_FRAME = 0x20,
     PTC_S_SCHEDULE_BEACON_RADIO_OP,
     PTC_S_WAIT_START_OF_SLOT,
     PTC_S_SCHEDULE_SLOT_RADIO_OP,
 
-    // Initialization states for 'sink' role
-    PTC_S_SCHEDULE_COMM = 0X20,
-
-    // Initialization states 'sensor' role
-    PTC_S_WAIT_FIRST_BEACON = 0x30,
-
+    // Debug states
     PTC_S_WAIT_TIMEOUT = 0xF0,
-    PTC_S_WAIT_SET_RAT_CMP,
-    PTC_S_WAIT_RTC_CMP,
 } ptc_state_t;
 
 // Structure to hold the state of the protocol module

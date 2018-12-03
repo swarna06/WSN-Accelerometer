@@ -51,6 +51,13 @@ uint32_t pOverridesCommon[] =
     (uint32_t)0x03000243,
     // Bluetooth 5: Set correct total clock accuracy for received AuxPtr assuming local sleep clock of 50 ppm
     (uint32_t)0x0E490823,
+
+    // ************************************************************************************************
+    // IMPORTANT: This override is required to route the reception event signal to a physical pin
+    //            See TI's "Proprietary RF User's Guide" -> "Routing RF core signals to physical pins"
+    // ************************************************************************************************
+    (uint32_t)0x008F88B3,
+
     // override_frontend_id.xml
     (uint32_t)0xFFFFFFFF,
 };

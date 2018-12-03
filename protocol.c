@@ -117,12 +117,46 @@ void Ptc_Process()
         break;
 
     case PTC_S_WAIT_RF_CORE_INIT:
-        ptc.state = PTC_S_WAIT_START_OF_FRAME;
+        if (Ptc_Dev_Is_Sink_Node())
+            ptc.state = PTC_S_WAIT_START_OF_FRAME;
+        else
+        {
+//            Rfc_Enable_Output_Signals();
+            Rfc_Synchronize_RAT();
+            ptc.state = PTC_S_SCHEDULE_BEACON_RX;
+        }
         break;
 
     case PTC_S_WAIT_RF_CORE_WAKEUP:
         Rfc_Synchronize_RAT();
         ptc.state = ptc.next_state;
+        break;
+
+    case PTC_S_SCHEDULE_BEACON_RX:
+        // Start reception
+        Rfc_BLE5_Scanner(PTC_FRAME_TIME_SEC*1000*1000 + 10*1000); // TODO define timeout
+        ptc.state = PTC_S_WAIT_FIRST_BEACON;
+        break;
+
+    case PTC_S_WAIT_FIRST_BEACON:
+        Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);
+        if (ptc.rx_result.err_flags == 0) // no errors
+        {
+            Log_Line("Beacon received");
+//            ptc.state = PTC_S_IDLE;
+            ptc.state = PTC_S_SCHEDULE_BEACON_RX;
+        }
+        else
+        {
+            #ifndef PTC_DUMMY_SLEEP
+            Pma_MCU_Sleep(Tm_Get_RTC_Time() + PTC_RTC_FRAME_TIME);
+            #else
+            Pma_Dummy_MCU_Sleep(wakeup_time);
+            #endif // #ifndef PTC_DUMMY_SLEEP
+
+            ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
+            ptc.next_state = PTC_S_SCHEDULE_BEACON_RX;
+        }
         break;
 
     case PTC_S_WAIT_START_OF_FRAME:
