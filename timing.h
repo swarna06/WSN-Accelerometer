@@ -74,6 +74,8 @@ void Tm_Init();
 
 bool Tm_Sys_Tick();
 
+void Tm_Adjust_Time();
+
 void Tm_Process();
 
 void Tm_Start_Period(uint8_t per_idx, uint16_t per_val);

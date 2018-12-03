@@ -52,6 +52,13 @@ bool Tm_Sys_Tick()
         return false;
 }
 
+void Tm_Adjust_Time()
+{
+    // Update the compare value of the RTC channel
+    HWREG(AON_RTC_BASE + AON_RTC_O_SYNC); // synchronize with AON - TODO is this necessary ?
+    AONRTCCompareValueSet(AON_RTC_CH2, Tm_Get_RTC_Time() + TM_RTC_TICKS_PER_MSEC); // current time + RTC ticks per system tick
+}
+
 void Tm_Process()
 {
     uint8_t n;

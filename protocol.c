@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include <driverlib/prcm.h>
 #include <driverlib/ccfgread.h>
@@ -121,7 +122,6 @@ void Ptc_Process()
             ptc.state = PTC_S_WAIT_START_OF_FRAME;
         else
         {
-//            Rfc_Enable_Output_Signals();
             Rfc_Synchronize_RAT();
             ptc.state = PTC_S_SCHEDULE_BEACON_RX;
         }
@@ -140,11 +140,35 @@ void Ptc_Process()
 
     case PTC_S_WAIT_FIRST_BEACON:
         Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);
-        if (ptc.rx_result.err_flags == 0) // no errors
+        if ((ptc.rx_result.err_flags == 0) && (ptc.rx_result.payload_len)) // no errors
         {
-            Log_Line("Beacon received");
-//            ptc.state = PTC_S_IDLE;
-            ptc.state = PTC_S_SCHEDULE_BEACON_RX;
+            uint32_t rtc_start_of_curr_frame = *((uint32_t*)ptc.rx_result.buf);
+            uint32_t rat_rx_timestamp = ptc.rx_result.rat_timestamp;
+
+            Tm_Synch_With_RTC();
+            uint32_t rat_current_time = Rfc_Get_RAT_Time();
+            uint32_t rat_comm_delay = rat_current_time - rat_rx_timestamp;
+            // Convert RTC ticks into RAT ticks: 1 RTC tick = 4e6/32768 RAT ticks = 15625/128 RAT ticks
+            uint32_t rtc_comm_delay = (rat_comm_delay * 128) / 15625;
+            rtc_comm_delay = rtc_comm_delay / TM_RTC_TICKS_PER_CYCLE;
+            rtc_comm_delay = 0;
+
+            uint32_t rtc_new_time_sec = (rtc_start_of_curr_frame + rtc_comm_delay) >> 16;
+            uint32_t rtc_new_time_subsec = ((rtc_start_of_curr_frame + rtc_comm_delay) & 0x0000FFFF) << 16;
+            HWREG(AON_RTC_BASE + AON_RTC_O_SEC) = rtc_new_time_sec;
+            HWREG(AON_RTC_BASE + AON_RTC_O_SUBSEC) = rtc_new_time_subsec;
+
+            ptc.start_of_next_slot = rtc_start_of_curr_frame + (PTC_RTC_SLOT_TIME * ptc.dev_id);
+            ptc.start_of_next_frame = rtc_start_of_curr_frame + PTC_RTC_FRAME_TIME;
+
+            Tm_Adjust_Time();
+
+            Log_Val_Uint32("Beacon received:", rtc_start_of_curr_frame);
+            Log_Val_Uint32("rat_comm_delay:", rat_comm_delay);
+            Log_Val_Uint32("rtc_comm_delay:", rtc_comm_delay);
+
+            //            ptc.state = PTC_S_IDLE;
+            ptc.state = PTC_S_WAIT_START_OF_SLOT;
         }
         else
         {
@@ -221,7 +245,17 @@ void Ptc_Process()
         // 6. Request radio operation to the RF core
         if (Ptc_Dev_Is_Sink_Node())
         {
-            ptc.tx_param.buf = NULL; // TODO buffer contents
+            uint8_t payload_len = 0;
+            uint8_t* payload_p = ptc.tx_buf;
+            uint8_t* data_p;
+
+            // Add start of next frame time to the payload
+            data_p = (uint8_t*)&ptc.start_of_next_frame;
+            for (size_t n = 0; n < sizeof(ptc.start_of_next_frame); n++, data_p++, payload_p++, payload_len++)
+                *payload_p = *data_p;
+
+            ptc.tx_param.buf = ptc.tx_buf;
+            ptc.tx_param.len = payload_len;
             ptc.tx_param.rat_start_time = rat_start_time;
             Rfc_BLE5_Adv_Aux(&ptc.tx_param);
         }
