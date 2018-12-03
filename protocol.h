@@ -71,7 +71,7 @@ typedef enum
     PTC_S_WAIT_RF_CORE_WAKEUP,
 
     // Initialization states
-    PTC_S_SCHEDULE_BEACON_RX = 0x10,
+    PTC_S_SCHEDULE_FIRST_BEACON_RX = 0x10,
     PTC_S_WAIT_FIRST_BEACON,
 
     // 'Steady-state' states

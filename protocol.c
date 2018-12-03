@@ -123,7 +123,7 @@ void Ptc_Process()
         else
         {
             Rfc_Synchronize_RAT();
-            ptc.state = PTC_S_SCHEDULE_BEACON_RX;
+            ptc.state = PTC_S_SCHEDULE_FIRST_BEACON_RX;
         }
         break;
 
@@ -132,7 +132,7 @@ void Ptc_Process()
         ptc.state = ptc.next_state;
         break;
 
-    case PTC_S_SCHEDULE_BEACON_RX:
+    case PTC_S_SCHEDULE_FIRST_BEACON_RX:
         // Start reception
         Rfc_BLE5_Scanner(PTC_FRAME_TIME_SEC*1000*1000 + 10*1000); // TODO define timeout
         ptc.state = PTC_S_WAIT_FIRST_BEACON;
@@ -145,15 +145,18 @@ void Ptc_Process()
             uint32_t rtc_start_of_curr_frame = *((uint32_t*)ptc.rx_result.buf);
             uint32_t rtc_offset = TM_RTC_TICKS_PER_CYCLE*2;
 
+            // Wait for start of next RTC cycle and update RTC counter value
             Tm_Synch_With_RTC();
             uint32_t rtc_new_time_sec = (rtc_start_of_curr_frame + rtc_offset) >> 16;
             uint32_t rtc_new_time_subsec = ((rtc_start_of_curr_frame + rtc_offset) & 0x0000FFFF) << 16;
             HWREG(AON_RTC_BASE + AON_RTC_O_SEC) = rtc_new_time_sec;
             HWREG(AON_RTC_BASE + AON_RTC_O_SUBSEC) = rtc_new_time_subsec;
 
+            // Calculate start of next slot and frame
             ptc.start_of_next_slot = rtc_start_of_curr_frame + (PTC_RTC_SLOT_TIME * ptc.dev_id);
             ptc.start_of_next_frame = rtc_start_of_curr_frame + PTC_RTC_FRAME_TIME;
 
+            // Adjust timing module after synchronization
             Tm_Adjust_Time();
 
             Log_Val_Uint32("Beacon received:", rtc_start_of_curr_frame);
@@ -168,7 +171,7 @@ void Ptc_Process()
             #endif // #ifndef PTC_DUMMY_SLEEP
 
             ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
-            ptc.next_state = PTC_S_SCHEDULE_BEACON_RX;
+            ptc.next_state = PTC_S_SCHEDULE_FIRST_BEACON_RX;
         }
         break;
 
