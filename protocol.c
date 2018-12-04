@@ -38,9 +38,10 @@ ptc_control_t ptc;
 // Auxiliary functions
 static bool Ptc_Init_Random_Seeds();
 static uint32_t Ptc_Calculate_RAT_Start_Time(uint32_t rtc_start_of_next_event, int rat_time_offset);
-//static uint32_t Ptc_RAT_Ticks_To_Event(uint32_t rtc_ticks_to_event, int32_t offset);
 static void Ptc_Adjust_Local_Clock(uint32_t rtc_start_of_curr_frame, uint32_t rat_rx_timestamp);
 static void Ptc_Request_Beacon_Tx(uint32_t rtc_timestamp, uint32_t rat_start_of_tx);
+static void Ptc_Process_Data_Pkt();
+static void Ptc_Process_Beacon();
 
 #ifdef PTC_START_OF_FRAME_OUT
 void Ptc_RTC_Isr()
@@ -214,6 +215,7 @@ void Ptc_Process()
         uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_frame, offset);
 
         // Request radio operation to the RF core
+        // If device is sink -> transmit; if device is sensor receive
         if (Ptc_Dev_Is_Sink_Node())
         {
             Ptc_Request_Beacon_Tx(ptc.start_of_next_frame, rat_start_time);
@@ -256,29 +258,54 @@ void Ptc_Process()
     {
         // Calculate the start time of packet reception/transmission and request operation to the RF core
         // An offset is used to compensate for (measured) latencies of the RF core in the start of the reception/transmission
-        int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_TX_START_OFFSET; // TODO RX offset
+        // IMPORTANT: Notice the negation in the !Ptc_Dev_Is_Sink_Node()? conditional; roles are exchanged with respect to the start of frame
+        int32_t offset = !Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_RX_START_OFFSET;
         uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_slot, offset);
 
         // Request radio operation to the RF core
+        // If device is sink -> receive; if device is sensor transmit
         if (Ptc_Dev_Is_Sink_Node())
         {
-            ptc.tx_param.buf = NULL; // TODO buffer contents
-            ptc.tx_param.rat_start_time = rat_start_time;
-            Rfc_BLE5_Adv_Aux(&ptc.tx_param);
+            Rfc_BLE5_Scanner(rat_start_time, 1024); // TODO define timeout
+            ptc.state = PTC_S_WAIT_PKT_RECEPTION;
         }
         else
         {
-            // TODO reception
             ptc.tx_param.buf = NULL; // TODO buffer contents
             ptc.tx_param.rat_start_time = rat_start_time;
             Rfc_BLE5_Adv_Aux(&ptc.tx_param);
+            ptc.state = PTC_S_WAIT_TIMEOUT;
+            ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
         };
 
         Tm_Start_Timeout(TM_TOUT_PTC_ID, 30); // TODO remove
-        ptc.state = PTC_S_WAIT_TIMEOUT;
 
+
+//        if (Ptc_Dev_Is_Sink_Node())
+//        {
+//            ptc.dev_index++;
+//            if (ptc.dev_index > PTC_SENSOR_NODE_NUM)
+//                ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
+//            else
+//            {
+//                ptc.start_of_next_slot += PTC_RTC_SLOT_TIME;
+//                ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
+//            }
+//        }
+//        else
+//            ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
+    }
+    break;
+
+    case PTC_S_WAIT_PKT_RECEPTION:
+        Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);
         if (Ptc_Dev_Is_Sink_Node())
         {
+            if (ptc.rx_result.err_flags == 0)
+                Ptc_Process_Data_Pkt();
+            else
+                Log_Val_Hex32("Rx error: ", ptc.rx_result.err_flags);
+
             ptc.dev_index++;
             if (ptc.dev_index > PTC_SENSOR_NODE_NUM)
                 ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
@@ -289,24 +316,27 @@ void Ptc_Process()
             }
         }
         else
-            ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
-    }
-    break;
-
-    case PTC_S_WAIT_PKT_RECEPTION:
-        Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);
-        if ((ptc.rx_result.err_flags == 0) && (ptc.rx_result.payload_len)) // no errors
         {
-            uint32_t rtc_start_of_curr_frame = *((uint32_t*)ptc.rx_result.buf);
-            uint32_t rat_rx_timestamp = ptc.rx_result.rat_timestamp;
-
-            // Update local clock
-            Ptc_Adjust_Local_Clock(rtc_start_of_curr_frame, rat_rx_timestamp);
-
-            Log_Val_Uint32("Beacon received:", rtc_start_of_curr_frame);
+            if (ptc.rx_result.err_flags == 0)
+                Ptc_Process_Beacon();
+            ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
         }
+
         ptc.state = PTC_S_WAIT_TIMEOUT;
-        ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
+
+
+//        if ((ptc.rx_result.err_flags == 0) && (ptc.rx_result.payload_len)) // no errors
+//        {
+//            uint32_t rtc_start_of_curr_frame = *((uint32_t*)ptc.rx_result.buf);
+//            uint32_t rat_rx_timestamp = ptc.rx_result.rat_timestamp;
+//
+//            // Update local clock
+//            Ptc_Adjust_Local_Clock(rtc_start_of_curr_frame, rat_rx_timestamp);
+//
+//            Log_Val_Uint32("Beacon received:", rtc_start_of_curr_frame);
+//        }
+//        ptc.state = PTC_S_WAIT_TIMEOUT;
+//        ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
         break;
 
     default:
@@ -417,22 +447,6 @@ static uint32_t Ptc_Calculate_RAT_Start_Time(uint32_t rtc_start_of_next_event, i
     return rat_start_time;
 }
 
-//static uint32_t Ptc_RAT_Ticks_To_Event(uint32_t rtc_ticks_to_event, int32_t offset)
-//{
-//    // Convert RTC ticks into RAT ticks: 1 RTC tick = 4e6/32768 RAT ticks = 15625/128 RAT ticks
-//    // One RTC clock cycle is equal to 2 units of the RTC counter
-//    uint32_t rat_ticks_to_event = ((rtc_ticks_to_event / TM_RTC_TICKS_PER_CYCLE)*15625) / 128;
-//
-//    // Round up (if modulus is greater than half of the divisor; > 0.5 clock periods)
-//    //        if ((rat_ticks_to_start_of_frame % 128) > (128/2)) // round up
-//    //            rat_ticks_to_start_of_frame++;
-//
-//    // Compensate for offset
-//    rat_ticks_to_event += offset;
-//
-//    return rat_ticks_to_event;
-//}
-
 static void Ptc_Adjust_Local_Clock(uint32_t rtc_start_of_curr_frame, uint32_t rat_rx_timestamp)
 {
     // Wait for start of next RTC cycle and get current time (RAT)
@@ -475,3 +489,18 @@ static void Ptc_Request_Beacon_Tx(uint32_t rtc_timestamp, uint32_t rat_start_of_
     Rfc_BLE5_Adv_Aux(&ptc.tx_param);
 }
 
+static void Ptc_Process_Data_Pkt()
+{
+    Log_Line("Data pkt received");
+}
+
+static void Ptc_Process_Beacon()
+{
+    uint32_t rtc_start_of_curr_frame = *((uint32_t*)ptc.rx_result.buf);
+    uint32_t rat_rx_timestamp = ptc.rx_result.rat_timestamp;
+
+    // Update local clock
+    Ptc_Adjust_Local_Clock(rtc_start_of_curr_frame, rat_rx_timestamp);
+
+    Log_Val_Uint32("Beacon received:", rtc_start_of_curr_frame);
+}
