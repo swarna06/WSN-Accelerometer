@@ -21,6 +21,7 @@
 #include <driverlib/rf_common_cmd.h>
 #include <driverlib/rf_ble_cmd.h>
 #include <rf_patches/rf_patch_cpe_bt5.h>
+#include <inc/hw_rfc_dbell.h>
 #include "smartrf_settings.h"
 
 // Overrides for CMD_BLE5_RADIO_SETUP
@@ -56,6 +57,8 @@ uint32_t pOverridesCommon[] =
     // IMPORTANT: This override is required to route the reception event signal to a physical pin
     //            See TI's "Proprietary RF User's Guide" -> "Routing RF core signals to physical pins"
     // ************************************************************************************************
+    HW_REG_OVERRIDE(0x1110, RFC_DBELL_SYSGPOCTL_GPOCTL3_RATGPO0 | RFC_DBELL_SYSGPOCTL_GPOCTL2_RATGPO1 |
+                            RFC_DBELL_SYSGPOCTL_GPOCTL1_CPEGPO1 | RFC_DBELL_SYSGPOCTL_GPOCTL0_CPEGPO0),
     (uint32_t)0x008F88B3,
 
     // override_frontend_id.xml
