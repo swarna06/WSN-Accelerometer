@@ -232,13 +232,6 @@ void Ptc_Process()
     }
     break;
 
-    case PTC_S_WAIT_TIMEOUT:
-
-        if (Tm_Timeout_Completed(TM_TOUT_PTC_ID))
-            ptc.state = ptc.next_state;
-
-        break;
-
     case PTC_S_WAIT_START_OF_SLOT:
     {
         // Calculate wake up time and go to sleep
@@ -279,21 +272,6 @@ void Ptc_Process()
         };
 
         Tm_Start_Timeout(TM_TOUT_PTC_ID, 30); // TODO remove
-
-
-//        if (Ptc_Dev_Is_Sink_Node())
-//        {
-//            ptc.dev_index++;
-//            if (ptc.dev_index > PTC_SENSOR_NODE_NUM)
-//                ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
-//            else
-//            {
-//                ptc.start_of_next_slot += PTC_RTC_SLOT_TIME;
-//                ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
-//            }
-//        }
-//        else
-//            ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
     }
     break;
 
@@ -323,20 +301,13 @@ void Ptc_Process()
         }
 
         ptc.state = PTC_S_WAIT_TIMEOUT;
+        break;
 
+    case PTC_S_WAIT_TIMEOUT:
 
-//        if ((ptc.rx_result.err_flags == 0) && (ptc.rx_result.payload_len)) // no errors
-//        {
-//            uint32_t rtc_start_of_curr_frame = *((uint32_t*)ptc.rx_result.buf);
-//            uint32_t rat_rx_timestamp = ptc.rx_result.rat_timestamp;
-//
-//            // Update local clock
-//            Ptc_Adjust_Local_Clock(rtc_start_of_curr_frame, rat_rx_timestamp);
-//
-//            Log_Val_Uint32("Beacon received:", rtc_start_of_curr_frame);
-//        }
-//        ptc.state = PTC_S_WAIT_TIMEOUT;
-//        ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
+        if (Tm_Timeout_Completed(TM_TOUT_PTC_ID))
+            ptc.state = ptc.next_state;
+
         break;
 
     default:
