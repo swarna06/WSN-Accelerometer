@@ -208,32 +208,12 @@ void Ptc_Process()
 
     case PTC_S_SCHEDULE_BEACON_RADIO_OP:
     {
-//        //
-//        // Calculate time of the start of radio operation and request its execution to the RF Core
-//        //
-//        uint32_t rtc_current_time, rtc_ticks_to_event;
-//        uint32_t rat_current_time, rat_ticks_to_event, rat_start_time;
-//
-//        // 1. Synchronize with RTC; wait for the start of the next RTC period (up to ~30 us)
-//        Tm_Synch_With_RTC();
-//
-//        // 2. Get current time (RTC and RAT)
-//        rat_current_time = Rfc_Get_RAT_Time();
-//        rtc_current_time = Tm_Get_RTC_Time();
-//
-//        // 3. Calculate the number of RTC ticks left for the start of transmission
-//        rtc_ticks_to_event = ptc.start_of_next_frame - rtc_current_time;
-//
-//        // 4. Convert RTC ticks to RAT ticks (apply measured offset ~160 microseconds)
-//        int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_RX_START_OFFSET;
-//        rat_ticks_to_event = Ptc_RAT_Ticks_To_Event(rtc_ticks_to_event, offset);
-//
-//        // 5. Calculate absolute time of start of transmission
-//        rat_start_time = rat_current_time + rat_ticks_to_event;
-        int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_TX_START_OFFSET; // TODO RX offset
+        // Calculate the start time of packet reception/transmission and request operation to the RF core
+        // An offset is used to compensate for (measured) latencies of the RF core in the start of the reception/transmission
+        int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_TX_START_OFFSET;
         uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_frame, offset);
 
-        // 6. Request radio operation to the RF core
+        // Request radio operation to the RF core
         if (Ptc_Dev_Is_Sink_Node())
         {
             Ptc_Request_Beacon_Tx(ptc.start_of_next_frame, rat_start_time);
@@ -274,31 +254,12 @@ void Ptc_Process()
 
     case PTC_S_SCHEDULE_SLOT_RADIO_OP:
     {
-//        //
-//        // Calculate time of the start of radio operation and request its execution to the RF Core
-//        //
-//        uint32_t rtc_current_time, rtc_ticks_to_event;
-//        uint32_t rat_current_time, rat_ticks_to_event, rat_start_time;
-//
-//        // 1. Synchronize with RTC; wait for the start of the next RTC period (up to ~30 us)
-//        Tm_Synch_With_RTC();
-//
-//        // 2. Get current time (RTC and RAT)
-//        rat_current_time = Rfc_Get_RAT_Time();
-//        rtc_current_time = Tm_Get_RTC_Time();
-//
-//        // 3. Calculate the number of RTC ticks left for the start of transmission
-//        rtc_ticks_to_event = ptc.start_of_next_slot - rtc_current_time;
-//
-//        // 4. Convert RTC ticks to RAT ticks (apply measured offset ~160 microseconds)
-//        int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_TX_START_OFFSET; // TODO RX offset
-//        rat_ticks_to_event = Ptc_RAT_Ticks_To_Event(rtc_ticks_to_event, offset);
-//
-//        // 5. Calculate absolute time of start of transmission
+        // Calculate the start time of packet reception/transmission and request operation to the RF core
+        // An offset is used to compensate for (measured) latencies of the RF core in the start of the reception/transmission
         int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_TX_START_OFFSET; // TODO RX offset
         uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_slot, offset);
 
-        // 6. Request radio operation to the RF core
+        // Request radio operation to the RF core
         if (Ptc_Dev_Is_Sink_Node())
         {
             ptc.tx_param.buf = NULL; // TODO buffer contents
