@@ -85,7 +85,7 @@ typedef enum
     PTC_S_WAIT_SENSOR_REPLY = 0x30,
 
     // Sensor-only states
-    PTC_S_WAIT_BEACON = 0x40,
+    PTC_S_WAIT_BEACON_RX = 0x40,
 
     // Debug states
     PTC_S_WAIT_TIMEOUT = 0xF0,

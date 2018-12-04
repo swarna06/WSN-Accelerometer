@@ -39,6 +39,7 @@ ptc_control_t ptc;
 static bool Ptc_Init_Random_Seeds();
 static uint32_t Ptc_RAT_Ticks_To_Event(uint32_t rtc_ticks_to_event, int32_t offset);
 static void Ptc_Adjust_Local_Clock(uint32_t rtc_start_of_curr_frame, uint32_t rat_rx_timestamp);
+static void Ptc_Transmit_Beacon(uint32_t rtc_timestamp, uint32_t rat_start_of_tx);
 
 #ifdef PTC_START_OF_FRAME_OUT
 void Ptc_RTC_Isr()
@@ -232,27 +233,14 @@ void Ptc_Process()
         // 6. Request radio operation to the RF core
         if (Ptc_Dev_Is_Sink_Node())
         {
-            uint8_t payload_len = 0;
-            uint8_t* payload_p = ptc.tx_buf;
-            uint8_t* data_p;
-
-            // Add start of next frame time to the payload
-            data_p = (uint8_t*)&ptc.start_of_next_frame;
-            for (size_t n = 0; n < sizeof(ptc.start_of_next_frame); n++, data_p++, payload_p++, payload_len++)
-                *payload_p = *data_p;
-
-            ptc.tx_param.buf = ptc.tx_buf;
-            ptc.tx_param.len = payload_len;
-            ptc.tx_param.rat_start_time = rat_start_time;
-            Rfc_BLE5_Adv_Aux(&ptc.tx_param);
-
+            Ptc_Transmit_Beacon(ptc.start_of_next_frame, rat_start_time);
             ptc.state = PTC_S_WAIT_TIMEOUT;
             ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
         }
         else
         {
             Rfc_BLE5_Scanner(rat_start_time, 1024); // TODO define timeout
-            ptc.state = PTC_S_WAIT_BEACON;
+            ptc.state = PTC_S_WAIT_BEACON_RX;
         };
 
         Tm_Start_Timeout(TM_TOUT_PTC_ID, 30); // TODO remove
@@ -347,7 +335,7 @@ void Ptc_Process()
     }
     break;
 
-    case PTC_S_WAIT_BEACON:
+    case PTC_S_WAIT_BEACON_RX:
         Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);
         if ((ptc.rx_result.err_flags == 0) && (ptc.rx_result.payload_len)) // no errors
         {
@@ -482,3 +470,22 @@ static void Ptc_Adjust_Local_Clock(uint32_t rtc_start_of_curr_frame, uint32_t ra
     // Adjust timing module after synchronization
     Tm_Adjust_Time();
 }
+
+static void Ptc_Transmit_Beacon(uint32_t rtc_timestamp, uint32_t rat_start_of_tx)
+{
+    size_t payload_len = 0;
+    uint8_t* payload_p = ptc.tx_buf;
+    uint8_t* data_p;
+
+    // Include RTC time stamp in the payload
+    // The time stamp should correspond to the transmission absolute time (RTC)
+    data_p = (uint8_t*)&rtc_timestamp;
+    for (size_t n = 0; n < sizeof(rtc_timestamp); n++, data_p++, payload_p++, payload_len++)
+        *payload_p = *data_p;
+
+    ptc.tx_param.buf = ptc.tx_buf;
+    ptc.tx_param.len = payload_len;
+    ptc.tx_param.rat_start_time = rat_start_of_tx;
+    Rfc_BLE5_Adv_Aux(&ptc.tx_param);
+}
+
