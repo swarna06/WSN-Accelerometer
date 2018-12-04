@@ -260,18 +260,17 @@ void Ptc_Process()
             ptc.tx_param.len = payload_len;
             ptc.tx_param.rat_start_time = rat_start_time;
             Rfc_BLE5_Adv_Aux(&ptc.tx_param);
+
+            ptc.state = PTC_S_WAIT_TIMEOUT;
+            ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
         }
         else
         {
-            // TODO reception
-            ptc.tx_param.buf = NULL; // TODO buffer contents
-            ptc.tx_param.rat_start_time = rat_start_time;
-            Rfc_BLE5_Adv_Aux(&ptc.tx_param);
+            Rfc_BLE5_Scanner(10*1000); // TODO define timeout
+            ptc.state = PTC_S_WAIT_BEACON;
         };
 
         Tm_Start_Timeout(TM_TOUT_PTC_ID, 30); // TODO remove
-        ptc.state = PTC_S_WAIT_TIMEOUT;
-        ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
     }
     break;
 
@@ -362,6 +361,38 @@ void Ptc_Process()
             ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
     }
     break;
+
+    case PTC_S_WAIT_BEACON:
+        Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);
+        if ((ptc.rx_result.err_flags == 0) && (ptc.rx_result.payload_len)) // no errors
+        {
+            uint32_t rtc_start_of_curr_frame = *((uint32_t*)ptc.rx_result.buf);
+            uint32_t rat_rx_timestamp = ptc.rx_result.rat_timestamp;
+
+            // Wait for start of next RTC cycle and update RTC counter value
+            Tm_Synch_With_RTC();
+            uint32_t rat_current_time = Rfc_Get_RAT_Time();
+            uint32_t rat_comm_delay = rat_current_time - rat_rx_timestamp;
+            // Convert RTC ticks into RAT ticks: 1 RTC tick = 4e6/32768 RAT ticks = 15625/128 RAT ticks
+            uint32_t rtc_comm_delay = (rat_comm_delay * 128 * TM_RTC_TICKS_PER_CYCLE) / 15625;
+            rtc_comm_delay += 6; // xxx trimming
+
+            // Calculate
+            uint32_t rtc_new_time_sec = (rtc_start_of_curr_frame + rtc_comm_delay) >> 16;
+            uint32_t rtc_new_time_subsec = ((rtc_start_of_curr_frame + rtc_comm_delay) & 0x0000FFFF) << 16;
+            HWREG(AON_RTC_BASE + AON_RTC_O_SEC) = rtc_new_time_sec;
+            HWREG(AON_RTC_BASE + AON_RTC_O_SUBSEC) = rtc_new_time_subsec;
+
+            // Adjust timing module after synchronization
+            Tm_Adjust_Time();
+
+            Log_Val_Uint32("Beacon received:", rtc_start_of_curr_frame);
+            Log_Val_Uint32("rat_comm_delay:", rat_comm_delay);
+            Log_Val_Uint32("rtc_comm_delay:", rtc_comm_delay);
+        }
+        ptc.state = PTC_S_WAIT_TIMEOUT;
+        ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
+        break;
 
     default:
         assertion(!"Ptc_Process_Sink_Init: Unknown state!");
