@@ -80,12 +80,7 @@ typedef enum
     PTC_S_SCHEDULE_BEACON_RADIO_OP,
     PTC_S_WAIT_START_OF_SLOT,
     PTC_S_SCHEDULE_SLOT_RADIO_OP,
-
-    // Sink-only states
-    PTC_S_WAIT_SENSOR_REPLY = 0x30,
-
-    // Sensor-only states
-    PTC_S_WAIT_BEACON_RX = 0x40,
+    PTC_S_WAIT_PKT_RECEPTION,
 
     // Debug states
     PTC_S_WAIT_TIMEOUT = 0xF0,

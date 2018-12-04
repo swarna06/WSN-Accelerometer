@@ -37,9 +37,10 @@ ptc_control_t ptc;
 
 // Auxiliary functions
 static bool Ptc_Init_Random_Seeds();
-static uint32_t Ptc_RAT_Ticks_To_Event(uint32_t rtc_ticks_to_event, int32_t offset);
+static uint32_t Ptc_Calculate_RAT_Start_Time(uint32_t rtc_start_of_next_event, int rat_time_offset);
+//static uint32_t Ptc_RAT_Ticks_To_Event(uint32_t rtc_ticks_to_event, int32_t offset);
 static void Ptc_Adjust_Local_Clock(uint32_t rtc_start_of_curr_frame, uint32_t rat_rx_timestamp);
-static void Ptc_Transmit_Beacon(uint32_t rtc_timestamp, uint32_t rat_start_of_tx);
+static void Ptc_Request_Beacon_Tx(uint32_t rtc_timestamp, uint32_t rat_start_of_tx);
 
 #ifdef PTC_START_OF_FRAME_OUT
 void Ptc_RTC_Isr()
@@ -207,40 +208,42 @@ void Ptc_Process()
 
     case PTC_S_SCHEDULE_BEACON_RADIO_OP:
     {
-        //
-        // Calculate time of the start of radio operation and request its execution to the RF Core
-        //
-        uint32_t rtc_current_time, rtc_ticks_to_event;
-        uint32_t rat_current_time, rat_ticks_to_event, rat_start_time;
-
-        // 1. Synchronize with RTC; wait for the start of the next RTC period (up to ~30 us)
-        Tm_Synch_With_RTC();
-
-        // 2. Get current time (RTC and RAT)
-        rat_current_time = Rfc_Get_RAT_Time();
-        rtc_current_time = Tm_Get_RTC_Time();
-
-        // 3. Calculate the number of RTC ticks left for the start of transmission
-        rtc_ticks_to_event = ptc.start_of_next_frame - rtc_current_time;
-
-        // 4. Convert RTC ticks to RAT ticks (apply measured offset ~160 microseconds)
-        int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_RX_START_OFFSET;
-        rat_ticks_to_event = Ptc_RAT_Ticks_To_Event(rtc_ticks_to_event, offset);
-
-        // 5. Calculate absolute time of start of transmission
-        rat_start_time = rat_current_time + rat_ticks_to_event;
+//        //
+//        // Calculate time of the start of radio operation and request its execution to the RF Core
+//        //
+//        uint32_t rtc_current_time, rtc_ticks_to_event;
+//        uint32_t rat_current_time, rat_ticks_to_event, rat_start_time;
+//
+//        // 1. Synchronize with RTC; wait for the start of the next RTC period (up to ~30 us)
+//        Tm_Synch_With_RTC();
+//
+//        // 2. Get current time (RTC and RAT)
+//        rat_current_time = Rfc_Get_RAT_Time();
+//        rtc_current_time = Tm_Get_RTC_Time();
+//
+//        // 3. Calculate the number of RTC ticks left for the start of transmission
+//        rtc_ticks_to_event = ptc.start_of_next_frame - rtc_current_time;
+//
+//        // 4. Convert RTC ticks to RAT ticks (apply measured offset ~160 microseconds)
+//        int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_RX_START_OFFSET;
+//        rat_ticks_to_event = Ptc_RAT_Ticks_To_Event(rtc_ticks_to_event, offset);
+//
+//        // 5. Calculate absolute time of start of transmission
+//        rat_start_time = rat_current_time + rat_ticks_to_event;
+        int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_TX_START_OFFSET; // TODO RX offset
+        uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_frame, offset);
 
         // 6. Request radio operation to the RF core
         if (Ptc_Dev_Is_Sink_Node())
         {
-            Ptc_Transmit_Beacon(ptc.start_of_next_frame, rat_start_time);
+            Ptc_Request_Beacon_Tx(ptc.start_of_next_frame, rat_start_time);
             ptc.state = PTC_S_WAIT_TIMEOUT;
             ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
         }
         else
         {
             Rfc_BLE5_Scanner(rat_start_time, 1024); // TODO define timeout
-            ptc.state = PTC_S_WAIT_BEACON_RX;
+            ptc.state = PTC_S_WAIT_PKT_RECEPTION;
         };
 
         Tm_Start_Timeout(TM_TOUT_PTC_ID, 30); // TODO remove
@@ -250,14 +253,7 @@ void Ptc_Process()
     case PTC_S_WAIT_TIMEOUT:
 
         if (Tm_Timeout_Completed(TM_TOUT_PTC_ID))
-        {
-            if ( HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) & (1 << (PTC_RAT_CH + 12)) )
-            {
-                Log_Val_Hex32("RFHWIFG: ", HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG));
-            }
-
             ptc.state = ptc.next_state;
-        }
 
         break;
 
@@ -278,28 +274,29 @@ void Ptc_Process()
 
     case PTC_S_SCHEDULE_SLOT_RADIO_OP:
     {
-        //
-        // Calculate time of the start of radio operation and request its execution to the RF Core
-        //
-        uint32_t rtc_current_time, rtc_ticks_to_event;
-        uint32_t rat_current_time, rat_ticks_to_event, rat_start_time;
-
-        // 1. Synchronize with RTC; wait for the start of the next RTC period (up to ~30 us)
-        Tm_Synch_With_RTC();
-
-        // 2. Get current time (RTC and RAT)
-        rat_current_time = Rfc_Get_RAT_Time();
-        rtc_current_time = Tm_Get_RTC_Time();
-
-        // 3. Calculate the number of RTC ticks left for the start of transmission
-        rtc_ticks_to_event = ptc.start_of_next_slot - rtc_current_time;
-
-        // 4. Convert RTC ticks to RAT ticks (apply measured offset ~160 microseconds)
+//        //
+//        // Calculate time of the start of radio operation and request its execution to the RF Core
+//        //
+//        uint32_t rtc_current_time, rtc_ticks_to_event;
+//        uint32_t rat_current_time, rat_ticks_to_event, rat_start_time;
+//
+//        // 1. Synchronize with RTC; wait for the start of the next RTC period (up to ~30 us)
+//        Tm_Synch_With_RTC();
+//
+//        // 2. Get current time (RTC and RAT)
+//        rat_current_time = Rfc_Get_RAT_Time();
+//        rtc_current_time = Tm_Get_RTC_Time();
+//
+//        // 3. Calculate the number of RTC ticks left for the start of transmission
+//        rtc_ticks_to_event = ptc.start_of_next_slot - rtc_current_time;
+//
+//        // 4. Convert RTC ticks to RAT ticks (apply measured offset ~160 microseconds)
+//        int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_TX_START_OFFSET; // TODO RX offset
+//        rat_ticks_to_event = Ptc_RAT_Ticks_To_Event(rtc_ticks_to_event, offset);
+//
+//        // 5. Calculate absolute time of start of transmission
         int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_TX_START_OFFSET; // TODO RX offset
-        rat_ticks_to_event = Ptc_RAT_Ticks_To_Event(rtc_ticks_to_event, offset);
-
-        // 5. Calculate absolute time of start of transmission
-        rat_start_time = rat_current_time + rat_ticks_to_event;
+        uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_slot, offset);
 
         // 6. Request radio operation to the RF core
         if (Ptc_Dev_Is_Sink_Node())
@@ -335,7 +332,7 @@ void Ptc_Process()
     }
     break;
 
-    case PTC_S_WAIT_BEACON_RX:
+    case PTC_S_WAIT_PKT_RECEPTION:
         Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);
         if ((ptc.rx_result.err_flags == 0) && (ptc.rx_result.payload_len)) // no errors
         {
@@ -431,21 +428,49 @@ static bool Ptc_Init_Random_Seeds()
     return result;
 }
 
-static uint32_t Ptc_RAT_Ticks_To_Event(uint32_t rtc_ticks_to_event, int32_t offset)
+static uint32_t Ptc_Calculate_RAT_Start_Time(uint32_t rtc_start_of_next_event, int rat_time_offset)
 {
-    // Convert RTC ticks into RAT ticks: 1 RTC tick = 4e6/32768 RAT ticks = 15625/128 RAT ticks
-    // One RTC clock cycle is equal to 2 units of the RTC counter
-    uint32_t rat_ticks_to_event = ((rtc_ticks_to_event / TM_RTC_TICKS_PER_CYCLE)*15625) / 128;
+    // Calculate start time of radio operation //
+    uint32_t rtc_current_time, rtc_ticks_to_event;
+    uint32_t rat_current_time, rat_ticks_to_event, rat_start_time;
 
-    // Round up (if modulus is greater than half of the divisor; > 0.5 clock periods)
-    //        if ((rat_ticks_to_start_of_frame % 128) > (128/2)) // round up
-    //            rat_ticks_to_start_of_frame++;
+    // 1. Synchronize with RTC; wait for the start of the next RTC period (up to ~30 us)
+    Tm_Synch_With_RTC();
 
-    // Compensate for offset
-    rat_ticks_to_event += offset;
+    // 2. Get current time (RTC and RAT)
+    rat_current_time = Rfc_Get_RAT_Time();
+    rtc_current_time = Tm_Get_RTC_Time();
 
-    return rat_ticks_to_event;
+    // 3. Calculate the number of RTC ticks left for the start of transmission
+    rtc_ticks_to_event = rtc_start_of_next_event - rtc_current_time;
+
+    // 4. Convert RTC ticks to RAT ticks (apply measured offset ~160 microseconds)
+    //    Convert RTC ticks into RAT ticks: 1 RTC tick = 4e6/32768 RAT ticks = 15625/128 RAT ticks
+    //    One RTC clock cycle is equal to 2 units of the RTC counter
+    rat_ticks_to_event = ((rtc_ticks_to_event / TM_RTC_TICKS_PER_CYCLE)*15625) / 128;
+    rat_ticks_to_event += rat_time_offset;
+
+    // 5. Calculate absolute time of start of transmission
+    rat_start_time = rat_current_time + rat_ticks_to_event;
+
+    return rat_start_time;
 }
+
+//static uint32_t Ptc_RAT_Ticks_To_Event(uint32_t rtc_ticks_to_event, int32_t offset)
+//{
+//    // Convert RTC ticks into RAT ticks: 1 RTC tick = 4e6/32768 RAT ticks = 15625/128 RAT ticks
+//    // One RTC clock cycle is equal to 2 units of the RTC counter
+//    uint32_t rat_ticks_to_event = ((rtc_ticks_to_event / TM_RTC_TICKS_PER_CYCLE)*15625) / 128;
+//
+//    // Round up (if modulus is greater than half of the divisor; > 0.5 clock periods)
+//    //        if ((rat_ticks_to_start_of_frame % 128) > (128/2)) // round up
+//    //            rat_ticks_to_start_of_frame++;
+//
+//    // Compensate for offset
+//    rat_ticks_to_event += offset;
+//
+//    return rat_ticks_to_event;
+//}
 
 static void Ptc_Adjust_Local_Clock(uint32_t rtc_start_of_curr_frame, uint32_t rat_rx_timestamp)
 {
@@ -471,7 +496,7 @@ static void Ptc_Adjust_Local_Clock(uint32_t rtc_start_of_curr_frame, uint32_t ra
     Tm_Adjust_Time();
 }
 
-static void Ptc_Transmit_Beacon(uint32_t rtc_timestamp, uint32_t rat_start_of_tx)
+static void Ptc_Request_Beacon_Tx(uint32_t rtc_timestamp, uint32_t rat_start_of_tx)
 {
     size_t payload_len = 0;
     uint8_t* payload_p = ptc.tx_buf;
