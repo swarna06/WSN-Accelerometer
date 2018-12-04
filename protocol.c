@@ -164,16 +164,15 @@ void Ptc_Process()
         }
         else
         {
-//            #ifndef PTC_DUMMY_SLEEP
-//            Pma_MCU_Sleep(Tm_Get_RTC_Time() + PTC_RTC_FRAME_TIME);
-//            #else
-//            Pma_Dummy_MCU_Sleep(wakeup_time);
-//            #endif // #ifndef PTC_DUMMY_SLEEP
-//
-//            ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
-//            ptc.next_state = PTC_S_SCHEDULE_FIRST_BEACON_RX;
+            #ifndef PTC_DUMMY_SLEEP
+            Pma_MCU_Sleep(Tm_Get_RTC_Time() + PTC_RTC_FRAME_TIME);
+            #else
+            Pma_Dummy_MCU_Sleep(wakeup_time);
+            #endif // #ifndef PTC_DUMMY_SLEEP
+
+            ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
+            ptc.next_state = PTC_S_SCHEDULE_FIRST_BEACON_RX;
         }
-        ptc.state = PTC_S_SCHEDULE_FIRST_BEACON_RX;
         break;
 
     case PTC_S_WAIT_START_OF_FRAME:

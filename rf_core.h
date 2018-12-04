@@ -16,11 +16,6 @@
 
 #include "configuration.h"
 
-// Configuration
-#if (CFG_DEBUG_RADIO_OUT == CFG_SETTING_ENABLED)
-#define RFC_ENABLE_TXRX_PHY_PINS
-#endif
-
 // ********************************
 // Timing
 // ********************************
@@ -94,16 +89,6 @@
 #define Rfc_Send_To_CPE(op)             HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDR) = (uint32_t)op;
 #define Rfc_CPE_Ack()                   (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFACKIFG))
 #define Rfc_Get_CPE_CMDSTA()            (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDSTA))
-
-// Mapping of transmission and reception events signals to RFC output signal (GPO)
-#define RFC_GPO_MAPPING                 (RFC_DBELL_SYSGPOCTL_GPOCTL0_CPEGPO0 + \
-                                         RFC_DBELL_SYSGPOCTL_GPOCTL1_CPEGPO1 + \
-                                         RFC_DBELL_SYSGPOCTL_GPOCTL2_RATGPO1 + \
-                                         RFC_DBELL_SYSGPOCTL_GPOCTL3_RATGPO0)
-//                                         RFC_DBELL_SYSGPOCTL_GPOCTL3_RATGPO0)
-//                                         RFC_DBELL_SYSGPOCTL_GPOCTL2_RATGPO1 +
-//#define Rfc_Apply_GPO_Mapping()         (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_SYSGPOCTL) = RFC_GPO_MAPPING)
-#define Rfc_Apply_GPO_Mapping()
 
 // Radio operation status field error flag
 #define RFC_F_RADIO_OP_STATUS_ERR       0x0800

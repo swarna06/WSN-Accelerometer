@@ -56,6 +56,10 @@ uint32_t pOverridesCommon[] =
     // ************************************************************************************************
     // IMPORTANT: This override is required to route the reception event signal to a physical pin
     //            See TI's "Proprietary RF User's Guide" -> "Routing RF core signals to physical pins"
+    //            Map signals RAT_GPO0 and RAT_GPO1 to RFC_GPO3 and RFC_GPO2
+    //            RAT_GPO0: Goes high when a transmission is initiated and low when the transmission is done
+    //            RAT_GPO1: Goes high when sync word is detected and low either when the packet has been
+    //            received or reception has been aborted.
     // ************************************************************************************************
     HW_REG_OVERRIDE(0x1110, RFC_DBELL_SYSGPOCTL_GPOCTL3_RATGPO0 | RFC_DBELL_SYSGPOCTL_GPOCTL2_RATGPO1 |
                             RFC_DBELL_SYSGPOCTL_GPOCTL1_CPEGPO1 | RFC_DBELL_SYSGPOCTL_GPOCTL0_CPEGPO0),

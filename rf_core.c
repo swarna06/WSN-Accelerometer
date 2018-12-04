@@ -151,12 +151,6 @@ void Rfc_Process()
         Rfc_Start_Direct_Cmd(CMD_START_RAT);
         rfc.next_state = RFC_S_IDLE;
         Rfc_Set_Flags_On_Success(RFC_F_INITIALIZED);
-
-        #ifdef RFC_ENABLE_TXRX_PHY_PINS
-        // Mapping should always be set after radio setup command
-        Rfc_Apply_GPO_Mapping();
-        #endif // #ifdef RFC_ENABLE_TXRX_PHY_PINS
-
         break;
 
     case RFC_S_EXEC_SYNC_START_RAT:
@@ -512,18 +506,10 @@ inline uint8_t Rfc_Error()
 
 void Rfc_Enable_Output_Signals()
 {
-    // Map signals RAT_GPO0 and RAT_GPO1 to RFC_GPO3 and RFC_GPO2
+    // Signals RAT_GPO0 and RAT_GPO1 are routed to RFC_GPO3 and RFC_GPO2 using 'overrides' (see smartrf_settings.c)
     // RAT_GPO0: Goes high when a transmission is initiated and low when the transmission is done
     // RAT_GPO1: Goes high when sync word is detected and low either when the packet has been received or reception has been aborted.
     // IMPORTANT: Mapping RAT_GPO1 signal requires an additional override (see smartrf_settings.c)
-//    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_SYSGPOCTL) = 0x0000CD10;
-//    Rfc_Set_GPO_Mapping(RFC_GPO_MAPPING);
-    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_SYSGPOCTL) = (RFC_DBELL_SYSGPOCTL_GPOCTL0_CPEGPO0 +
-                                                     RFC_DBELL_SYSGPOCTL_GPOCTL1_CPEGPO1 +
-//                                                     RFC_DBELL_SYSGPOCTL_GPOCTL2_RATGPO1 +
-                                                     RFC_DBELL_SYSGPOCTL_GPOCTL2_CPEGPO2 +
-//                                                     RFC_DBELL_SYSGPOCTL_GPOCTL3_RATGPO0);
-                                                     RFC_DBELL_SYSGPOCTL_GPOCTL3_RATGPO1);
 
     // Map signals RFC_GPO3 and RFC_GPO2 to physical pins
     IOCPortConfigureSet(BRD_RFC_TXOUT_PIN, IOC_PORT_RFC_GPO3, IOC_STD_OUTPUT);
