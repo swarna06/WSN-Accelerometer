@@ -38,6 +38,7 @@ ptc_control_t ptc;
 // Auxiliary functions
 static bool Ptc_Init_Random_Seeds();
 static uint32_t Ptc_RAT_Ticks_To_Event(uint32_t rtc_ticks_to_event, int32_t offset);
+static void Ptc_Adjust_Local_Clock(uint32_t rtc_start_of_curr_frame, uint32_t rat_rx_timestamp);
 
 #ifdef PTC_START_OF_FRAME_OUT
 void Ptc_RTC_Isr()
@@ -145,30 +146,30 @@ void Ptc_Process()
             uint32_t rtc_start_of_curr_frame = *((uint32_t*)ptc.rx_result.buf);
             uint32_t rat_rx_timestamp = ptc.rx_result.rat_timestamp;
 
-            // Wait for start of next RTC cycle and update RTC counter value
-            Tm_Synch_With_RTC();
-            uint32_t rat_current_time = Rfc_Get_RAT_Time();
-            uint32_t rat_comm_delay = rat_current_time - rat_rx_timestamp;
-            // Convert RTC ticks into RAT ticks: 1 RTC tick = 4e6/32768 RAT ticks = 15625/128 RAT ticks
-            uint32_t rtc_comm_delay = (rat_comm_delay * 128 * TM_RTC_TICKS_PER_CYCLE) / 15625;
-            rtc_comm_delay += 6; // xxx trimming
+            Ptc_Adjust_Local_Clock(rtc_start_of_curr_frame, rat_rx_timestamp);
 
-            // Calculate
-            uint32_t rtc_new_time_sec = (rtc_start_of_curr_frame + rtc_comm_delay) >> 16;
-            uint32_t rtc_new_time_subsec = ((rtc_start_of_curr_frame + rtc_comm_delay) & 0x0000FFFF) << 16;
-            HWREG(AON_RTC_BASE + AON_RTC_O_SEC) = rtc_new_time_sec;
-            HWREG(AON_RTC_BASE + AON_RTC_O_SUBSEC) = rtc_new_time_subsec;
+//            // Wait for start of next RTC cycle and update RTC counter value
+//            Tm_Synch_With_RTC();
+//            uint32_t rat_current_time = Rfc_Get_RAT_Time();
+//            uint32_t rat_comm_delay = rat_current_time - rat_rx_timestamp;
+//            // Convert RTC ticks into RAT ticks: 1 RTC tick = 4e6/32768 RAT ticks = 15625/128 RAT ticks
+//            uint32_t rtc_comm_delay = (rat_comm_delay * 128 * TM_RTC_TICKS_PER_CYCLE) / 15625;
+//            rtc_comm_delay += 6; // xxx trimming
+//
+//            // Calculate
+//            uint32_t rtc_new_time_sec = (rtc_start_of_curr_frame + rtc_comm_delay) >> 16;
+//            uint32_t rtc_new_time_subsec = ((rtc_start_of_curr_frame + rtc_comm_delay) & 0x0000FFFF) << 16;
+//            HWREG(AON_RTC_BASE + AON_RTC_O_SEC) = rtc_new_time_sec;
+//            HWREG(AON_RTC_BASE + AON_RTC_O_SUBSEC) = rtc_new_time_subsec;
 
             // Calculate start of next slot and frame
             ptc.start_of_next_slot = rtc_start_of_curr_frame + (PTC_RTC_SLOT_TIME * ptc.dev_id);
             ptc.start_of_next_frame = rtc_start_of_curr_frame + PTC_RTC_FRAME_TIME;
 
-            // Adjust timing module after synchronization
-            Tm_Adjust_Time();
+//            // Adjust timing module after synchronization
+//            Tm_Adjust_Time();
 
             Log_Val_Uint32("Beacon received:", rtc_start_of_curr_frame);
-            Log_Val_Uint32("rat_comm_delay:", rat_comm_delay);
-            Log_Val_Uint32("rtc_comm_delay:", rtc_comm_delay);
 
             ptc.state = PTC_S_WAIT_START_OF_SLOT;
         }
@@ -369,26 +370,26 @@ void Ptc_Process()
             uint32_t rtc_start_of_curr_frame = *((uint32_t*)ptc.rx_result.buf);
             uint32_t rat_rx_timestamp = ptc.rx_result.rat_timestamp;
 
-            // Wait for start of next RTC cycle and update RTC counter value
-            Tm_Synch_With_RTC();
-            uint32_t rat_current_time = Rfc_Get_RAT_Time();
-            uint32_t rat_comm_delay = rat_current_time - rat_rx_timestamp;
-            // Convert RTC ticks into RAT ticks: 1 RTC tick = 4e6/32768 RAT ticks = 15625/128 RAT ticks
-            uint32_t rtc_comm_delay = (rat_comm_delay * 128 * TM_RTC_TICKS_PER_CYCLE) / 15625;
-            rtc_comm_delay += 6; // xxx trimming
+            Ptc_Adjust_Local_Clock(rtc_start_of_curr_frame, rat_rx_timestamp);
 
-            // Calculate
-            uint32_t rtc_new_time_sec = (rtc_start_of_curr_frame + rtc_comm_delay) >> 16;
-            uint32_t rtc_new_time_subsec = ((rtc_start_of_curr_frame + rtc_comm_delay) & 0x0000FFFF) << 16;
-            HWREG(AON_RTC_BASE + AON_RTC_O_SEC) = rtc_new_time_sec;
-            HWREG(AON_RTC_BASE + AON_RTC_O_SUBSEC) = rtc_new_time_subsec;
-
-            // Adjust timing module after synchronization
-            Tm_Adjust_Time();
+//            // Wait for start of next RTC cycle and update RTC counter value
+//            Tm_Synch_With_RTC();
+//            uint32_t rat_current_time = Rfc_Get_RAT_Time();
+//            uint32_t rat_comm_delay = rat_current_time - rat_rx_timestamp;
+//            // Convert RTC ticks into RAT ticks: 1 RTC tick = 4e6/32768 RAT ticks = 15625/128 RAT ticks
+//            uint32_t rtc_comm_delay = (rat_comm_delay * 128 * TM_RTC_TICKS_PER_CYCLE) / 15625;
+//            rtc_comm_delay += 6; // xxx trimming
+//
+//            // Calculate
+//            uint32_t rtc_new_time_sec = (rtc_start_of_curr_frame + rtc_comm_delay) >> 16;
+//            uint32_t rtc_new_time_subsec = ((rtc_start_of_curr_frame + rtc_comm_delay) & 0x0000FFFF) << 16;
+//            HWREG(AON_RTC_BASE + AON_RTC_O_SEC) = rtc_new_time_sec;
+//            HWREG(AON_RTC_BASE + AON_RTC_O_SUBSEC) = rtc_new_time_subsec;
+//
+//            // Adjust timing module after synchronization
+//            Tm_Adjust_Time();
 
             Log_Val_Uint32("Beacon received:", rtc_start_of_curr_frame);
-            Log_Val_Uint32("rat_comm_delay:", rat_comm_delay);
-            Log_Val_Uint32("rtc_comm_delay:", rtc_comm_delay);
         }
         ptc.state = PTC_S_WAIT_TIMEOUT;
         ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
@@ -488,4 +489,28 @@ static uint32_t Ptc_RAT_Ticks_To_Event(uint32_t rtc_ticks_to_event, int32_t offs
     rat_ticks_to_event += offset;
 
     return rat_ticks_to_event;
+}
+
+static void Ptc_Adjust_Local_Clock(uint32_t rtc_start_of_curr_frame, uint32_t rat_rx_timestamp)
+{
+    // Wait for start of next RTC cycle and get current time (RAT)
+    Tm_Synch_With_RTC();
+    uint32_t rat_current_time = Rfc_Get_RAT_Time();
+
+    // Calculate the number of RAT ticks since the reception of the beacon
+    // Convert this value to RTC ticks (1 RTC tick = 4e6/32768 RAT ticks = 15625/128 RAT ticks)
+    uint32_t rat_time_since_rx = rat_current_time - rat_rx_timestamp;
+    uint32_t rtc_time_since_rx = (rat_time_since_rx * 128 * TM_RTC_TICKS_PER_CYCLE) / 15625;
+    rtc_time_since_rx += 6; // xxx trimming
+
+    // Calculate new value of the RTC counter
+    uint32_t rtc_new_time_sec = (rtc_start_of_curr_frame + rtc_time_since_rx) >> 16;
+    uint32_t rtc_new_time_subsec = ((rtc_start_of_curr_frame + rtc_time_since_rx) & 0x0000FFFF) << 16;
+
+    // Update the RTC counter
+    HWREG(AON_RTC_BASE + AON_RTC_O_SEC) = rtc_new_time_sec;
+    HWREG(AON_RTC_BASE + AON_RTC_O_SUBSEC) = rtc_new_time_subsec;
+
+    // Adjust timing module after synchronization
+    Tm_Adjust_Time();
 }
