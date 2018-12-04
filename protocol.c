@@ -134,7 +134,7 @@ void Ptc_Process()
 
     case PTC_S_SCHEDULE_FIRST_BEACON_RX:
         // Start reception
-        Rfc_BLE5_Scanner(PTC_FRAME_TIME_SEC*1000*1000 + 10*1000); // TODO define timeout
+        Rfc_BLE5_Scanner(0, PTC_FRAME_TIME_SEC*1000*1000 + 10*1000); // TODO define timeout
         ptc.state = PTC_S_WAIT_FIRST_BEACON;
         break;
 
@@ -177,7 +177,7 @@ void Ptc_Process()
             #ifndef PTC_DUMMY_SLEEP
             Pma_MCU_Sleep(Tm_Get_RTC_Time() + PTC_RTC_FRAME_TIME);
             #else
-            Pma_Dummy_MCU_Sleep(wakeup_time);
+            Pma_Dummy_MCU_Sleep(Tm_Get_RTC_Time() + PTC_RTC_FRAME_TIME);
             #endif // #ifndef PTC_DUMMY_SLEEP
 
             ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
@@ -238,7 +238,7 @@ void Ptc_Process()
         rtc_ticks_to_event = ptc.start_of_next_frame - rtc_current_time;
 
         // 4. Convert RTC ticks to RAT ticks (apply measured offset ~160 microseconds)
-        int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_TX_START_OFFSET; // TODO RX offset
+        int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_RX_START_OFFSET;
         rat_ticks_to_event = Ptc_RAT_Ticks_To_Event(rtc_ticks_to_event, offset);
 
         // 5. Calculate absolute time of start of transmission
@@ -266,7 +266,7 @@ void Ptc_Process()
         }
         else
         {
-            Rfc_BLE5_Scanner(10*1000); // TODO define timeout
+            Rfc_BLE5_Scanner(rat_start_time, 1024); // TODO define timeout
             ptc.state = PTC_S_WAIT_BEACON;
         };
 

@@ -31,6 +31,7 @@
 
 // Start of transmission offset (value measured ~160 microseconds)
 #define PTC_RAT_TX_START_OFFSET     (-647)
+#define PTC_RAT_RX_START_OFFSET     PTC_RAT_TX_START_OFFSET*2 // TODO define this value
 
 // Number of sensor nodes
 #define PTC_SENSOR_NODES_NUM        10

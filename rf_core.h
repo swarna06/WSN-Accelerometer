@@ -278,7 +278,7 @@ void Rfc_BLE5_Set_Channel(uint8_t channel);
 
 bool Rfc_BLE5_Adv_Aux(rfc_tx_param_t* tx_param_p);
 
-bool Rfc_BLE5_Scanner(uint32_t timeout_usec);
+bool Rfc_BLE5_Scanner(uint32_t rat_start_time, uint32_t timeout_usec);
 
 void Rfc_BLE5_Get_Scanner_Result(rfc_rx_result_t* dest);
 
