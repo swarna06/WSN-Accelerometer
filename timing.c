@@ -54,14 +54,14 @@ bool Tm_Sys_Tick()
 
 void Tm_Adjust_Time()
 {
-    const int32_t MIN_DELTA = 6; // TODO adjust this value
+    const int32_t MIN_DELTA = 4;
     // Update the compare value of the RTC channel
     HWREG(AON_RTC_BASE + AON_RTC_O_SYNC); // synchronize with AON - TODO is this necessary ?
     uint32_t curr_time = Tm_Get_RTC_Time();
     uint32_t compare_val = AONRTCCompareValueGet(AON_RTC_CH2);
 
     // Compare value should be ahead of RTC counter by at least 4 units otherwise it won't generate a compare event
-    int32_t delta = curr_time - compare_val;
+    int32_t delta = compare_val - curr_time;
     if (delta < MIN_DELTA)
         AONRTCCompareValueSet(AON_RTC_CH2, Tm_Get_RTC_Time() + MIN_DELTA);
 }
