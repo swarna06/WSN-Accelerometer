@@ -139,9 +139,12 @@ typedef enum
 // ********************************
 // Transmission and reception data structures and constants
 // ********************************
+// Maximum payload length
+#define RFC_MAX_PAYLOAD_LEN             254
+
 // RX result flags
-#define RFC_F_RX_CRC_ERR        0x01
-#define RFC_F_RX_TOUT_ERR       0x02
+#define RFC_F_RX_CRC_ERR                0x01
+#define RFC_F_RX_TOUT_ERR               0x02
 
 // RX buffer
 #define RFC_RX_BUF_LEN                  512

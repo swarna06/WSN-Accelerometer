@@ -311,6 +311,10 @@ inline uint8_t Ptc_Get_FSM_State()
 void Ptc_Handle_Error()
 {
     // TODO
+    while (1) // Stop execution; flush log buffer
+    {
+        Log_Process();
+    }
 }
 
 // ********************************
@@ -444,6 +448,7 @@ static void Ptc_Request_Beacon_Tx(uint32_t rtc_timestamp, uint32_t rat_start_of_
 
     ptc.tx_param.buf = ptc.tx_buf;
     ptc.tx_param.len = payload_len;
+    ptc.tx_param.len = 254;
     ptc.tx_param.rat_start_time = rat_start_of_tx;
     Rfc_BLE5_Adv_Aux(&ptc.tx_param);
 }
@@ -462,4 +467,5 @@ static void Ptc_Process_Beacon()
     Ptc_Adjust_Local_Clock(rtc_start_of_curr_frame, rat_rx_timestamp);
 
     Log_Val_Uint32("Beacon received:", rtc_start_of_curr_frame);
+    Log_Val_Uint32("payload_len:", ptc.rx_result.payload_len);
 }
