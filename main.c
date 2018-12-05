@@ -34,7 +34,8 @@
 
 #include "printf.h"
 
-PFL_DECLARE_PROFILING_VARIABLES();
+// Global profiling variables
+volatile uint32_t pfl_tic, pfl_toc, pfl_wcet = 0;
 
 void GPIO_Init();
 

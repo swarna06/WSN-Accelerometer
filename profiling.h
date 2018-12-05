@@ -12,11 +12,9 @@
 #include <driverlib/timer.h>
 
 // Profiling global variables
-extern uint32_t pfl_tic;
-extern uint32_t pfl_toc;
-extern uint32_t pfl_wcet;
-
-#define PFL_DECLARE_PROFILING_VARIABLES()       uint32_t pfl_tic, pfl_toc, pfl_wcet = 0;
+extern volatile uint32_t pfl_tic;
+extern volatile uint32_t pfl_toc;
+extern volatile uint32_t pfl_wcet;
 
 // Hardware definitions (timer number and peripheral id)
 #define PFL_TIMER_BASE                          (GPT3_BASE)
