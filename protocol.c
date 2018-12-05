@@ -162,11 +162,11 @@ void Ptc_Process()
         }
         else
         {
-            #ifndef PTC_DUMMY_SLEEP
+//            #ifndef PTC_DUMMY_SLEEP
             Pma_MCU_Sleep(Tm_Get_RTC_Time() + PTC_RTC_FRAME_TIME);
-            #else
-            Pma_Dummy_MCU_Sleep(Tm_Get_RTC_Time() + PTC_RTC_FRAME_TIME);
-            #endif // #ifndef PTC_DUMMY_SLEEP
+//            #else
+//            Pma_Dummy_MCU_Sleep(Tm_Get_RTC_Time() + PTC_RTC_FRAME_TIME);
+//            #endif // #ifndef PTC_DUMMY_SLEEP
 
             ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
             ptc.next_state = PTC_S_SCHEDULE_FIRST_BEACON_RX;
@@ -188,11 +188,11 @@ void Ptc_Process()
 
         // Calculate wake up time and go to sleep
         uint32_t wakeup_time = ptc.start_of_next_frame - PTC_RTC_TOTAL_WAKEUP_TIME;
-        #ifndef PTC_DUMMY_SLEEP
+//        #ifndef PTC_DUMMY_SLEEP
         Pma_MCU_Sleep(wakeup_time);
-        #else
-        Pma_Dummy_MCU_Sleep(wakeup_time);
-        #endif // #ifndef PTC_DUMMY_SLEEP
+//        #else
+//        Pma_Dummy_MCU_Sleep(wakeup_time);
+//        #endif // #ifndef PTC_DUMMY_SLEEP
 
         #ifdef PTC_START_OF_FRAME_OUT
         // Set RTC compare value to match the start of next frame
@@ -236,11 +236,11 @@ void Ptc_Process()
     {
         // Calculate wake up time and go to sleep
         uint32_t wakeup_time = ptc.start_of_next_slot - PTC_RTC_TOTAL_WAKEUP_TIME;
-        #ifndef PTC_DUMMY_SLEEP
+//        #ifndef PTC_DUMMY_SLEEP
         Pma_MCU_Sleep(wakeup_time);
-        #else
-        Pma_Dummy_MCU_Sleep(wakeup_time);
-        #endif
+//        #else
+//        Pma_Dummy_MCU_Sleep(wakeup_time);
+//        #endif
 
         ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
         ptc.next_state = PTC_S_SCHEDULE_SLOT_RADIO_OP;

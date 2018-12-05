@@ -15,6 +15,10 @@
 #define PMA_SLEEP_OUT
 #endif // #if (CFG_DEBUG_SLEEP_OUT == CFG_SETTING_ENABLED)
 
+#if (CFG_DEBUG_DUMMY_SLEEP == CFG_SETTING_ENABLED)
+#define PMA_DUMMY_SLEEP
+#endif // #if (CFG_DEBUG_SLEEP_OUT == CFG_SETTING_ENABLED)
+
 // Wake up procedure execution time
 //#define PMA_WAKEUP_TIME_USEC        400
 #define PMA_WAKEUP_TIME_USEC        700 // xxx measure this time again later and update this constant
@@ -43,6 +47,6 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time);
 
 void Pma_MCU_Wakeup();
 
-void Pma_Dummy_MCU_Sleep(uint32_t rtc_wakeup_time);
+//void Pma_Dummy_MCU_Sleep(uint32_t rtc_wakeup_time);
 
 #endif /* POWER_MANAGEMENT_H_ */

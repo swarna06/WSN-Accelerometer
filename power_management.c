@@ -151,11 +151,20 @@ inline void Pma_CPU_Sleep(uint32_t tout_ms)
 
 void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
 {
-    #ifdef PMA_SLEEP_OUT
-    Brd_Led_Off(BRD_SLEEP_PIN);
-    #endif // #ifdef PMA_SLEEP_OUT
+#ifdef PMA_SLEEP_OUT
+    Brd_Led_Off(BRD_SLEEP_PIN); // signal indicates MCU state (sleep/active)
+#endif // #ifdef PMA_SLEEP_OUT
 
     while (!Sep_UART_Idle()); // wait until the UART FIFO becomes FIXME remove
+
+#ifdef PMA_DUMMY_SLEEP
+
+    // Dummy sleep; busy-wait until RTC event
+    AONRTCEventClear(AON_RTC_CH0);
+    AONRTCCompareValueSet(AON_RTC_CH0, rtc_wakeup_time);
+    while (!AONRTCEventGet(AON_RTC_CH0)); // busy wait
+
+#else
 
     // Put MCU in standby mode
     // Sequence taken from TI's power driver (PowerCC26XX.c)
@@ -236,9 +245,11 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     // 9. Wake up modules
     Pma_MCU_Wakeup();
 
-    #ifdef PMA_SLEEP_OUT
-    Brd_Led_On(BRD_SLEEP_PIN);
-    #endif // #ifdef PMA_SLEEP_OUT
+#endif // #ifndef PMA_DUMMY_SLEEP
+
+#ifdef PMA_SLEEP_OUT
+    Brd_Led_On(BRD_SLEEP_PIN); // signal indicates MCU state (sleep/active)
+#endif // #ifdef PMA_SLEEP_OUT
 }
 
 void Pma_MCU_Wakeup()
@@ -246,19 +257,19 @@ void Pma_MCU_Wakeup()
     Rfc_Wakeup();
     Sep_Wakeup();
 }
-
-void Pma_Dummy_MCU_Sleep(uint32_t rtc_wakeup_time)
-{
-    #ifdef PMA_SLEEP_OUT
-    Brd_Led_Off(BRD_SLEEP_PIN);
-    #endif // #ifdef PMA_SLEEP_OUT
-
-    AONRTCEventClear(AON_RTC_CH0);
-    AONRTCCompareValueSet(AON_RTC_CH0, rtc_wakeup_time);
-
-    while (!AONRTCEventGet(AON_RTC_CH0)); // busy wait
-
-    #ifdef PMA_SLEEP_OUT
-    Brd_Led_On(BRD_SLEEP_PIN);
-    #endif // #ifdef PMA_SLEEP_OUT
-}
+//
+//void Pma_Dummy_MCU_Sleep(uint32_t rtc_wakeup_time)
+//{
+//    #ifdef PMA_SLEEP_OUT
+//    Brd_Led_Off(BRD_SLEEP_PIN);
+//    #endif // #ifdef PMA_SLEEP_OUT
+//
+//    AONRTCEventClear(AON_RTC_CH0);
+//    AONRTCCompareValueSet(AON_RTC_CH0, rtc_wakeup_time);
+//
+//    while (!AONRTCEventGet(AON_RTC_CH0)); // busy wait
+//
+//    #ifdef PMA_SLEEP_OUT
+//    Brd_Led_On(BRD_SLEEP_PIN);
+//    #endif // #ifdef PMA_SLEEP_OUT
+//}
