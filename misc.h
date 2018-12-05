@@ -22,7 +22,7 @@
     #define assertion(__e)  if (__e) (void)0;   \
                             else \
                             { \
-                                PRINTF("Assertion violation: file " __FILE__ ", line " TO_STR(__LINE__) ": " #__e "\r\n"); \
+                                PRINTF("\r\nAssertion violation: file " __FILE__ ", line " TO_STR(__LINE__) ": " #__e "\r\n"); \
                                 exit(0); \
                             }
 #else

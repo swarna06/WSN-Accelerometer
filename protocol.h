@@ -13,10 +13,10 @@
 #include "power_management.h"
 #include "configuration.h"
 
-#define PTC_RAT_CH                  5
-#define PTC_RAT_GPO                 2
-#define PTC_RFC_GPO                 2
-#define PTC_RAT_OUTP_MODE           0
+
+// Macro used to add field field payload (increase readability)
+// To be used with the 'Ptc_Add_Field_To_Payload' and 'Ptc_Get_Field_From_Payload' functions
+#define Ptc_Payload_Field(f)        &f, sizeof(f)
 
 // Debug signal; transition indicates the start of a frame
 #if (CFG_DEBUG_START_OF_FRAME_OUT == CFG_SETTING_ENABLED)
@@ -82,6 +82,9 @@ typedef enum
     // Debug states
     PTC_S_WAIT_TIMEOUT = 0xF0,
 } ptc_state_t;
+
+// Flags
+#define PTC_F_IN_SYNC               0x01
 
 // Structure to hold the state of the protocol module
 typedef struct

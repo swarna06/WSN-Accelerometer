@@ -39,9 +39,11 @@ ptc_control_t ptc;
 static bool Ptc_Init_Random_Seeds();
 static uint32_t Ptc_Calculate_RAT_Start_Time(uint32_t rtc_start_of_next_event, int rat_time_offset);
 static void Ptc_Adjust_Local_Clock(uint32_t rtc_start_of_curr_frame, uint32_t rat_rx_timestamp);
-static void Ptc_Request_Beacon_Tx(uint32_t rtc_timestamp, uint32_t rat_start_of_tx);
+static void Ptc_Request_Beacon_Tx(uint32_t rat_start_of_tx);
 static void Ptc_Process_Data_Pkt();
 static void Ptc_Process_Beacon();
+static size_t Ptc_Add_Field_To_Payload(uint8_t** payload_p, void* data_p, size_t data_len);
+static void Ptc_Get_Field_From_Payload(uint8_t** payload_p, void* data_p, size_t data_len);
 
 #ifdef PTC_START_OF_FRAME_OUT
 void Ptc_RTC_Isr()
@@ -146,18 +148,7 @@ void Ptc_Process()
         Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);
         if ((ptc.rx_result.err_flags == 0) && (ptc.rx_result.payload_len)) // no errors
         {
-            uint32_t rtc_start_of_curr_frame = *((uint32_t*)ptc.rx_result.buf);
-            uint32_t rat_rx_timestamp = ptc.rx_result.rat_timestamp;
-
-            // Update local clock
-            Ptc_Adjust_Local_Clock(rtc_start_of_curr_frame, rat_rx_timestamp);
-
-            // Calculate start of next slot and frame
-            ptc.start_of_next_slot = rtc_start_of_curr_frame + (PTC_RTC_SLOT_TIME * ptc.dev_id);
-            ptc.start_of_next_frame = rtc_start_of_curr_frame + PTC_RTC_FRAME_TIME;
-
-            Log_Val_Uint32("Beacon received:", rtc_start_of_curr_frame);
-
+            Ptc_Process_Beacon();
             ptc.state = PTC_S_WAIT_START_OF_SLOT;
         }
         else
@@ -210,7 +201,7 @@ void Ptc_Process()
         // If device is sink -> transmit; if device is sensor receive
         if (Ptc_Dev_Is_Sink_Node())
         {
-            Ptc_Request_Beacon_Tx(ptc.start_of_next_frame, rat_start_time);
+            Ptc_Request_Beacon_Tx(rat_start_time);
             ptc.state = PTC_S_WAIT_TIMEOUT;
             ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
         }
@@ -434,21 +425,21 @@ static void Ptc_Adjust_Local_Clock(uint32_t rtc_start_of_curr_frame, uint32_t ra
     Tm_Adjust_Time();
 }
 
-static void Ptc_Request_Beacon_Tx(uint32_t rtc_timestamp, uint32_t rat_start_of_tx)
+static void Ptc_Request_Beacon_Tx(uint32_t rat_start_of_tx)
 {
     size_t payload_len = 0;
     uint8_t* payload_p = ptc.tx_buf;
-    uint8_t* data_p;
 
     // Include RTC time stamp in the payload
     // The time stamp should correspond to the transmission absolute time (RTC)
-    data_p = (uint8_t*)&rtc_timestamp;
-    for (size_t n = 0; n < sizeof(rtc_timestamp); n++, data_p++, payload_p++, payload_len++)
-        *payload_p = *data_p;
+    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.dev_id));
+    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.start_of_next_frame));
+    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.channel));
+    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.tx_power));
+    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.phy_mode));
 
     ptc.tx_param.buf = ptc.tx_buf;
     ptc.tx_param.len = payload_len;
-    ptc.tx_param.len = 254;
     ptc.tx_param.rat_start_time = rat_start_of_tx;
     Rfc_BLE5_Adv_Aux(&ptc.tx_param);
 }
@@ -460,12 +451,58 @@ static void Ptc_Process_Data_Pkt()
 
 static void Ptc_Process_Beacon()
 {
-    uint32_t rtc_start_of_curr_frame = *((uint32_t*)ptc.rx_result.buf);
-    uint32_t rat_rx_timestamp = ptc.rx_result.rat_timestamp;
+    uint8_t* payload_p = ptc.rx_result.buf;
+    size_t payload_len = ptc.rx_result.payload_len;
+
+    uint8_t dev_id = 1;
+    uint32_t rtc_start_of_curr_frame;
+    uint8_t channel;
+    uint16_t tx_pow;
+    uint8_t phy_mode;
+
+    Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(dev_id));
+    Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(rtc_start_of_curr_frame));
+    Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(channel));
+    Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(tx_pow));
+    Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(phy_mode));
 
     // Update local clock
+    uint32_t rat_rx_timestamp = ptc.rx_result.rat_timestamp;
     Ptc_Adjust_Local_Clock(rtc_start_of_curr_frame, rat_rx_timestamp);
 
-    Log_Val_Uint32("Beacon received:", rtc_start_of_curr_frame);
-    Log_Val_Uint32("payload_len:", ptc.rx_result.payload_len);
+    if (!(ptc.flags & PTC_F_IN_SYNC))
+    {
+        // Calculate start of next slot and frame
+        ptc.start_of_next_slot = rtc_start_of_curr_frame + (PTC_RTC_SLOT_TIME * ptc.dev_id);
+        ptc.start_of_next_frame = rtc_start_of_curr_frame + PTC_RTC_FRAME_TIME;
+        ptc.flags |= PTC_F_IN_SYNC;
+    }
+
+    // TODO remove the following lines
+    Log_String_Literal("Beacon:");
+    Log_String_Literal(" payload_len: "); Log_Value_Uint(payload_len);
+    Log_String_Literal(" dev_id: "); Log_Value_Hex(dev_id);
+    Log_String_Literal(" rtc_time: "); Log_Value_Hex(rtc_start_of_curr_frame);
+    Log_String_Literal(" channel: "); Log_Value_Uint(channel);
+    Log_String_Literal(" tx_pow: "); Log_Value_Hex(tx_pow);
+    Log_String_Literal(" phy_mode: "); Log_Value_Uint(phy_mode);
+    Log_Line(""); // new line
+}
+
+static size_t Ptc_Add_Field_To_Payload(uint8_t** payload_p, void* data_p, size_t data_len)
+{
+    uint8_t* _data_p = (uint8_t*)data_p;
+
+    for (size_t n = 0; n < data_len; n++, _data_p++, (*payload_p)++)
+        *(*payload_p) = *_data_p;
+
+    return data_len;
+}
+
+static void Ptc_Get_Field_From_Payload(uint8_t** payload_p, void* data_p, size_t data_len)
+{
+    uint8_t* _data_p = (uint8_t*)data_p;
+
+    for (size_t n = 0; n < data_len; n++, _data_p++, (*payload_p)++)
+        *_data_p = *(*payload_p);
 }

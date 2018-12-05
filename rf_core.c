@@ -345,7 +345,7 @@ void Rfc_BLE5_Set_Channel(uint8_t channel)
 bool Rfc_BLE5_Adv_Aux(rfc_tx_param_t* tx_param_p)
 {
     assertion(tx_param_p != NULL);
-    assertion(tx_param_p->buf != NULL && tx_param_p->len > RFC_MAX_PAYLOAD_LEN);
+    assertion(tx_param_p->len <= RFC_MAX_PAYLOAD_LEN);
     if (!Rfc_Ready())
         return false;
 
