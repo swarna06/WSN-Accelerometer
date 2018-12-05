@@ -257,19 +257,3 @@ void Pma_MCU_Wakeup()
     Rfc_Wakeup();
     Sep_Wakeup();
 }
-//
-//void Pma_Dummy_MCU_Sleep(uint32_t rtc_wakeup_time)
-//{
-//    #ifdef PMA_SLEEP_OUT
-//    Brd_Led_Off(BRD_SLEEP_PIN);
-//    #endif // #ifdef PMA_SLEEP_OUT
-//
-//    AONRTCEventClear(AON_RTC_CH0);
-//    AONRTCCompareValueSet(AON_RTC_CH0, rtc_wakeup_time);
-//
-//    while (!AONRTCEventGet(AON_RTC_CH0)); // busy wait
-//
-//    #ifdef PMA_SLEEP_OUT
-//    Brd_Led_On(BRD_SLEEP_PIN);
-//    #endif // #ifdef PMA_SLEEP_OUT
-//}

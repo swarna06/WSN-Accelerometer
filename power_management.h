@@ -15,6 +15,7 @@
 #define PMA_SLEEP_OUT
 #endif // #if (CFG_DEBUG_SLEEP_OUT == CFG_SETTING_ENABLED)
 
+// 'Dummy' sleep; busy-wait instead to go to deep sleep
 #if (CFG_DEBUG_DUMMY_SLEEP == CFG_SETTING_ENABLED)
 #define PMA_DUMMY_SLEEP
 #endif // #if (CFG_DEBUG_SLEEP_OUT == CFG_SETTING_ENABLED)
