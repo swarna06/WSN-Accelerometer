@@ -14,7 +14,6 @@
 #include "timing.h"
 #include "misc.h"
 #include "board.h"
-#include "log.h"
 
 // Control structure to keep the state of the timing module
 static tm_control_t tcs;
