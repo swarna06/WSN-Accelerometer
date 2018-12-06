@@ -44,7 +44,7 @@
 #define PTC_RAT_RX_START_OFFSET     (-800 - ((PTC_RX_TIMEOUT_USEC/2)*RFC_RAT_TICKS_PER_USEC))
 
 // Number of sensor nodes
-#define PTC_SENSOR_NODES_NUM        10
+#define PTC_SENSOR_NODES_NUM        CFG_SENSOR_NODE_NUM
 
 // Frame duration
 #define PTC_FRAME_TIME_SEC          (1)
@@ -98,6 +98,7 @@ typedef enum
 
 // Flags
 #define PTC_F_IN_SYNC               0x01
+#define PTC_F_BEACON_RXED           0x02
 
 // Structure to hold the state of the protocol module
 typedef struct

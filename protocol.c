@@ -40,8 +40,9 @@ static bool Ptc_Init_Random_Seeds();
 static uint32_t Ptc_Calculate_RAT_Start_Time(uint32_t rtc_start_of_next_event, int rat_time_offset);
 static void Ptc_Adjust_Local_Clock(uint32_t rtc_start_of_curr_frame, uint32_t rat_rx_timestamp);
 static void Ptc_Request_Beacon_Tx(uint32_t rat_start_of_tx);
-static void Ptc_Process_Data_Pkt();
 static void Ptc_Process_Beacon();
+static void Ptc_Request_Data_Pkt_Tx(uint32_t rat_start_of_tx);
+static void Ptc_Process_Data_Pkt();
 static size_t Ptc_Add_Field_To_Payload(uint8_t** payload_p, void* data_p, size_t data_len);
 static void Ptc_Get_Field_From_Payload(uint8_t** payload_p, void* data_p, size_t data_len);
 
@@ -208,7 +209,7 @@ void Ptc_Process()
         }
         else
         {
-            Rfc_BLE5_Scanner(rat_start_time, PTC_RX_TIMEOUT_USEC + PTC_OFFSET_RX_TOUT_USEC); // TODO define timeout
+            Rfc_BLE5_Scanner(rat_start_time, PTC_RX_TIMEOUT_USEC + PTC_OFFSET_RX_TOUT_USEC);
             ptc.state = PTC_S_WAIT_PKT_RECEPTION;
         };
 
@@ -239,14 +240,15 @@ void Ptc_Process()
         // If device is sink -> receive; if device is sensor transmit
         if (Ptc_Dev_Is_Sink_Node())
         {
-            Rfc_BLE5_Scanner(rat_start_time, PTC_RX_TIMEOUT_USEC + PTC_OFFSET_RX_TOUT_USEC); // TODO define timeout
+            Rfc_BLE5_Scanner(rat_start_time, PTC_RX_TIMEOUT_USEC + PTC_OFFSET_RX_TOUT_USEC);
             ptc.state = PTC_S_WAIT_PKT_RECEPTION;
         }
         else
         {
-            ptc.tx_param.buf = NULL; // TODO buffer contents
-            ptc.tx_param.rat_start_time = rat_start_time;
-            Rfc_BLE5_Adv_Aux(&ptc.tx_param);
+            Ptc_Request_Data_Pkt_Tx(rat_start_time);
+//            ptc.tx_param.buf = NULL; // TODO buffer contents
+//            ptc.tx_param.rat_start_time = rat_start_time;
+//            Rfc_BLE5_Adv_Aux(&ptc.tx_param);
             ptc.state = PTC_S_WAIT_TIMEOUT;
             ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
         };
@@ -278,10 +280,12 @@ void Ptc_Process()
             if (ptc.rx_result.err_flags == 0)
             {
                 Ptc_Process_Beacon();
+                ptc.flags |= PTC_F_BEACON_RXED;
                 ptc.err_count = PTC_MAX_ERR_NUM;
             }
             else
             {
+                ptc.flags &= ~PTC_F_BEACON_RXED;
                 ptc.err_count--;
                 if (ptc.err_count == 0) // max consecutive errors reached ?
                 {
@@ -463,17 +467,12 @@ static void Ptc_Request_Beacon_Tx(uint32_t rat_start_of_tx)
     Rfc_BLE5_Adv_Aux(&ptc.tx_param);
 }
 
-static void Ptc_Process_Data_Pkt()
-{
-    Log_Line("Data pkt received");
-}
-
 static void Ptc_Process_Beacon()
 {
     uint8_t* payload_p = ptc.rx_result.buf;
     size_t payload_len = ptc.rx_result.payload_len;
 
-    uint8_t dev_id = 1;
+    uint8_t dev_id;
     uint32_t rtc_start_of_curr_frame;
     uint8_t channel;
     uint16_t tx_pow;
@@ -508,6 +507,44 @@ static void Ptc_Process_Beacon()
     Log_Line(""); // new line
 }
 
+static void Ptc_Request_Data_Pkt_Tx(uint32_t rat_start_of_tx)
+{
+    size_t payload_len = 0;
+    uint8_t* payload_p = ptc.tx_buf;
+
+    uint8_t ack = ptc.flags & PTC_F_BEACON_RXED ? 1 : 0;
+
+    // Include RTC time stamp in the payload
+    // The time stamp should correspond to the transmission absolute time (RTC)
+    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.dev_id));
+    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ack));
+
+    ptc.tx_param.buf = ptc.tx_buf;
+    ptc.tx_param.len = payload_len;
+    //    ptc.tx_param.len = RFC_MAX_PAYLOAD_LEN;
+    ptc.tx_param.rat_start_time = rat_start_of_tx;
+    Rfc_BLE5_Adv_Aux(&ptc.tx_param);
+}
+
+static void Ptc_Process_Data_Pkt()
+{
+    uint8_t* payload_p = ptc.rx_result.buf;
+    size_t payload_len = ptc.rx_result.payload_len;
+
+    uint8_t dev_id;
+    uint8_t ack;
+
+    Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(dev_id));
+    Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(ack));
+
+    // TODO remove the following lines
+    Log_String_Literal("Data:");
+    Log_String_Literal(" payload_len: "); Log_Value_Uint(payload_len);
+    Log_String_Literal(" dev_id: "); Log_Value_Hex(dev_id);
+    Log_String_Literal(" ack: "); Log_Value_Hex(ack);
+    Log_Line(""); // new line
+}
+
 static size_t Ptc_Add_Field_To_Payload(uint8_t** payload_p, void* data_p, size_t data_len)
 {
     uint8_t* _data_p = (uint8_t*)data_p;
@@ -525,3 +562,7 @@ static void Ptc_Get_Field_From_Payload(uint8_t** payload_p, void* data_p, size_t
     for (size_t n = 0; n < data_len; n++, _data_p++, (*payload_p)++)
         *_data_p = *(*payload_p);
 }
+
+// ********************************
+// Test functions
+// ********************************
