@@ -34,7 +34,7 @@
 #define PTC_SENSOR_NODE_NUM         CFG_SENSOR_NODE_NUM
 
 // Reception timeout
-#define PTC_RX_TIMEOUT_USEC         1000
+#define PTC_RX_TIMEOUT_USEC         1300
 #define PTC_OFFSET_RX_TOUT_USEC     200
 
 // Start of transmission offset
