@@ -128,8 +128,8 @@ typedef enum
 #define RFC_PHY_MAIN_MODE_2MBPS     1
 #define RFC_PHY_MAIN_MODE_CODED     2
 #define RFC_PHY_CODING_NONE         0
-#define RFC_PHY_CODING_500KBPS      2
-#define RFC_PHY_CODING_125KBPS      8
+#define RFC_PHY_CODING_500KBPS      1
+#define RFC_PHY_CODING_125KBPS      0
 
 // BLE5 frequency channel base values
 #define RFC_BLE5_BASE_FREQ          2402 // frequency channel 37 (channel offset = 0)

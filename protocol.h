@@ -26,9 +26,15 @@
 // Number of sensor nodes in the network
 #define PTC_SENSOR_NODE_NUM         CFG_SENSOR_NODE_NUM
 
-// Start of transmission offset (value measured ~160 microseconds)
-#define PTC_RAT_TX_START_OFFSET     (-647)
-#define PTC_RAT_RX_START_OFFSET     PTC_RAT_TX_START_OFFSET*2 // TODO define this value
+// Reception timeout
+#define PTC_RX_TIMEOUT_USEC         1000
+#define PTC_OFFSET_RX_TOUT_USEC     200
+
+// Start of transmission offset
+#define PTC_RAT_TX_START_OFFSET     (-647) // value measured ~160 microseconds
+// Start of reception offset
+// value measured ~200 microseconds; start calculated to center the reception time around the start of frame/slot
+#define PTC_RAT_RX_START_OFFSET     (-800 - ((PTC_RX_TIMEOUT_USEC/2)*RFC_RAT_TICKS_PER_USEC))
 
 // Number of sensor nodes
 #define PTC_SENSOR_NODES_NUM        10

@@ -299,6 +299,9 @@ void Rfc_BLE5_Set_PHY_Mode(uint8_t ble5_mode)
     }
 
     // Set channel TX and RX commands
+    cmd_ble5_radio_setup_p->defaultPhy.mainMode = main_mode; // TODO necessary ?
+    cmd_ble5_radio_setup_p->defaultPhy.coding = coding; // TODO necessary ?
+
     cmd_ble5_adv_aux_p->phyMode.mainMode = main_mode;
     cmd_ble5_adv_aux_p->phyMode.coding = coding;
 

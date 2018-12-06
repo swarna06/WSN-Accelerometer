@@ -61,7 +61,9 @@ uint32_t pOverridesCommon[] =
     //            RAT_GPO1: Goes high when sync word is detected and low either when the packet has been
     //            received or reception has been aborted.
     // ************************************************************************************************
-    HW_REG_OVERRIDE(0x1110, RFC_DBELL_SYSGPOCTL_GPOCTL3_RATGPO0 | RFC_DBELL_SYSGPOCTL_GPOCTL2_RATGPO1 |
+//    HW_REG_OVERRIDE(0x1110, RFC_DBELL_SYSGPOCTL_GPOCTL3_RATGPO0 | RFC_DBELL_SYSGPOCTL_GPOCTL2_RATGPO1 |
+    HW_REG_OVERRIDE(0x1110, RFC_DBELL_SYSGPOCTL_GPOCTL3_RATGPO0 | RFC_DBELL_SYSGPOCTL_GPOCTL2_CPEGPO0 |
+//    HW_REG_OVERRIDE(0x1110, RFC_DBELL_SYSGPOCTL_GPOCTL3_CPEGPO1 | RFC_DBELL_SYSGPOCTL_GPOCTL2_CPEGPO0 |
                             RFC_DBELL_SYSGPOCTL_GPOCTL1_CPEGPO1 | RFC_DBELL_SYSGPOCTL_GPOCTL0_CPEGPO0),
     (uint32_t)0x008F88B3,
 

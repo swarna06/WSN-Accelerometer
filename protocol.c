@@ -194,7 +194,7 @@ void Ptc_Process()
     {
         // Calculate the start time of packet reception/transmission and request operation to the RF core
         // An offset is used to compensate for (measured) latencies of the RF core in the start of the reception/transmission
-        int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_TX_START_OFFSET;
+        int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_RX_START_OFFSET;
         uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_frame, offset);
 
         // Request radio operation to the RF core
@@ -207,7 +207,7 @@ void Ptc_Process()
         }
         else
         {
-            Rfc_BLE5_Scanner(rat_start_time, 1024); // TODO define timeout
+            Rfc_BLE5_Scanner(rat_start_time, PTC_RX_TIMEOUT_USEC + PTC_OFFSET_RX_TOUT_USEC); // TODO define timeout
             ptc.state = PTC_S_WAIT_PKT_RECEPTION;
         };
 
@@ -238,7 +238,7 @@ void Ptc_Process()
         // If device is sink -> receive; if device is sensor transmit
         if (Ptc_Dev_Is_Sink_Node())
         {
-            Rfc_BLE5_Scanner(rat_start_time, 1024); // TODO define timeout
+            Rfc_BLE5_Scanner(rat_start_time, PTC_RX_TIMEOUT_USEC + PTC_OFFSET_RX_TOUT_USEC); // TODO define timeout
             ptc.state = PTC_S_WAIT_PKT_RECEPTION;
         }
         else
@@ -440,6 +440,7 @@ static void Ptc_Request_Beacon_Tx(uint32_t rat_start_of_tx)
 
     ptc.tx_param.buf = ptc.tx_buf;
     ptc.tx_param.len = payload_len;
+//    ptc.tx_param.len = RFC_MAX_PAYLOAD_LEN;
     ptc.tx_param.rat_start_time = rat_start_of_tx;
     Rfc_BLE5_Adv_Aux(&ptc.tx_param);
 }
