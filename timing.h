@@ -90,10 +90,4 @@ bool Tm_Timeout_Completed(uint8_t tout_idx);
 
 void Tm_Enable_LF_Clock_Output();
 
-void Tm_Enable_Abs_Time_Per();
-
-bool Tm_Abs_Time_Per_Completed();
-
-void Tm_Abs_Period_Update();
-
 #endif /* TIMING_H_ */

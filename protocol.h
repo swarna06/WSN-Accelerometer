@@ -13,6 +13,13 @@
 #include "power_management.h"
 #include "configuration.h"
 
+// Default communication parameters
+#define PTC_DEFAULT_TX_POW          RFC_TX_POW_0dBm
+#define PTC_DEFAULT_PHY_MODE        RFC_PHY_MODE_125KBPS
+#define PTC_DEFAULT_CHANNEL         37
+
+// Maximum number of consetuctive errors
+#define PTC_MAX_ERR_NUM             3
 
 // Macro used to add field field payload (increase readability)
 // To be used with the 'Ptc_Add_Field_To_Payload' and 'Ptc_Get_Field_From_Payload' functions
@@ -98,6 +105,7 @@ typedef struct
     uint8_t flags;
     uint8_t state, next_state;
     uint32_t absent_nodes;
+    uint8_t err_count;
 
     uint8_t dev_id, dev_index;
     uint32_t ble_access_l, ble_access_h;

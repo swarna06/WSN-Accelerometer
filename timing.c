@@ -14,6 +14,7 @@
 #include "timing.h"
 #include "misc.h"
 #include "board.h"
+#include "log.h"
 
 // Control structure to keep the state of the timing module
 static tm_control_t tcs;
@@ -55,15 +56,18 @@ bool Tm_Sys_Tick()
 void Tm_Adjust_Time()
 {
     const int32_t MIN_DELTA = 4;
+//    const int32_t MIN_DELTA = TM_RTC_TICKS_PER_MSEC;
     // Update the compare value of the RTC channel
-    HWREG(AON_RTC_BASE + AON_RTC_O_SYNC); // synchronize with AON - TODO is this necessary ?
-    uint32_t curr_time = Tm_Get_RTC_Time();
+    Tm_Synch_With_RTC();
     uint32_t compare_val = AONRTCCompareValueGet(AON_RTC_CH2);
+    uint32_t curr_time = Tm_Get_RTC_Time();
 
     // Compare value should be ahead of RTC counter by at least 4 units otherwise it won't generate a compare event
     int32_t delta = compare_val - curr_time;
     if (delta < MIN_DELTA)
-        AONRTCCompareValueSet(AON_RTC_CH2, Tm_Get_RTC_Time() + MIN_DELTA);
+        AONRTCCompareValueSet(AON_RTC_CH2, curr_time + MIN_DELTA);
+    else if (delta > TM_RTC_TICKS_PER_MSEC)
+        AONRTCCompareValueSet(AON_RTC_CH2, curr_time + TM_RTC_TICKS_PER_MSEC);
 }
 
 void Tm_Process()
@@ -140,46 +144,6 @@ void Tm_Enable_LF_Clock_Output()
 {
     IOCPortConfigureSet(BRD_LF_OSC_PIN, IOC_PORT_AON_CLK32K, IOC_STD_OUTPUT);
     AONIOC32kHzOutputEnable();
-}
-
-void Tm_Enable_Abs_Time_Per()
-{
-    const uint32_t TICKS_PER_PERIOD = TM_ABS_TIME_PERIOD_MS*TM_RTC_TICKS_PER_MSEC;
-    uint32_t curr_time, cmp_val;
-
-    // Configure and enable CH2 (periodic compare)
-    AONRTCModeCh1Set(AON_RTC_MODE_CH1_COMPARE);
-    Tm_Synch_With_RTC(); // wait for next RTC cycle
-    curr_time = AONRTCCurrentCompareValueGet();
-
-    if (TICKS_PER_PERIOD > curr_time)
-        cmp_val = TICKS_PER_PERIOD;
-    else
-        cmp_val = curr_time + (TICKS_PER_PERIOD - (curr_time % TICKS_PER_PERIOD));
-
-    AONRTCCompareValueSet(AON_RTC_CH1, cmp_val);
-    AONRTCChannelEnable(AON_RTC_CH1);
-}
-
-bool Tm_Abs_Time_Per_Completed()
-{
-    if (AONRTCEventGet(AON_RTC_CH1))
-    {
-        const uint32_t TICKS_PER_PERIOD = TM_ABS_TIME_PERIOD_MS*TM_RTC_TICKS_PER_MSEC;
-        AONRTCEventClear(AON_RTC_CH1);
-        AONRTCCompareValueSet(AON_RTC_CH1, AONRTCCompareValueGet(AON_RTC_CH1) + TICKS_PER_PERIOD);
-
-        return true;
-    }
-    else
-        return false;
-}
-
-void Tm_Abs_Period_Update()
-{
-    const uint32_t TICKS_PER_PERIOD = TM_ABS_TIME_PERIOD_MS*TM_RTC_TICKS_PER_MSEC;
-    AONRTCEventClear(AON_RTC_CH1);
-    AONRTCCompareValueSet(AON_RTC_CH1, AONRTCCompareValueGet(AON_RTC_CH1) + TICKS_PER_PERIOD);
 }
 
 // ********************************

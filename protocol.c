@@ -76,9 +76,9 @@ void Ptc_Init()
     Ptc_Init_Random_Seeds();
 
     // Set transmission power, PHY mode and frequency channel
-    ptc.tx_power = RFC_TX_POW_0dBm;
-    ptc.phy_mode = RFC_PHY_MODE_125KBPS;
-    ptc.channel = 37; // advertising channel
+    ptc.tx_power = PTC_DEFAULT_TX_POW;
+    ptc.phy_mode = PTC_DEFAULT_PHY_MODE;
+    ptc.channel = PTC_DEFAULT_CHANNEL;
 
     Rfc_Set_Tx_Power(ptc.tx_power);
     Rfc_BLE5_Set_PHY_Mode(ptc.phy_mode);
@@ -99,6 +99,7 @@ void Ptc_Init()
     ptc.flags = 0;
     ptc.state = PTC_S_WAIT_RF_CORE_INIT;
     ptc.next_state = PTC_S_IDLE;
+    ptc.err_count = PTC_MAX_ERR_NUM;
 
     #ifdef PTC_START_OF_FRAME_OUT
     // Configure an RTC CH in compare mode and enable interrupt
@@ -275,7 +276,24 @@ void Ptc_Process()
         else
         {
             if (ptc.rx_result.err_flags == 0)
+            {
                 Ptc_Process_Beacon();
+                ptc.err_count = PTC_MAX_ERR_NUM;
+            }
+            else
+            {
+                ptc.err_count--;
+                if (ptc.err_count == 0) // max consecutive errors reached ?
+                {
+                    ptc.flags &= ~PTC_F_IN_SYNC; // out of sync
+                    Rfc_BLE5_Set_PHY_Mode(PTC_DEFAULT_PHY_MODE);
+                    Rfc_BLE5_Set_Channel(PTC_DEFAULT_CHANNEL);
+
+                    // If we go to the PTC_S_WAIT_FIRST_BEACON we will sleep immediately
+                    ptc.state = PTC_S_WAIT_FIRST_BEACON;
+                    break;
+                }
+            }
             ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
         }
 
