@@ -40,7 +40,7 @@ static bool Ptc_Init_Random_Seeds();
 static uint32_t Ptc_Calculate_RAT_Start_Time(uint32_t rtc_start_of_next_event, int rat_time_offset);
 static void Ptc_Adjust_Local_Clock(uint32_t rtc_start_of_curr_frame, uint32_t rat_rx_timestamp);
 static void Ptc_Request_Beacon_Tx(uint32_t rat_start_of_tx);
-static void Ptc_Process_Beacon();
+static bool Ptc_Process_Beacon();
 static void Ptc_Request_Data_Pkt_Tx(uint32_t rat_start_of_tx);
 static void Ptc_Process_Data_Pkt();
 static size_t Ptc_Add_Field_To_Payload(uint8_t** payload_p, void* data_p, size_t data_len);
@@ -67,7 +67,10 @@ void Ptc_Init()
     // The secondary BLE address is written using the TI UniFlash tool
     uint32_t secondary_ble_addr_l = HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0);
     ptc.dev_id = (uint8_t)secondary_ble_addr_l;
+
+    #ifdef PTC_VERBOSE
     Log_Val_Uint32("dev_id: ", ptc.dev_id);
+    #endif // #ifdef PTC_VERBOSE
 
     // Read and store the BLE primary access address - TODO move this to a packet buffer
     ptc.ble_access_l = HWREG(FCFG1_BASE + FCFG1_O_MAC_BLE_0);
@@ -148,11 +151,8 @@ void Ptc_Process()
 
     case PTC_S_WAIT_FIRST_BEACON:
         Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);
-        if ((ptc.rx_result.err_flags == 0) && (ptc.rx_result.payload_len)) // no errors
-        {
-            Ptc_Process_Beacon();
+        if ((ptc.rx_result.err_flags == 0) && Ptc_Process_Beacon()) // no errors
             ptc.state = PTC_S_WAIT_START_OF_SLOT;
-        }
         else
         {
             Pma_MCU_Sleep(Tm_Get_RTC_Time() + PTC_RTC_FRAME_TIME);
@@ -185,7 +185,9 @@ void Ptc_Process()
         AONRTCCompareValueSet(AON_RTC_CH1, ptc.start_of_next_frame);
         #endif // #ifdef PTC_START_OF_FRAME_OUT
 
+        #ifdef PTC_VERBOSE
         Log_Val_Uint32("rtc_SoNF: ", ptc.start_of_next_frame);
+        #endif // #ifdef PTC_VERBOSE
 
         ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
         ptc.next_state = PTC_S_SCHEDULE_BEACON_RADIO_OP;
@@ -246,9 +248,6 @@ void Ptc_Process()
         else
         {
             Ptc_Request_Data_Pkt_Tx(rat_start_time);
-//            ptc.tx_param.buf = NULL; // TODO buffer contents
-//            ptc.tx_param.rat_start_time = rat_start_time;
-//            Rfc_BLE5_Adv_Aux(&ptc.tx_param);
             ptc.state = PTC_S_WAIT_TIMEOUT;
             ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
         };
@@ -264,7 +263,13 @@ void Ptc_Process()
             if (ptc.rx_result.err_flags == 0)
                 Ptc_Process_Data_Pkt();
             else
-                Log_Val_Hex32("Rx error: ", ptc.rx_result.err_flags);
+            {
+//                Log_Val_Hex32("Rx error: ", ptc.rx_result.err_flags);
+                Log_String_Literal(""); Log_Value_Hex(ptc.start_of_next_frame);
+                Log_String_Literal(", "); Log_Value_Hex(ptc.dev_index);
+                Log_String_Literal(", "); Log_Value_Hex(ptc.rx_result.err_flags << 1);
+                Log_Line(""); // new line
+            }
 
             ptc.dev_index++;
             if (ptc.dev_index > PTC_SENSOR_NODE_NUM)
@@ -277,9 +282,8 @@ void Ptc_Process()
         }
         else
         {
-            if (ptc.rx_result.err_flags == 0)
+            if (ptc.rx_result.err_flags == 0 && Ptc_Process_Beacon())
             {
-                Ptc_Process_Beacon();
                 ptc.flags |= PTC_F_BEACON_RXED;
                 ptc.err_count = PTC_MAX_ERR_NUM;
             }
@@ -306,6 +310,9 @@ void Ptc_Process()
 
     case PTC_S_WAIT_TIMEOUT:
 
+//        if (!Ptc_Dev_Is_Sink_Node())
+//            ptc.state = ptc.next_state;
+//        else if (Tm_Timeout_Completed(TM_TOUT_PTC_ID))
         if (Tm_Timeout_Completed(TM_TOUT_PTC_ID))
             ptc.state = ptc.next_state;
 
@@ -323,11 +330,11 @@ inline uint8_t Ptc_Get_FSM_State()
 
 void Ptc_Handle_Error()
 {
-    // TODO
-    while (1) // Stop execution; flush log buffer
-    {
-        Log_Process();
-    }
+//    // TODO
+//    while (1) // Stop execution; flush log buffer
+//    {
+//        Log_Process();
+//    }
 }
 
 // ********************************
@@ -456,33 +463,28 @@ static void Ptc_Request_Beacon_Tx(uint32_t rat_start_of_tx)
     // The time stamp should correspond to the transmission absolute time (RTC)
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.dev_id));
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.start_of_next_frame));
-    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.channel));
+    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.channel)); // FIXME remove
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.tx_power));
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.phy_mode));
 
     ptc.tx_param.buf = ptc.tx_buf;
     ptc.tx_param.len = payload_len;
-//    ptc.tx_param.len = RFC_MAX_PAYLOAD_LEN;
     ptc.tx_param.rat_start_time = rat_start_of_tx;
     Rfc_BLE5_Adv_Aux(&ptc.tx_param);
 }
 
-static void Ptc_Process_Beacon()
+static bool Ptc_Process_Beacon()
 {
     uint8_t* payload_p = ptc.rx_result.buf;
-    size_t payload_len = ptc.rx_result.payload_len;
 
     uint8_t dev_id;
     uint32_t rtc_start_of_curr_frame;
-    uint8_t channel;
-    uint16_t tx_pow;
-    uint8_t phy_mode;
 
     Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(dev_id));
+    if (dev_id != PTC_SINK_NODE_DEV_ID)
+        return false;
+
     Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(rtc_start_of_curr_frame));
-    Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(channel));
-    Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(tx_pow));
-    Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(phy_mode));
 
     // Update local clock
     uint32_t rat_rx_timestamp = ptc.rx_result.rat_timestamp;
@@ -496,15 +498,16 @@ static void Ptc_Process_Beacon()
         ptc.flags |= PTC_F_IN_SYNC;
     }
 
-    // TODO remove the following lines
+    #ifdef PTC_VERBOSE
+    size_t payload_len = ptc.rx_result.payload_len;
     Log_String_Literal("Beacon:");
     Log_String_Literal(" payload_len: "); Log_Value_Uint(payload_len);
     Log_String_Literal(" dev_id: "); Log_Value_Hex(dev_id);
     Log_String_Literal(" rtc_time: "); Log_Value_Hex(rtc_start_of_curr_frame);
-    Log_String_Literal(" channel: "); Log_Value_Uint(channel);
-    Log_String_Literal(" tx_pow: "); Log_Value_Hex(tx_pow);
-    Log_String_Literal(" phy_mode: "); Log_Value_Uint(phy_mode);
     Log_Line(""); // new line
+    #endif // #ifdef PTC_VERBOSE
+
+    return true;
 }
 
 static void Ptc_Request_Data_Pkt_Tx(uint32_t rat_start_of_tx)
@@ -521,7 +524,6 @@ static void Ptc_Request_Data_Pkt_Tx(uint32_t rat_start_of_tx)
 
     ptc.tx_param.buf = ptc.tx_buf;
     ptc.tx_param.len = payload_len;
-    //    ptc.tx_param.len = RFC_MAX_PAYLOAD_LEN;
     ptc.tx_param.rat_start_time = rat_start_of_tx;
     Rfc_BLE5_Adv_Aux(&ptc.tx_param);
 }
@@ -529,7 +531,7 @@ static void Ptc_Request_Data_Pkt_Tx(uint32_t rat_start_of_tx)
 static void Ptc_Process_Data_Pkt()
 {
     uint8_t* payload_p = ptc.rx_result.buf;
-    size_t payload_len = ptc.rx_result.payload_len;
+//    size_t payload_len = ptc.rx_result.payload_len;
 
     uint8_t dev_id;
     uint8_t ack;
@@ -537,12 +539,15 @@ static void Ptc_Process_Data_Pkt()
     Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(dev_id));
     Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(ack));
 
-    // TODO remove the following lines
-    Log_String_Literal("Data:");
-    Log_String_Literal(" payload_len: "); Log_Value_Uint(payload_len);
-    Log_String_Literal(" dev_id: "); Log_Value_Hex(dev_id);
-    Log_String_Literal(" ack: "); Log_Value_Hex(ack);
+//    #ifdef PTC_VERBOSE
+    Log_String_Literal(""); Log_Value_Hex(ptc.start_of_next_frame);
+    Log_String_Literal(", "); Log_Value_Hex(dev_id);
+    Log_String_Literal(", "); Log_Value_Hex(ack);
+//    Log_String_Literal(" payload_len: "); Log_Value_Uint(payload_len);
+//    Log_String_Literal(" dev_id: "); Log_Value_Hex(dev_id);
+//    Log_String_Literal(" ack: "); Log_Value_Hex(ack);
     Log_Line(""); // new line
+//    #endif // #ifdef PTC_VERBOSE
 }
 
 static size_t Ptc_Add_Field_To_Payload(uint8_t** payload_p, void* data_p, size_t data_len)

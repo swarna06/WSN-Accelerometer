@@ -30,6 +30,12 @@
 #define PTC_START_OF_FRAME_OUT
 #endif
 
+// Print additional information
+#if (CFG_DEBUG_VERBOSE == CFG_SETTING_ENABLED)
+#define PTC_VERBOSE
+#endif
+
+
 // Number of sensor nodes in the network
 #define PTC_SENSOR_NODE_NUM         CFG_SENSOR_NODE_NUM
 

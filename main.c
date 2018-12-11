@@ -58,8 +58,8 @@ int main(void)
 
     Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
 
-    uint8_t fsm_state = (uint8_t)-1;
-    uint8_t new_fsm_state = fsm_state;
+//    uint8_t fsm_state = (uint8_t)-1;
+//    uint8_t new_fsm_state = fsm_state;
 
     // Enable debug output signals according to configuration
 #if (CFG_DEBUG_LF_OSC_OUT == CFG_SETTING_ENABLED)
@@ -83,11 +83,11 @@ int main(void)
 
         Rfc_Process();
 
-        if (fsm_state != (new_fsm_state = Ptc_Get_FSM_State()))
-        {
-            fsm_state = new_fsm_state;
-            Log_Val_Hex32("s:", fsm_state);
-        }
+//        if (fsm_state != (new_fsm_state = Ptc_Get_FSM_State()))
+//        {
+//            fsm_state = new_fsm_state;
+//            Log_Val_Hex32("s:", fsm_state);
+//        }
 
         if (Rfc_Ready())
             Ptc_Process();
