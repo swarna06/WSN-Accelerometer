@@ -145,7 +145,7 @@ void Ptc_Process()
 
     case PTC_S_SCHEDULE_FIRST_BEACON_RX:
         // Start reception
-        Rfc_BLE5_Scanner(0, PTC_FRAME_TIME_SEC*1000*1000 + 10*1000); // TODO define timeout
+        Rfc_BLE5_Scanner(0, PTC_FRAME_TIME_SEC*1000*1000 + 10*1000); // 1.01 s TODO define timeout
         ptc.state = PTC_S_WAIT_FIRST_BEACON;
         break;
 
@@ -310,9 +310,9 @@ void Ptc_Process()
 
     case PTC_S_WAIT_TIMEOUT:
 
-//        if (!Ptc_Dev_Is_Sink_Node())
-//            ptc.state = ptc.next_state;
-//        else if (Tm_Timeout_Completed(TM_TOUT_PTC_ID))
+        // This timeout keeps the MCU awake for a moment to
+        // let the Log send the data over UART before going to sleep
+        // FIXME it should be removed for power efficiency
         if (Tm_Timeout_Completed(TM_TOUT_PTC_ID))
             ptc.state = ptc.next_state;
 
@@ -463,9 +463,6 @@ static void Ptc_Request_Beacon_Tx(uint32_t rat_start_of_tx)
     // The time stamp should correspond to the transmission absolute time (RTC)
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.dev_id));
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.start_of_next_frame));
-    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.channel)); // FIXME remove
-    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.tx_power));
-    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.phy_mode));
 
     ptc.tx_param.buf = ptc.tx_buf;
     ptc.tx_param.len = payload_len;
@@ -543,9 +540,6 @@ static void Ptc_Process_Data_Pkt()
     Log_String_Literal(""); Log_Value_Hex(ptc.start_of_next_frame);
     Log_String_Literal(", "); Log_Value_Hex(dev_id);
     Log_String_Literal(", "); Log_Value_Hex(ack);
-//    Log_String_Literal(" payload_len: "); Log_Value_Uint(payload_len);
-//    Log_String_Literal(" dev_id: "); Log_Value_Hex(dev_id);
-//    Log_String_Literal(" ack: "); Log_Value_Hex(ack);
     Log_Line(""); // new line
 //    #endif // #ifdef PTC_VERBOSE
 }
