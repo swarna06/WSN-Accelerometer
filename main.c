@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+// v0.1.5
 //#define DRIVERLIB_NOROM // uncomment to disable ROM
 
 #include <driverlib/prcm.h>
