@@ -60,7 +60,7 @@ void Ptc_RTC_Isr()
 void Ptc_Init()
 {
     // Set bits in 'absent_nodes' for all nodes in the network
-    ptc.absent_nodes = (PTC_SENSOR_NODES_NUM >= 32) ? (uint32_t)-1 : (((uint32_t)1 << PTC_SENSOR_NODES_NUM) - 1);
+    ptc.absent_nodes = (PTC_SENSOR_NODE_NUM >= 32) ? (uint32_t)-1 : (((uint32_t)1 << PTC_SENSOR_NODE_NUM) - 1);
 
     // Note: The device ID determines the role of a device; sink: 0, sensor: other
     // The device id is the LSB of the secondary BLE access address
