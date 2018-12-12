@@ -3,8 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-//#define DRIVERLIB_NOROM
-#define SET_CCFG_IEEE_BLE_0
+//#define DRIVERLIB_NOROM // uncomment to disable ROM
 
 #include <driverlib/prcm.h>
 #include <driverlib/sys_ctrl.h>

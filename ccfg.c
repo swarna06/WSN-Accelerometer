@@ -45,6 +45,8 @@
 #include "inc/hw_ccfg.h"
 #include "inc/hw_ccfg_simple_struct.h"
 
+#include "configuration.h"
+
 //*****************************************************************************
 //
 // Introduction
@@ -76,8 +78,6 @@
 // Set the values of the individual bit fields.
 //
 //*****************************************************************************
-
-#include "configuration.h"
 
 //#####################################
 // Alternative DC/DC settings
