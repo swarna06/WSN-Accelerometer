@@ -26,6 +26,8 @@
 #define CFG_DEBUG_LF_OSC_OUT            CFG_SETTING_ENABLED
 #define CFG_DEBUG_RADIO_OUT             CFG_SETTING_ENABLED
 #define CFG_DEBUG_VERBOSE               CFG_SETTING_ENABLED
+#define CFG_DEBUG_PROFILING             CFG_SETTING_DISABLED
+#define CFG_DEBUG_FSM_STATE             CFG_SETTING_DISABLED
 
 // Device (CC2640R2F) configuration (see ccfg.h)
 #ifndef SET_CCFG_IEEE_BLE_0

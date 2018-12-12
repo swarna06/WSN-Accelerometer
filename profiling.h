@@ -11,6 +11,8 @@
 #include <driverlib/prcm.h>
 #include <driverlib/timer.h>
 
+#include "configuration.h"
+
 // Profiling global variables
 extern volatile uint32_t pfl_tic;
 extern volatile uint32_t pfl_toc;
@@ -48,6 +50,7 @@ extern volatile uint32_t pfl_wcet;
 
 static inline void Pfl_Init()
 {
+#if (CFG_DEBUG_PROFILING == CFG_SETTING_ENABLED)
     // Power timer and enable module clock
     if (PRCMPowerDomainStatus(PRCM_DOMAIN_TIMER) != PRCM_DOMAIN_POWER_ON)
         PRCMPowerDomainOn(PRCM_DOMAIN_TIMER);
@@ -61,6 +64,7 @@ static inline void Pfl_Init()
     TimerConfigure(PFL_TIMER_BASE, TIMER_CFG_PERIODIC_UP);
     TimerLoadSet(PFL_TIMER_BASE, TIMER_A, 0xFFFFFFFF); // note: only timer A should be loaded when timer is configured in full-width mode
     TimerEnable(PFL_TIMER_BASE, TIMER_A);
+#endif // #if (CFG_DEBUG_PROFILING == CFG_SETTING_ENABLED)
 }
 
 #endif /* PROFILING_H_ */

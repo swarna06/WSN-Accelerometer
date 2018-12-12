@@ -14,6 +14,7 @@
 #include "timing.h"
 #include "misc.h"
 #include "board.h"
+#include "configuration.h"
 
 // Control structure to keep the state of the timing module
 static tm_control_t tcs;
@@ -141,8 +142,10 @@ bool Tm_Timeout_Completed(uint8_t tout_idx)
 
 void Tm_Enable_LF_Clock_Output()
 {
+#if (CFG_DEBUG_LF_OSC_OUT == CFG_SETTING_ENABLED)
     IOCPortConfigureSet(BRD_LF_OSC_PIN, IOC_PORT_AON_CLK32K, IOC_STD_OUTPUT);
     AONIOC32kHzOutputEnable();
+#endif // #if (CFG_DEBUG_LF_OSC_OUT == CFG_SETTING_ENABLED)
 }
 
 // ********************************

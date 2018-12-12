@@ -41,39 +41,37 @@ void GPIO_Init();
 
 int main(void)
 {
+    // Modules' initialization
     Pma_Init();
     GPIO_Init();
     Tm_Init();
 
-    Sep_Init(); // FIXME disable to reduce power consumption
+    Sep_Init();
     Log_Init();
-    #if (BRD_BOARD == BRD_LAUNCHPAD)
-    Pfl_Init(); // FIXME disable to reduce power consumption
-    #endif
+    Pfl_Init();
 
     Rfc_Init();
     Ptc_Init();
 
-    Brd_Led_Off(BRD_LED1);
+    // Enable debug output signals according to configuration
+    Tm_Enable_LF_Clock_Output();
+    Rfc_Enable_Output_Signals();
 
+    // Start heart beat period
     Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
 
-//    uint8_t fsm_state = (uint8_t)-1;
-//    uint8_t new_fsm_state = fsm_state;
+    // Variable to keep track of the state of a module's FSM
+    #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
+    uint8_t fsm_state = (uint8_t)-1;
+    uint8_t new_fsm_state = fsm_state;
+    #endif // #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
 
-    // Enable debug output signals according to configuration
-#if (CFG_DEBUG_LF_OSC_OUT == CFG_SETTING_ENABLED)
-    Tm_Enable_LF_Clock_Output();
-#endif
-#if (CFG_DEBUG_RADIO_OUT == CFG_SETTING_ENABLED)
-    Rfc_Enable_Output_Signals();
-#endif
-
+    // Round-robin scheduling (circular execution, no priorities)
     while (1)
     {
         if (Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
         {
-//            Brd_Led_Toggle(BRD_LED1);
+//            Brd_Led_Toggle(BRD_LED1); // heart beat
         }
 
         if (Tm_Sys_Tick())
@@ -83,11 +81,13 @@ int main(void)
 
         Rfc_Process();
 
-//        if (fsm_state != (new_fsm_state = Ptc_Get_FSM_State()))
-//        {
-//            fsm_state = new_fsm_state;
-//            Log_Val_Hex32("s:", fsm_state);
-//        }
+        #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
+        if (fsm_state != (new_fsm_state = Ptc_Get_FSM_State()))
+        {
+            fsm_state = new_fsm_state;
+            Log_Val_Hex32("s:", fsm_state);
+        }
+        #endif // #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
 
         if (Rfc_Ready())
             Ptc_Process();

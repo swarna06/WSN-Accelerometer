@@ -31,6 +31,7 @@
 #include "misc.h"
 #include "power_management.h"
 #include "board.h"
+#include "configuration.h"
 
 // RF core control structure
 rfc_control_t rfc;
@@ -527,6 +528,7 @@ inline uint8_t Rfc_Error()
 
 void Rfc_Enable_Output_Signals()
 {
+#if (CFG_DEBUG_RADIO_OUT == CFG_SETTING_ENABLED)
     // Signals RAT_GPO0 and RAT_GPO1 are routed to RFC_GPO3 and RFC_GPO2 using 'overrides' (see smartrf_settings.c)
     // RAT_GPO0: Goes high when a transmission is initiated and low when the transmission is done
     // RAT_GPO1: Goes high when sync word is detected and low either when the packet has been received or reception has been aborted.
@@ -535,6 +537,7 @@ void Rfc_Enable_Output_Signals()
     // Map signals RFC_GPO3 and RFC_GPO2 to physical pins
     IOCPortConfigureSet(BRD_RFC_TXOUT_PIN, IOC_PORT_RFC_GPO3, IOC_STD_OUTPUT);
     IOCPortConfigureSet(BRD_RFC_RXOUT_PIN, IOC_PORT_RFC_GPO2, IOC_STD_OUTPUT);
+#endif // #if (CFG_DEBUG_RADIO_OUT == CFG_SETTING_ENABLED)
 }
 
 // ********************************
