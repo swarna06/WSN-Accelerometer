@@ -18,14 +18,17 @@
 #if (CFG_DEFAULT_DEV_ID > CFG_SENSOR_NODE_NUM)
 #error Device id is greater than total number of sensors
 #endif // #if (CFG_DEFAULT_DEV_ID > CFG_SENSOR_NODE_NUM)
+#if (CFG_SENSOR_NODE_NUM <= 0)
+#error Sensor node number must be greater than 0
+#endif // #if (CFG_DEFAULT_DEV_ID > CFG_SENSOR_NODE_NUM)
 
 // Debug settings
 #define CFG_DEBUG_DUMMY_SLEEP           CFG_SETTING_DISABLED
 #define CFG_DEBUG_SLEEP_OUT             CFG_SETTING_ENABLED
 #define CFG_DEBUG_START_OF_FRAME_OUT    CFG_SETTING_ENABLED
-#define CFG_DEBUG_LF_OSC_OUT            CFG_SETTING_ENABLED
-#define CFG_DEBUG_RADIO_OUT             CFG_SETTING_ENABLED
-#define CFG_DEBUG_VERBOSE               CFG_SETTING_ENABLED
+#define CFG_DEBUG_LF_OSC_OUT            CFG_SETTING_DISABLED
+#define CFG_DEBUG_RADIO_OUT             CFG_SETTING_DISABLED
+#define CFG_DEBUG_VERBOSE               CFG_SETTING_DISABLED
 #define CFG_DEBUG_PROFILING             CFG_SETTING_DISABLED
 #define CFG_DEBUG_FSM_STATE             CFG_SETTING_DISABLED
 
