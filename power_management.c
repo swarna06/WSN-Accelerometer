@@ -22,6 +22,7 @@
 #include "serial_port.h"
 
 #include "board.h"
+#include "log.h"
 
 void Pma_RTC_Isr()
 {
@@ -162,7 +163,10 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     // Dummy sleep; busy-wait until RTC event
     AONRTCEventClear(AON_RTC_CH0);
     AONRTCCompareValueSet(AON_RTC_CH0, rtc_wakeup_time);
-    while (!AONRTCEventGet(AON_RTC_CH0)); // busy wait
+    while (!AONRTCEventGet(AON_RTC_CH0)) // busy wait
+    {
+        Log_Process(); // flush log queue meanwhile
+    }
 
 #else
 
