@@ -27,6 +27,34 @@
 #endif
 
 // ********************************
+// Radio and protocol
+// ********************************
+// Default radio parameters
+#define PTC_DEFAULT_TX_POW          RFC_TX_POW_0dBm
+#define PTC_DEFAULT_PHY_MODE        RFC_PHY_MODE_125KBPS
+#define PTC_DEFAULT_CHANNEL         37
+
+// Maximum number of consecutive errors
+#define PTC_MAX_ERR_NUM             3
+
+// Macro used to add field pay load (increase readability); see 'Ptc_Add_Field_To_Payload()' and 'Ptc_Get_Field_From_Payload()'
+#define Ptc_Payload_Field(f)        &f, sizeof(f)
+
+// Number of sensor nodes in the network
+#define PTC_SENSOR_NODE_NUM         CFG_SENSOR_NODE_NUM
+
+// Size of reception-transmission buffer
+#define PTC_RXTX_BUF_LEN            256
+
+// Number of random seeds
+#define PTC_RAND_SEEDS_NUM          4
+
+// Sink node device id and macro to evaluate if the device is the sink node or a sensor node
+#define PTC_SINK_NODE_DEV_ID        0
+#define Ptc_Dev_Is_Sink_Node()      (ptc.dev_id == PTC_SINK_NODE_DEV_ID)
+#define Ptc_Dev_Is_Sensor_Node()    (ptc.dev_id != PTC_SINK_NODE_DEV_ID)
+
+// ********************************
 // Timing
 // ********************************
 // Reception timeout
@@ -44,7 +72,8 @@
 //#define PTC_RTC_FRAME_TIME          (TM_RTC_TICKS_PER_SEC * PTC_FRAME_TIME_SEC)/8
 
 // Slot duration
-#define PTC_RTC_SLOT_TIME           (PTC_RTC_FRAME_TIME/4)
+#define PTC_RTC_SLOT_NUM            (PTC_SENSOR_NODE_NUM + 1)
+#define PTC_RTC_SLOT_TIME           (PTC_RTC_FRAME_TIME/PTC_RTC_SLOT_NUM)
 
 // Number of RTC ticks required to wake up
 #define PTC_RTC_MCU_WAKEUP_TIME     (PMA_WAKEUP_TIME_USEC / TM_RTC_USEC_PER_TICK)
@@ -52,32 +81,12 @@
 #define PTC_RTC_TOTAL_WAKEUP_TIME   (PTC_RTC_MCU_WAKEUP_TIME + PTC_RTC_RADIO_WAKEUP_TIME)
 
 // ********************************
-// Radio and protocol
+// Reliability test
 // ********************************
-// Default radio parameters
-#define PTC_DEFAULT_TX_POW          RFC_TX_POW_0dBm
-#define PTC_DEFAULT_PHY_MODE        RFC_PHY_MODE_125KBPS
-#define PTC_DEFAULT_CHANNEL         37
-
-// Maximum number of consecutive errors
-#define PTC_MAX_ERR_NUM             3
-
-// Macro used to add field field payload (increase readability); see 'Ptc_Add_Field_To_Payload()' and 'Ptc_Get_Field_From_Payload()'
-#define Ptc_Payload_Field(f)        &f, sizeof(f)
-
-// Number of sensor nodes in the network
-#define PTC_SENSOR_NODE_NUM         CFG_SENSOR_NODE_NUM
-
-// Size of reception-transmission buffer
-#define PTC_RXTX_BUF_LEN            256
-
-// Number of random seeds
-#define PTC_RAND_SEEDS_NUM          4
-
-// Sink node device id and macro to evaluate if the device is the sink node or a sensor node
-#define PTC_SINK_NODE_DEV_ID        0
-#define Ptc_Dev_Is_Sink_Node()      (ptc.dev_id == PTC_SINK_NODE_DEV_ID)
-#define Ptc_Dev_Is_Sensor_Node()    (ptc.dev_id != PTC_SINK_NODE_DEV_ID)
+//#define PTC_SUBSLOT_NUM             8
+#define PTC_SUBSLOT_NUM             2 // xxx
+#define PTC_RTC_SUBSLOT_TIME        (PTC_RTC_SLOT_TIME/PTC_SUBSLOT_NUM) // ~30 ms
+#define PTC_TEST_TOUT_MSEC          20
 
 // ********************************
 // Control structure and FSM
@@ -105,6 +114,11 @@ typedef enum
     PTC_S_SCHEDULE_SLOT_RADIO_OP,
     PTC_S_WAIT_PKT_RECEPTION,
 
+    // Reliability test states
+    PTC_S_WAIT_START_OF_SUBSLOT = 0x30,
+    PTC_S_SCHEDULE_SUBSLOT_RADIO_OP,
+    PTC_S_WAIT_TEST_PKT_RECEPTION,
+
     // Debug states
     PTC_S_WAIT_TIMEOUT = 0xF0,
 } ptc_state_t;
@@ -123,6 +137,9 @@ typedef struct
     uint16_t random_seeds[PTC_RAND_SEEDS_NUM];
     uint32_t start_of_next_frame;
     uint32_t start_of_next_slot;
+    uint32_t start_of_next_subslot;
+    uint8_t slot_count;
+    uint8_t subslot_count;
 
     uint16_t tx_power;
     uint8_t phy_mode;
@@ -137,7 +154,7 @@ typedef struct
 
 void Ptc_Init();
 
-void Ptc_Process();
+void (*Ptc_Process)();
 
 uint8_t Ptc_Get_FSM_State();
 
