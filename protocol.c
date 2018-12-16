@@ -36,9 +36,8 @@
 ptc_control_t ptc;
 
 // Auxiliary functions
-static void _Ptc_Process(); // FIXME remove
-
 static void Ptc_Sink_Node_FSM();
+static void Ptc_Sensor_Node_FSM();
 static bool Ptc_Init_Random_Seeds();
 static uint32_t Ptc_Calculate_RAT_Start_Time(uint32_t rtc_start_of_next_event, int rat_time_offset);
 static void Ptc_Adjust_Local_Clock(uint32_t rtc_start_of_curr_frame, uint32_t rat_rx_timestamp);
@@ -110,7 +109,7 @@ void Ptc_Init()
     if (Ptc_Dev_Is_Sink_Node())
         Ptc_Process = Ptc_Sink_Node_FSM;
     else
-        Ptc_Process = _Ptc_Process; // xxx
+        Ptc_Process = Ptc_Sensor_Node_FSM;
 
     #ifdef PTC_START_OF_FRAME_OUT
     // Configure an RTC CH in compare mode and enable interrupt
@@ -136,13 +135,7 @@ static void Ptc_Sink_Node_FSM()
         break;
 
     case PTC_S_WAIT_RF_CORE_INIT:
-        if (Ptc_Dev_Is_Sink_Node())
-            ptc.state = PTC_S_WAIT_START_OF_FRAME;
-        else
-        {
-            Rfc_Synchronize_RAT();
-            ptc.state = PTC_S_SCHEDULE_FIRST_BEACON_RX;
-        }
+        ptc.state = PTC_S_WAIT_START_OF_FRAME;
         break;
 
     case PTC_S_WAIT_RF_CORE_WAKEUP:
@@ -156,7 +149,6 @@ static void Ptc_Sink_Node_FSM()
         ptc.start_of_next_frame += PTC_RTC_FRAME_TIME;
         ptc.start_of_next_slot = ptc.start_of_next_frame;
         ptc.slot_count = 0;
-        ptc.dev_index = 1;
 
         // Test
         ptc.start_of_next_subslot = ptc.start_of_next_frame;
@@ -233,7 +225,7 @@ static void Ptc_Sink_Node_FSM()
         else
         {
             Log_String_Literal(""); Log_Value_Int(ptc.start_of_next_frame);
-            Log_String_Literal(", "); Log_Value_Hex(ptc.dev_index);
+            Log_String_Literal(", "); Log_Value_Hex(ptc.slot_count);
             Log_String_Literal(", "); Log_Value_Hex(ptc.rx_result.err_flags << 1);
             Log_Line(""); // new line
         }
@@ -308,6 +300,217 @@ static void Ptc_Sink_Node_FSM()
 
     default:
         assertion(!"Ptc_Sink_Node_FSM: Unknown state!");
+
+    }
+}
+
+static void Ptc_Sensor_Node_FSM()
+{
+    switch (ptc.state)
+    {
+    // Common states for both device roles
+    case PTC_S_IDLE:
+        break;
+
+    case PTC_S_WAIT_RF_CORE_INIT:
+        Rfc_Synchronize_RAT();
+        ptc.state = PTC_S_SCHEDULE_FIRST_BEACON_RX;
+        break;
+
+    case PTC_S_WAIT_RF_CORE_WAKEUP:
+        Rfc_Synchronize_RAT();
+        ptc.state = ptc.next_state;
+        break;
+
+    case PTC_S_SCHEDULE_FIRST_BEACON_RX:
+        // Start reception
+        Rfc_BLE5_Scanner(0, PTC_FRAME_TIME_SEC*1000*1000 + 10*1000); // 1.01 s TODO define timeout
+        ptc.state = PTC_S_WAIT_FIRST_BEACON;
+        break;
+
+    case PTC_S_WAIT_FIRST_BEACON:
+        Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);
+        if ((ptc.rx_result.err_flags == 0) && Ptc_Process_Beacon()) // no errors
+            ptc.state = PTC_S_WAIT_START_OF_SLOT;
+        else
+        {
+            Pma_MCU_Sleep(Tm_Get_RTC_Time() + PTC_RTC_FRAME_TIME);
+
+            ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
+            ptc.next_state = PTC_S_SCHEDULE_FIRST_BEACON_RX;
+        }
+        break;
+
+    case PTC_S_WAIT_START_OF_FRAME:
+    {
+        // Calculate time of start of next frame and next slot
+        ptc.start_of_next_frame += PTC_RTC_FRAME_TIME;
+        ptc.start_of_next_slot = ptc.start_of_next_frame;
+        ptc.slot_count = 0;
+
+        // Test
+        ptc.start_of_next_subslot = ptc.start_of_next_frame;
+        ptc.subslot_count = PTC_SUBSLOT_NUM - 1;
+
+        // Calculate wake up time and go to sleep
+        uint32_t wakeup_time = ptc.start_of_next_frame - PTC_RTC_TOTAL_WAKEUP_TIME;
+        Pma_MCU_Sleep(wakeup_time);
+
+        #ifdef PTC_START_OF_FRAME_OUT
+        // Set RTC compare value to match the start of next frame
+        AONRTCEventClear(AON_RTC_CH1);
+        AONRTCCompareValueSet(AON_RTC_CH1, ptc.start_of_next_frame);
+        #endif // #ifdef PTC_START_OF_FRAME_OUT
+
+        #ifdef PTC_VERBOSE
+        Log_Val_Uint32("rtc_SoNF: ", ptc.start_of_next_frame);
+        #endif // #ifdef PTC_VERBOSE
+
+        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
+        ptc.next_state = PTC_S_SCHEDULE_BEACON_RADIO_OP;
+    }
+    break;
+
+    case PTC_S_SCHEDULE_BEACON_RADIO_OP:
+    {
+        // Calculate the start time of radio operation and send request to the RF core
+        // An offset is used to compensate for (measured) latencies of the RF core in the start of the reception/transmission
+        uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_frame, PTC_RAT_RX_START_OFFSET);
+
+        // Request radio operation to the RF core
+        Rfc_BLE5_Scanner(rat_start_time, PTC_RX_TIMEOUT_USEC + PTC_OFFSET_RX_TOUT_USEC);
+        ptc.state = PTC_S_WAIT_PKT_RECEPTION;
+
+        Tm_Start_Timeout(TM_TOUT_PTC_ID, PTC_TEST_TOUT_MSEC); // TODO remove
+    }
+    break;
+
+    case PTC_S_WAIT_START_OF_SLOT:
+    {
+        ptc.start_of_next_slot += (PTC_RTC_SLOT_TIME * ptc.dev_id);
+        ptc.start_of_next_subslot = ptc.start_of_next_slot;
+        ptc.subslot_count = PTC_SUBSLOT_NUM - 1;
+
+        // Calculate wake up time and go to sleep
+        uint32_t wakeup_time = ptc.start_of_next_slot - PTC_RTC_TOTAL_WAKEUP_TIME;
+        Pma_MCU_Sleep(wakeup_time);
+
+        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
+        ptc.next_state = PTC_S_SCHEDULE_SLOT_RADIO_OP;
+    }
+    break;
+
+    case PTC_S_SCHEDULE_SLOT_RADIO_OP:
+    {
+        // Calculate the start time of radio operation and send request to the RF core
+        // An offset is used to compensate for (measured) latencies of the RF core in the start of the reception/transmission
+        uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_slot, PTC_RAT_TX_START_OFFSET);
+
+        // Request radio operation to the RF core
+        Ptc_Request_Data_Pkt_Tx(rat_start_time);
+        ptc.state = PTC_S_WAIT_TIMEOUT;
+        ptc.next_state = PTC_S_WAIT_START_OF_SUBSLOT;
+
+        Tm_Start_Timeout(TM_TOUT_PTC_ID, PTC_TEST_TOUT_MSEC); // TODO remove
+    }
+    break;
+
+    case PTC_S_WAIT_PKT_RECEPTION:
+
+        Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);
+        if (ptc.rx_result.err_flags == 0 && Ptc_Process_Beacon())
+        {
+            ptc.flags |= PTC_F_BEACON_RXED;
+            ptc.err_count = PTC_MAX_ERR_NUM;
+        }
+        else
+        {
+            ptc.flags &= ~PTC_F_BEACON_RXED;
+            ptc.err_count--;
+            if (ptc.err_count == 0) // max consecutive errors reached ?
+            {
+                ptc.flags &= ~PTC_F_IN_SYNC; // out of sync
+                Rfc_BLE5_Set_PHY_Mode(PTC_DEFAULT_PHY_MODE);
+                Rfc_BLE5_Set_Channel(PTC_DEFAULT_CHANNEL);
+
+                // If we go to the PTC_S_WAIT_FIRST_BEACON we will sleep immediately
+                ptc.state = PTC_S_WAIT_FIRST_BEACON;
+                break;
+            }
+        }
+
+        ptc.next_state = PTC_S_WAIT_START_OF_SUBSLOT;
+        ptc.state = PTC_S_WAIT_TIMEOUT;
+        break;
+
+    // ********************************
+    // Reliability test states
+    // ********************************
+    case PTC_S_WAIT_START_OF_SUBSLOT:
+    {
+        ptc.start_of_next_subslot += PTC_RTC_SUBSLOT_TIME;
+
+        // Calculate wake up time and go to sleep
+        uint32_t wakeup_time = ptc.start_of_next_subslot - PTC_RTC_TOTAL_WAKEUP_TIME;
+        Pma_MCU_Sleep(wakeup_time);
+
+        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
+        ptc.next_state = PTC_S_SCHEDULE_SUBSLOT_RADIO_OP;
+    }
+    break;
+
+    case PTC_S_SCHEDULE_SUBSLOT_RADIO_OP:
+    {
+        // Calculate the start time of radio operation and send request to the RF core
+        // An offset is used to compensate for (measured) latencies of the RF core in the start of the reception/transmission
+        uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_subslot, PTC_RAT_TX_START_OFFSET);
+        if(rat_start_time) (void)0; // FIXME remove
+
+        if (ptc.slot_count == 0) // first slot ?
+        {
+//            Rfc_BLE5_Scanner(rat_start_time, PTC_RX_TIMEOUT_USEC + PTC_OFFSET_RX_TOUT_USEC); // TODO
+            ptc.state = PTC_S_WAIT_TEST_PKT_RECEPTION;
+        }
+        else
+        {
+//            Ptc_Request_Beacon_Tx(rat_start_time); // TODO
+            ptc.state = PTC_S_WAIT_TIMEOUT;
+        }
+
+        ptc.subslot_count--;
+        if (ptc.subslot_count == 0)
+        {
+            if (ptc.slot_count == 0)
+            {
+                ptc.slot_count = 1;
+                ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
+            }
+            else
+                ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
+        }
+        else
+            ptc.next_state = PTC_S_WAIT_START_OF_SUBSLOT;
+
+        Tm_Start_Timeout(TM_TOUT_PTC_ID, PTC_TEST_TOUT_MSEC); // TODO remove
+    }
+    break;
+
+    case PTC_S_WAIT_TEST_PKT_RECEPTION:
+        ptc.state = PTC_S_WAIT_TIMEOUT;
+        break;
+
+    case PTC_S_WAIT_TIMEOUT:
+
+        // This timeout keeps the MCU awake for a moment to
+        // let the Log send the data over UART before going to sleep
+        // FIXME it should be removed for power efficiency
+        if (Tm_Timeout_Completed(TM_TOUT_PTC_ID))
+            ptc.state = ptc.next_state;
+
+        break;
+
+    default:
+        assertion(!"Ptc_Sensor_Node_FSM: Unknown state!");
 
     }
 }
@@ -555,205 +758,3 @@ static void Ptc_Get_Field_From_Payload(uint8_t** payload_p, void* data_p, size_t
 // Test functions
 // ********************************
 
-static void _Ptc_Process()
-{
-    switch (ptc.state)
-    {
-    // Common states for both device roles
-    case PTC_S_IDLE:
-        break;
-
-    case PTC_S_WAIT_RF_CORE_INIT:
-        if (Ptc_Dev_Is_Sink_Node())
-            ptc.state = PTC_S_WAIT_START_OF_FRAME;
-        else
-        {
-            Rfc_Synchronize_RAT();
-            ptc.state = PTC_S_SCHEDULE_FIRST_BEACON_RX;
-        }
-        break;
-
-    case PTC_S_WAIT_RF_CORE_WAKEUP:
-        Rfc_Synchronize_RAT();
-        ptc.state = ptc.next_state;
-        break;
-
-    case PTC_S_SCHEDULE_FIRST_BEACON_RX:
-        // Start reception
-        Rfc_BLE5_Scanner(0, PTC_FRAME_TIME_SEC*1000*1000 + 10*1000); // 1.01 s TODO define timeout
-        ptc.state = PTC_S_WAIT_FIRST_BEACON;
-        break;
-
-    case PTC_S_WAIT_FIRST_BEACON:
-        Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);
-        if ((ptc.rx_result.err_flags == 0) && Ptc_Process_Beacon()) // no errors
-            ptc.state = PTC_S_WAIT_START_OF_SLOT;
-        else
-        {
-            Pma_MCU_Sleep(Tm_Get_RTC_Time() + PTC_RTC_FRAME_TIME);
-
-            ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
-            ptc.next_state = PTC_S_SCHEDULE_FIRST_BEACON_RX;
-        }
-        break;
-
-    case PTC_S_WAIT_START_OF_FRAME:
-    {
-        // Calculate time of start of next frame and next slot
-        ptc.start_of_next_frame += PTC_RTC_FRAME_TIME;
-
-        if (Ptc_Dev_Is_Sink_Node())
-        {
-            ptc.start_of_next_slot = ptc.start_of_next_frame + PTC_RTC_SLOT_TIME;
-            ptc.dev_index = 1;
-        }
-        else
-            ptc.start_of_next_slot = ptc.start_of_next_frame + (PTC_RTC_SLOT_TIME * ptc.dev_id);
-
-        // Calculate wake up time and go to sleep
-        uint32_t wakeup_time = ptc.start_of_next_frame - PTC_RTC_TOTAL_WAKEUP_TIME;
-        Pma_MCU_Sleep(wakeup_time);
-
-        #ifdef PTC_START_OF_FRAME_OUT
-        // Set RTC compare value to match the start of next frame
-        AONRTCEventClear(AON_RTC_CH1);
-        AONRTCCompareValueSet(AON_RTC_CH1, ptc.start_of_next_frame);
-        #endif // #ifdef PTC_START_OF_FRAME_OUT
-
-        #ifdef PTC_VERBOSE
-        Log_Val_Uint32("rtc_SoNF: ", ptc.start_of_next_frame);
-        #endif // #ifdef PTC_VERBOSE
-
-        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
-        ptc.next_state = PTC_S_SCHEDULE_BEACON_RADIO_OP;
-    }
-    break;
-
-    case PTC_S_SCHEDULE_BEACON_RADIO_OP:
-    {
-        // Calculate the start time of packet reception/transmission and request operation to the RF core
-        // An offset is used to compensate for (measured) latencies of the RF core in the start of the reception/transmission
-        int32_t offset = Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_RX_START_OFFSET;
-        uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_frame, offset);
-
-        // Request radio operation to the RF core
-        // If device is sink -> transmit; if device is sensor receive
-        if (Ptc_Dev_Is_Sink_Node())
-        {
-            Ptc_Request_Beacon_Tx(rat_start_time);
-            ptc.state = PTC_S_WAIT_TIMEOUT;
-            ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
-        }
-        else
-        {
-            Rfc_BLE5_Scanner(rat_start_time, PTC_RX_TIMEOUT_USEC + PTC_OFFSET_RX_TOUT_USEC);
-            ptc.state = PTC_S_WAIT_PKT_RECEPTION;
-        };
-
-        Tm_Start_Timeout(TM_TOUT_PTC_ID, 30); // TODO remove
-    }
-    break;
-
-    case PTC_S_WAIT_START_OF_SLOT:
-    {
-        // Calculate wake up time and go to sleep
-        uint32_t wakeup_time = ptc.start_of_next_slot - PTC_RTC_TOTAL_WAKEUP_TIME;
-        Pma_MCU_Sleep(wakeup_time);
-
-        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
-        ptc.next_state = PTC_S_SCHEDULE_SLOT_RADIO_OP;
-    }
-    break;
-
-    case PTC_S_SCHEDULE_SLOT_RADIO_OP:
-    {
-        // Calculate the start time of packet reception/transmission and request operation to the RF core
-        // An offset is used to compensate for (measured) latencies of the RF core in the start of the reception/transmission
-        // IMPORTANT: Notice the negation in the !Ptc_Dev_Is_Sink_Node()? conditional; roles are exchanged with respect to the start of frame
-        int32_t offset = !Ptc_Dev_Is_Sink_Node() ? PTC_RAT_TX_START_OFFSET : PTC_RAT_RX_START_OFFSET;
-        uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_slot, offset);
-
-        // Request radio operation to the RF core
-        // If device is sink -> receive; if device is sensor transmit
-        if (Ptc_Dev_Is_Sink_Node())
-        {
-            Rfc_BLE5_Scanner(rat_start_time, PTC_RX_TIMEOUT_USEC + PTC_OFFSET_RX_TOUT_USEC);
-            ptc.state = PTC_S_WAIT_PKT_RECEPTION;
-        }
-        else
-        {
-            Ptc_Request_Data_Pkt_Tx(rat_start_time);
-            ptc.state = PTC_S_WAIT_TIMEOUT;
-            ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
-        };
-
-        Tm_Start_Timeout(TM_TOUT_PTC_ID, 30); // TODO remove
-    }
-    break;
-
-    case PTC_S_WAIT_PKT_RECEPTION:
-        Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);
-        if (Ptc_Dev_Is_Sink_Node())
-        {
-            if (ptc.rx_result.err_flags == 0)
-                Ptc_Process_Data_Pkt();
-            else
-            {
-//                Log_Val_Hex32("Rx error: ", ptc.rx_result.err_flags);
-                Log_String_Literal(""); Log_Value_Hex(ptc.start_of_next_frame);
-                Log_String_Literal(", "); Log_Value_Hex(ptc.dev_index);
-                Log_String_Literal(", "); Log_Value_Hex(ptc.rx_result.err_flags << 1);
-                Log_Line(""); // new line
-            }
-
-            ptc.dev_index++;
-            if (ptc.dev_index > PTC_SENSOR_NODE_NUM)
-                ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
-            else
-            {
-                ptc.start_of_next_slot += PTC_RTC_SLOT_TIME;
-                ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
-            }
-        }
-        else
-        {
-            if (ptc.rx_result.err_flags == 0 && Ptc_Process_Beacon())
-            {
-                ptc.flags |= PTC_F_BEACON_RXED;
-                ptc.err_count = PTC_MAX_ERR_NUM;
-            }
-            else
-            {
-                ptc.flags &= ~PTC_F_BEACON_RXED;
-                ptc.err_count--;
-                if (ptc.err_count == 0) // max consecutive errors reached ?
-                {
-                    ptc.flags &= ~PTC_F_IN_SYNC; // out of sync
-                    Rfc_BLE5_Set_PHY_Mode(PTC_DEFAULT_PHY_MODE);
-                    Rfc_BLE5_Set_Channel(PTC_DEFAULT_CHANNEL);
-
-                    // If we go to the PTC_S_WAIT_FIRST_BEACON we will sleep immediately
-                    ptc.state = PTC_S_WAIT_FIRST_BEACON;
-                    break;
-                }
-            }
-            ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
-        }
-
-        ptc.state = PTC_S_WAIT_TIMEOUT;
-        break;
-
-    case PTC_S_WAIT_TIMEOUT:
-
-        // This timeout keeps the MCU awake for a moment to
-        // let the Log send the data over UART before going to sleep
-        // FIXME it should be removed for power efficiency
-        if (Tm_Timeout_Completed(TM_TOUT_PTC_ID))
-            ptc.state = ptc.next_state;
-
-        break;
-
-    default:
-        assertion(!"Ptc_Process_Sink_Init: Unknown state!");
-    }
-}

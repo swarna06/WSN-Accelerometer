@@ -83,8 +83,8 @@
 // ********************************
 // Reliability test
 // ********************************
-//#define PTC_SUBSLOT_NUM             8
-#define PTC_SUBSLOT_NUM             2 // xxx
+#define PTC_SUBSLOT_NUM             8
+//#define PTC_SUBSLOT_NUM             2 // xxx
 #define PTC_RTC_SUBSLOT_TIME        (PTC_RTC_SLOT_TIME/PTC_SUBSLOT_NUM) // ~30 ms
 #define PTC_TEST_TOUT_MSEC          20
 
@@ -131,7 +131,7 @@ typedef struct
     uint32_t absent_nodes;
     uint8_t err_count;
 
-    uint8_t dev_id, dev_index;
+    uint8_t dev_id;
     uint32_t ble_access_l, ble_access_h;
 
     uint16_t random_seeds[PTC_RAND_SEEDS_NUM];
