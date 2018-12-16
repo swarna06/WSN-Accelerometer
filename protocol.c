@@ -274,17 +274,15 @@ static void Ptc_Sink_Node_FSM()
 
     case PTC_S_SCHEDULE_SUBSLOT_RADIO_OP:
     {
-        // Calculate the start time of radio operation and send request to the RF core
-        // An offset is used to compensate for (measured) latencies of the RF core in the start of the reception/transmission
-        uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_subslot, PTC_RAT_TX_START_OFFSET);
-
         if (ptc.slot_count == 0) // first slot ?
         {
+            uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_subslot, PTC_RAT_TX_START_OFFSET);
             Ptc_Request_Test_Pkt_Tx(rat_start_time);
             ptc.state = PTC_S_WAIT_TIMEOUT;
         }
         else
         {
+            uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_subslot, PTC_RAT_RX_START_OFFSET);
             Rfc_BLE5_Scanner(rat_start_time, PTC_RX_TIMEOUT_USEC + PTC_OFFSET_RX_TOUT_USEC);
             ptc.state = PTC_S_WAIT_TEST_PKT_RECEPTION;
         }
@@ -482,19 +480,16 @@ static void Ptc_Sensor_Node_FSM()
 
     case PTC_S_SCHEDULE_SUBSLOT_RADIO_OP:
     {
-        // Calculate the start time of radio operation and send request to the RF core
-        // An offset is used to compensate for (measured) latencies of the RF core in the start of the reception/transmission
-        uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_subslot, PTC_RAT_TX_START_OFFSET);
-        if(rat_start_time) (void)0; // FIXME remove
-
         if (ptc.slot_count == 0) // first slot ?
         {
-//            Rfc_BLE5_Scanner(rat_start_time, PTC_RX_TIMEOUT_USEC + PTC_OFFSET_RX_TOUT_USEC); // TODO
+            uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_subslot, PTC_RAT_RX_START_OFFSET);
+            Rfc_BLE5_Scanner(rat_start_time, PTC_RX_TIMEOUT_USEC + PTC_OFFSET_RX_TOUT_USEC);
             ptc.state = PTC_S_WAIT_TEST_PKT_RECEPTION;
         }
         else
         {
-//            Ptc_Request_Beacon_Tx(rat_start_time); // TODO
+            uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_subslot, PTC_RAT_TX_START_OFFSET);
+            Ptc_Request_Test_Pkt_Tx(rat_start_time);
             ptc.state = PTC_S_WAIT_TIMEOUT;
         }
 
