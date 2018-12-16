@@ -48,6 +48,9 @@ static ptc_test_t test =
  .channel = channel,
 };
 
+// Pseudo-random number generation variables
+uint16_t lfsr;
+
 // Auxiliary functions
 static void Ptc_Sink_Node_FSM();
 static void Ptc_Sensor_Node_FSM();
@@ -60,6 +63,8 @@ static void Ptc_Request_Data_Pkt_Tx(uint32_t rat_start_of_tx);
 static void Ptc_Process_Data_Pkt();
 static size_t Ptc_Add_Field_To_Payload(uint8_t** payload_p, void* data_p, size_t data_len);
 static void Ptc_Get_Field_From_Payload(uint8_t** payload_p, void* data_p, size_t data_len);
+
+static void Ptc_Request_Test_Pkt_Tx(uint32_t rat_start_of_tx);
 
 #ifdef PTC_START_OF_FRAME_OUT
 void Ptc_RTC_Isr()
@@ -93,6 +98,7 @@ void Ptc_Init()
 
     // Initialize random seeds using the True Random Number Generator (TRNG)
     Ptc_Init_Random_Seeds();
+    Lfsr_Seed(ptc.random_seeds[0]);
 
     // Set transmission power, PHY mode and frequency channel
     ptc.tx_power = PTC_DEFAULT_TX_POW;
@@ -271,16 +277,15 @@ static void Ptc_Sink_Node_FSM()
         // Calculate the start time of radio operation and send request to the RF core
         // An offset is used to compensate for (measured) latencies of the RF core in the start of the reception/transmission
         uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_subslot, PTC_RAT_TX_START_OFFSET);
-        if(rat_start_time) (void)0; // FIXME remove
 
         if (ptc.slot_count == 0) // first slot ?
         {
-            //                Ptc_Request_Beacon_Tx(rat_start_time); // TODO
+            Ptc_Request_Test_Pkt_Tx(rat_start_time);
             ptc.state = PTC_S_WAIT_TIMEOUT;
         }
         else
         {
-            //                Rfc_BLE5_Scanner(rat_start_time, PTC_RX_TIMEOUT_USEC + PTC_OFFSET_RX_TOUT_USEC); // TODO
+            Rfc_BLE5_Scanner(rat_start_time, PTC_RX_TIMEOUT_USEC + PTC_OFFSET_RX_TOUT_USEC);
             ptc.state = PTC_S_WAIT_TEST_PKT_RECEPTION;
         }
 
@@ -712,8 +717,8 @@ static bool Ptc_Process_Beacon()
 
     #ifdef PTC_VERBOSE
     size_t payload_len = ptc.rx_result.payload_len;
-    Log_String_Literal("Beacon:");
-    Log_String_Literal(" payload_len: "); Log_Value_Uint(payload_len);
+    Log_String_Literal("Beacon ->");
+    Log_String_Literal(" len: "); Log_Value_Uint(payload_len);
     Log_String_Literal(" dev_id: "); Log_Value_Hex(dev_id);
     Log_String_Literal(" i: "); Log_Value_Hex(ptc.test->i);
     Log_String_Literal(" j: "); Log_Value_Hex(ptc.test->j);
@@ -783,3 +788,19 @@ static void Ptc_Get_Field_From_Payload(uint8_t** payload_p, void* data_p, size_t
 // Test functions
 // ********************************
 
+static void Ptc_Request_Test_Pkt_Tx(uint32_t rat_start_of_tx)
+{
+    uint16_t* payload_p = (uint16_t*)ptc.tx_buf;
+    uint16_t random_val;
+
+    for (size_t n = 0; n < RFC_MAX_PAYLOAD_LEN/sizeof(random_val); n++)
+    {
+        random_val = Lfsr_Fibonacci();
+        payload_p[n] = random_val;
+    }
+
+    ptc.tx_param.buf = ptc.tx_buf;
+    ptc.tx_param.len = RFC_MAX_PAYLOAD_LEN;
+    ptc.tx_param.rat_start_time = rat_start_of_tx;
+    Rfc_BLE5_Adv_Aux(&ptc.tx_param);
+}

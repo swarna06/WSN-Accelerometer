@@ -33,5 +33,19 @@
 #define is_aligned(POINTER, BYTE_COUNT) \
         (((uintptr_t)(const void *)(POINTER)) % (BYTE_COUNT) == 0)
 
+// Pseudo-random number generation
+extern uint16_t lfsr;
+
+inline void Lfsr_Seed(uint16_t seed)
+{
+    lfsr = seed;
+}
+
+inline uint16_t Lfsr_Fibonacci()
+{
+    uint16_t bit = ((lfsr >> 0) ^ (lfsr >> 2) ^ (lfsr >> 3) ^ (lfsr >> 5) ) & 1;
+    lfsr =  (lfsr >> 1) | (bit << 15);
+    return lfsr;
+}
 
 #endif /* MISC_H_ */
