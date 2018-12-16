@@ -28,9 +28,14 @@
 #define CFG_DEBUG_START_OF_FRAME_OUT    CFG_SETTING_ENABLED
 #define CFG_DEBUG_LF_OSC_OUT            CFG_SETTING_DISABLED
 #define CFG_DEBUG_RADIO_OUT             CFG_SETTING_DISABLED
-#define CFG_DEBUG_VERBOSE               CFG_SETTING_DISABLED
+#define CFG_DEBUG_VERBOSE               CFG_SETTING_ENABLED
 #define CFG_DEBUG_PROFILING             CFG_SETTING_DISABLED
 #define CFG_DEBUG_FSM_STATE             CFG_SETTING_DISABLED
+
+// Reliability test configuration
+#define CFG_RELIAB_TEST_PHY_MODES       {RFC_PHY_MODE_125KBPS}
+#define CFG_RELIAB_TEST_TX_POWER        {RFC_TX_POW_0dBm}
+#define CFG_RELIAB_TEST_CHANNELS        {37}
 
 // Device (CC2640R2F) configuration (see ccfg.h)
 #ifndef SET_CCFG_IEEE_BLE_0

@@ -33,7 +33,20 @@
 #include "misc.h"
 #include "board.h"
 
-ptc_control_t ptc;
+// Module's control structure
+static ptc_control_t ptc;
+
+// Test variables
+static uint8_t phy_mode[] = CFG_RELIAB_TEST_PHY_MODES;
+static rfc_tx_power_t tx_power[] = CFG_RELIAB_TEST_TX_POWER;
+static uint8_t channel[] = CFG_RELIAB_TEST_CHANNELS;
+static ptc_test_t test =
+{
+ .i = 0, .j = 0, .k = 0,
+ .phy_mode = phy_mode,
+ .tx_power = tx_power,
+ .channel = channel,
+};
 
 // Auxiliary functions
 static void Ptc_Sink_Node_FSM();
@@ -110,6 +123,9 @@ void Ptc_Init()
         Ptc_Process = Ptc_Sink_Node_FSM;
     else
         Ptc_Process = Ptc_Sensor_Node_FSM;
+
+    // Test fields
+    ptc.test = &test;
 
     #ifdef PTC_START_OF_FRAME_OUT
     // Configure an RTC CH in compare mode and enable interrupt
@@ -655,6 +671,9 @@ static void Ptc_Request_Beacon_Tx(uint32_t rat_start_of_tx)
     // The time stamp should correspond to the transmission absolute time (RTC)
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.dev_id));
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.start_of_next_frame));
+    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.test->i));
+    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.test->j));
+    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.test->k));
 
     ptc.tx_param.buf = ptc.tx_buf;
     ptc.tx_param.len = payload_len;
@@ -687,12 +706,18 @@ static bool Ptc_Process_Beacon()
         ptc.flags |= PTC_F_IN_SYNC;
     }
 
+    Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(ptc.test->i));
+    Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(ptc.test->j));
+    Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(ptc.test->k));
+
     #ifdef PTC_VERBOSE
     size_t payload_len = ptc.rx_result.payload_len;
     Log_String_Literal("Beacon:");
     Log_String_Literal(" payload_len: "); Log_Value_Uint(payload_len);
     Log_String_Literal(" dev_id: "); Log_Value_Hex(dev_id);
-    Log_String_Literal(" rtc_time: "); Log_Value_Hex(rtc_start_of_curr_frame);
+    Log_String_Literal(" i: "); Log_Value_Hex(ptc.test->i);
+    Log_String_Literal(" j: "); Log_Value_Hex(ptc.test->j);
+    Log_String_Literal(" k: "); Log_Value_Hex(ptc.test->k);
     Log_Line(""); // new line
     #endif // #ifdef PTC_VERBOSE
 

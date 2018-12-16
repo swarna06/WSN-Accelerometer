@@ -88,6 +88,14 @@
 #define PTC_RTC_SUBSLOT_TIME        (PTC_RTC_SLOT_TIME/PTC_SUBSLOT_NUM) // ~30 ms
 #define PTC_TEST_TOUT_MSEC          20
 
+typedef struct
+{
+    uint8_t i, j, k; // indexes of the PHY mode, TX power, and channel arrays
+    uint8_t* phy_mode;
+    rfc_tx_power_t* tx_power;
+    uint8_t* channel;
+} ptc_test_t;
+
 // ********************************
 // Control structure and FSM
 // ********************************
@@ -150,6 +158,8 @@ typedef struct
 
     uint8_t tx_buf[PTC_RXTX_BUF_LEN];
     uint8_t rx_buf[PTC_RXTX_BUF_LEN];
+
+    ptc_test_t* test;
 } ptc_control_t;
 
 void Ptc_Init();
