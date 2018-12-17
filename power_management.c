@@ -156,7 +156,7 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     Brd_Led_Off(BRD_SLEEP_PIN); // signal indicates MCU state (sleep/active)
 #endif // #ifdef PMA_SLEEP_OUT
 
-    while (!Sep_UART_Idle()); // wait until the UART FIFO becomes FIXME remove
+    while (Sep_UART_Busy()); // wait until the UART FIFO becomes FIXME remove
 
 #ifdef PMA_DUMMY_SLEEP
 

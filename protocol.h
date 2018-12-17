@@ -86,7 +86,7 @@
 #define PTC_SUBSLOT_NUM             8
 //#define PTC_SUBSLOT_NUM             2 // xxx
 #define PTC_RTC_SUBSLOT_TIME        (PTC_RTC_SLOT_TIME/PTC_SUBSLOT_NUM) // ~30 ms
-#define PTC_TEST_TOUT_MSEC          20
+#define PTC_TEST_TOUT_MSEC          25
 
 typedef struct
 {
