@@ -83,8 +83,8 @@
 // ********************************
 // Reliability test
 // ********************************
-//#define PTC_SUBSLOT_NUM             8
-#define PTC_SUBSLOT_NUM             2 // xxx
+#define PTC_SUBSLOT_NUM             8
+//#define PTC_SUBSLOT_NUM             2 // xxx
 #define PTC_RTC_SUBSLOT_TIME        (PTC_RTC_SLOT_TIME/PTC_SUBSLOT_NUM) // ~30 ms
 #define PTC_TEST_TOUT_MSEC          20
 
@@ -163,10 +163,6 @@ typedef struct
     uint8_t subslot_count;
 
     ptc_data_pkt_t data_pkt;
-
-    uint16_t tx_power;
-    uint8_t phy_mode;
-    uint8_t channel;
 
     rfc_tx_param_t tx_param;
     rfc_rx_result_t rx_result;

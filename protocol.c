@@ -63,9 +63,11 @@ static void Ptc_Request_Data_Pkt_Tx(uint32_t rat_start_of_tx);
 static void Ptc_Process_Data_Pkt();
 static size_t Ptc_Add_Field_To_Payload(uint8_t** payload_p, void* data_p, size_t data_len);
 static void Ptc_Get_Field_From_Payload(uint8_t** payload_p, void* data_p, size_t data_len);
+static void Ptc_Set_Default_Radio_Config();
 
 static void Ptc_Request_Test_Pkt_Tx(uint32_t rat_start_of_tx);
 static void Ptc_Update_Test_Idx();
+static void Ptc_Set_Test_Radio_Config();
 
 #ifdef PTC_START_OF_FRAME_OUT
 void Ptc_RTC_Isr()
@@ -102,13 +104,7 @@ void Ptc_Init()
     Lfsr_Seed(ptc.random_seeds[0]);
 
     // Set transmission power, PHY mode and frequency channel
-    ptc.tx_power = PTC_DEFAULT_TX_POW;
-    ptc.phy_mode = PTC_DEFAULT_PHY_MODE;
-    ptc.channel = PTC_DEFAULT_CHANNEL;
-
-    Rfc_Set_Tx_Power(ptc.tx_power);
-    Rfc_BLE5_Set_PHY_Mode(ptc.phy_mode);
-    Rfc_BLE5_Set_Channel(ptc.channel);
+    Ptc_Set_Default_Radio_Config();
 
     // Initialize transmission and reception structures
     ptc.tx_param.buf = NULL; // empty packet
@@ -191,6 +187,8 @@ static void Ptc_Sink_Node_FSM()
         Log_Val_Uint32("rtc_SoNF: ", ptc.start_of_next_frame);
         #endif // #ifdef PTC_VERBOSE
 
+        Ptc_Set_Default_Radio_Config();
+
         ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
         ptc.next_state = PTC_S_SCHEDULE_BEACON_RADIO_OP;
     }
@@ -225,6 +223,8 @@ static void Ptc_Sink_Node_FSM()
         // Calculate wake up time and go to sleep
         uint32_t wakeup_time = ptc.start_of_next_slot - PTC_RTC_TOTAL_WAKEUP_TIME;
         Pma_MCU_Sleep(wakeup_time);
+
+        Ptc_Set_Default_Radio_Config();
 
         ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
         ptc.next_state = PTC_S_SCHEDULE_SLOT_RADIO_OP;
@@ -265,6 +265,9 @@ static void Ptc_Sink_Node_FSM()
         uint32_t wakeup_time = ptc.start_of_next_subslot - PTC_RTC_TOTAL_WAKEUP_TIME;
         Pma_MCU_Sleep(wakeup_time);
 
+        if (ptc.subslot_count == PTC_SUBSLOT_NUM - 1)
+            Ptc_Set_Test_Radio_Config();
+
         ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
         ptc.next_state = PTC_S_SCHEDULE_SUBSLOT_RADIO_OP;
     }
@@ -292,10 +295,7 @@ static void Ptc_Sink_Node_FSM()
             if (ptc.slot_count < PTC_RTC_SLOT_NUM)
                 ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
             else
-            {
-                Ptc_Update_Test_Idx();
                 ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
-            }
         }
         else
             ptc.next_state = PTC_S_WAIT_START_OF_SUBSLOT;
@@ -321,6 +321,9 @@ static void Ptc_Sink_Node_FSM()
         if (ptc.subslot_count == 0) // end of slot ?
         {
             Log_String_Literal(""); Log_Value_Int(ptc.start_of_next_frame);
+            Log_String_Literal(", "); Log_Value_Int(ptc.test->i);
+            Log_String_Literal(", "); Log_Value_Int(ptc.test->j);
+            Log_String_Literal(", "); Log_Value_Int(ptc.test->k);
             Log_String_Literal(", "); Log_Value_Hex(ptc.data_pkt.dev_id);
             Log_String_Literal(", "); Log_Value_Hex(ptc.data_pkt.ack);
             Log_String_Literal(", "); Log_Value_Int(ptc.data_pkt.consec_err_count);
@@ -329,6 +332,9 @@ static void Ptc_Sink_Node_FSM()
             Log_String_Literal(", "); Log_Value_Int(ptc.test->total_err_count);
             Log_Line(""); // new line
         }
+
+        if (ptc.slot_count >= PTC_RTC_SLOT_NUM)
+            Ptc_Update_Test_Idx();
 
         ptc.state = PTC_S_WAIT_TIMEOUT;
         break;
@@ -413,6 +419,8 @@ static void Ptc_Sensor_Node_FSM()
         Log_Val_Uint32("rtc_SoNF: ", ptc.start_of_next_frame);
         #endif // #ifdef PTC_VERBOSE
 
+        Ptc_Set_Default_Radio_Config();
+
         ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
         ptc.next_state = PTC_S_SCHEDULE_BEACON_RADIO_OP;
     }
@@ -441,6 +449,8 @@ static void Ptc_Sensor_Node_FSM()
         // Calculate wake up time and go to sleep
         uint32_t wakeup_time = ptc.start_of_next_slot - PTC_RTC_TOTAL_WAKEUP_TIME;
         Pma_MCU_Sleep(wakeup_time);
+
+        Ptc_Set_Default_Radio_Config();
 
         ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
         ptc.next_state = PTC_S_SCHEDULE_SLOT_RADIO_OP;
@@ -500,6 +510,9 @@ static void Ptc_Sensor_Node_FSM()
         // Calculate wake up time and go to sleep
         uint32_t wakeup_time = ptc.start_of_next_subslot - PTC_RTC_TOTAL_WAKEUP_TIME;
         Pma_MCU_Sleep(wakeup_time);
+
+        if (ptc.subslot_count == PTC_SUBSLOT_NUM - 1)
+            Ptc_Set_Test_Radio_Config();
 
         ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
         ptc.next_state = PTC_S_SCHEDULE_SUBSLOT_RADIO_OP;
@@ -821,6 +834,13 @@ static void Ptc_Get_Field_From_Payload(uint8_t** payload_p, void* data_p, size_t
         *_data_p = *(*payload_p);
 }
 
+static void Ptc_Set_Default_Radio_Config()
+{
+    Rfc_BLE5_Set_PHY_Mode(PTC_DEFAULT_PHY_MODE);
+    Rfc_Set_Tx_Power(PTC_DEFAULT_TX_POW);
+    Rfc_BLE5_Set_Channel(PTC_DEFAULT_CHANNEL);
+}
+
 // ********************************
 // Test functions
 // ********************************
@@ -859,4 +879,11 @@ static void Ptc_Update_Test_Idx()
                 ptc.test->i = 0;
         }
     }
+}
+
+static void Ptc_Set_Test_Radio_Config()
+{
+    Rfc_BLE5_Set_PHY_Mode(phy_mode[ptc.test->i]);
+    Rfc_Set_Tx_Power(tx_power[ptc.test->j]);
+    Rfc_BLE5_Set_Channel(channel[ptc.test->k]);
 }
