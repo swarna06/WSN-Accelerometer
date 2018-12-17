@@ -319,8 +319,10 @@ static void Ptc_Sink_Node_FSM()
             Log_String_Literal(""); Log_Value_Int(ptc.start_of_next_frame);
             Log_String_Literal(", "); Log_Value_Hex(ptc.data_pkt.dev_id);
             Log_String_Literal(", "); Log_Value_Hex(ptc.data_pkt.ack);
-            Log_String_Literal(", "); Log_Value_Hex(ptc.test->consec_err_count);
-            Log_String_Literal(", "); Log_Value_Hex(ptc.test->total_err_count);
+            Log_String_Literal(", "); Log_Value_Int(ptc.data_pkt.consec_err_count);
+            Log_String_Literal(", "); Log_Value_Int(ptc.data_pkt.total_err_count);
+            Log_String_Literal(", "); Log_Value_Int(ptc.test->consec_err_count);
+            Log_String_Literal(", "); Log_Value_Int(ptc.test->total_err_count);
             Log_Line(""); // new line
         }
 
@@ -339,7 +341,6 @@ static void Ptc_Sink_Node_FSM()
 
     default:
         assertion(!"Ptc_Sink_Node_FSM: Unknown state!");
-
     }
 }
 
@@ -390,6 +391,9 @@ static void Ptc_Sensor_Node_FSM()
         // Test
         ptc.start_of_next_subslot = ptc.start_of_next_frame;
         ptc.subslot_count = PTC_SUBSLOT_NUM - 1;
+        ptc.test->err_count = 0;
+        ptc.test->total_err_count = 0;
+        ptc.test->consec_err_count = 0;
 
         // Calculate wake up time and go to sleep
         uint32_t wakeup_time = ptc.start_of_next_frame - PTC_RTC_TOTAL_WAKEUP_TIME;
@@ -532,6 +536,18 @@ static void Ptc_Sensor_Node_FSM()
     break;
 
     case PTC_S_WAIT_TEST_PKT_RECEPTION:
+        Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);
+
+        if (ptc.rx_result.err_flags != 0) // error ?
+        {
+            ptc.test->total_err_count++;
+            ptc.test->err_count++;
+            if (ptc.test->err_count > ptc.test->consec_err_count)
+                ptc.test->consec_err_count = ptc.test->err_count;
+        }
+        else
+            ptc.test->err_count = 0;
+
         ptc.state = PTC_S_WAIT_TIMEOUT;
         break;
 
@@ -547,7 +563,6 @@ static void Ptc_Sensor_Node_FSM()
 
     default:
         assertion(!"Ptc_Sensor_Node_FSM: Unknown state!");
-
     }
 }
 
@@ -755,6 +770,8 @@ static void Ptc_Request_Data_Pkt_Tx(uint32_t rat_start_of_tx)
     // The time stamp should correspond to the transmission absolute time (RTC)
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.dev_id));
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ack));
+    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.test->consec_err_count));
+    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.test->total_err_count));
 
     ptc.tx_param.buf = ptc.tx_buf;
     ptc.tx_param.len = payload_len;
@@ -770,11 +787,15 @@ static void Ptc_Process_Data_Pkt()
 
         Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(ptc.data_pkt.dev_id));
         Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(ptc.data_pkt.ack));
+        Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(ptc.data_pkt.consec_err_count));
+        Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(ptc.data_pkt.total_err_count));
     }
     else
     {
         ptc.data_pkt.dev_id = ptc.slot_count;
         ptc.data_pkt.ack = ptc.rx_result.err_flags << 1;
+        ptc.data_pkt.consec_err_count = -1;
+        ptc.data_pkt.total_err_count = -1;
     }
 }
 

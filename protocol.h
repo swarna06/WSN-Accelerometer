@@ -96,8 +96,8 @@ typedef struct
     uint8_t* channel;
 
     uint8_t err_count;
-    uint8_t total_err_count;
-    uint8_t consec_err_count;
+    int8_t consec_err_count;
+    int8_t total_err_count;
 } ptc_test_t;
 
 // ********************************
@@ -112,6 +112,8 @@ typedef struct
 {
     uint8_t dev_id;
     uint8_t ack;
+    int8_t consec_err_count;
+    int8_t total_err_count;
 } ptc_data_pkt_t;
 
 // FSM states
