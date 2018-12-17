@@ -206,7 +206,7 @@ static void Ptc_Sink_Node_FSM()
         ptc.state = PTC_S_WAIT_TIMEOUT;
         ptc.next_state = PTC_S_WAIT_START_OF_SUBSLOT;
 
-        Tm_Start_Timeout(TM_TOUT_PTC_ID, PTC_TEST_TOUT_MSEC); // TODO remove
+        Tm_Start_Timeout(TM_TOUT_PTC_ID, PTC_TEST_TOUT_MSEC);
     }
     break;
 
@@ -240,7 +240,7 @@ static void Ptc_Sink_Node_FSM()
         Rfc_BLE5_Scanner(rat_start_time, PTC_RX_TIMEOUT_USEC + PTC_OFFSET_RX_TOUT_USEC);
         ptc.state = PTC_S_WAIT_PKT_RECEPTION;
 
-        Tm_Start_Timeout(TM_TOUT_PTC_ID, PTC_TEST_TOUT_MSEC); // TODO remove
+        Tm_Start_Timeout(TM_TOUT_PTC_ID, PTC_TEST_TOUT_MSEC);
     }
     break;
 
@@ -296,7 +296,7 @@ static void Ptc_Sink_Node_FSM()
         else
             ptc.next_state = PTC_S_WAIT_START_OF_SUBSLOT;
 
-        Tm_Start_Timeout(TM_TOUT_PTC_ID, PTC_TEST_TOUT_MSEC); // TODO remove
+        Tm_Start_Timeout(TM_TOUT_PTC_ID, PTC_TEST_TOUT_MSEC);
     }
     break;
 
@@ -424,7 +424,7 @@ static void Ptc_Sensor_Node_FSM()
         Rfc_BLE5_Scanner(rat_start_time, PTC_RX_TIMEOUT_USEC + PTC_OFFSET_RX_TOUT_USEC);
         ptc.state = PTC_S_WAIT_PKT_RECEPTION;
 
-        Tm_Start_Timeout(TM_TOUT_PTC_ID, PTC_TEST_TOUT_MSEC); // TODO remove
+        Tm_Start_Timeout(TM_TOUT_PTC_ID, PTC_TEST_TOUT_MSEC);
     }
     break;
 
@@ -454,7 +454,7 @@ static void Ptc_Sensor_Node_FSM()
         ptc.state = PTC_S_WAIT_TIMEOUT;
         ptc.next_state = PTC_S_WAIT_START_OF_SUBSLOT;
 
-        Tm_Start_Timeout(TM_TOUT_PTC_ID, PTC_TEST_TOUT_MSEC); // TODO remove
+        Tm_Start_Timeout(TM_TOUT_PTC_ID, PTC_TEST_TOUT_MSEC);
     }
     break;
 
@@ -531,7 +531,7 @@ static void Ptc_Sensor_Node_FSM()
         else
             ptc.next_state = PTC_S_WAIT_START_OF_SUBSLOT;
 
-        Tm_Start_Timeout(TM_TOUT_PTC_ID, PTC_TEST_TOUT_MSEC); // TODO remove
+        Tm_Start_Timeout(TM_TOUT_PTC_ID, PTC_TEST_TOUT_MSEC);
     }
     break;
 
