@@ -96,8 +96,8 @@ typedef struct
     uint8_t* channel;
 
     uint8_t err_count;
-    uint8_t uplink_total_err_count;
-    uint8_t uplink_consec_err_count;
+    uint8_t total_err_count;
+    uint8_t consec_err_count;
 } ptc_test_t;
 
 // ********************************
