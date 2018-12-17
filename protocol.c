@@ -482,6 +482,7 @@ static void Ptc_Sensor_Node_FSM()
         }
         else
         {
+            Ptc_Update_Test_Idx();
             ptc.flags &= ~PTC_F_CTRL_PKT_RXED;
             ptc.err_count--;
             if (ptc.err_count == 0) // max consecutive errors reached ?
