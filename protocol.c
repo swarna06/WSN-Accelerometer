@@ -573,7 +573,7 @@ static void Ptc_Sensor_Node_FSM()
         // This timeout keeps the MCU awake for a moment to
         // let the Log send the data over UART before going to sleep
         // FIXME it should be removed for power efficiency
-        if (Tm_Timeout_Completed(TM_TOUT_PTC_ID))
+//        if (Tm_Timeout_Completed(TM_TOUT_PTC_ID))
             ptc.state = ptc.next_state;
 
         break;
