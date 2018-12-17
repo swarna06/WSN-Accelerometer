@@ -91,9 +91,9 @@
 typedef struct
 {
     uint8_t i, j, k; // indexes of the PHY mode, TX power, and channel arrays
-    uint8_t* phy_mode;
-    rfc_tx_power_t* tx_power;
-    uint8_t* channel;
+    const uint8_t* phy_mode;
+    const rfc_tx_power_t* tx_power;
+    const uint8_t* channel;
 
     uint8_t err_count;
     int8_t consec_err_count;

@@ -37,9 +37,9 @@
 static ptc_control_t ptc;
 
 // Test variables
-static uint8_t phy_mode[] = CFG_RELIAB_TEST_PHY_MODES;
-static rfc_tx_power_t tx_power[] = CFG_RELIAB_TEST_TX_POWER;
-static uint8_t channel[] = CFG_RELIAB_TEST_CHANNELS;
+static const uint8_t phy_mode[] = CFG_RELIAB_TEST_PHY_MODES;
+static const rfc_tx_power_t tx_power[] = CFG_RELIAB_TEST_TX_POWER;
+static const uint8_t channel[] = CFG_RELIAB_TEST_CHANNELS;
 static ptc_test_t test =
 {
  .i = 0, .j = 0, .k = 0,
@@ -65,6 +65,7 @@ static size_t Ptc_Add_Field_To_Payload(uint8_t** payload_p, void* data_p, size_t
 static void Ptc_Get_Field_From_Payload(uint8_t** payload_p, void* data_p, size_t data_len);
 
 static void Ptc_Request_Test_Pkt_Tx(uint32_t rat_start_of_tx);
+static void Ptc_Update_Test_Idx();
 
 #ifdef PTC_START_OF_FRAME_OUT
 void Ptc_RTC_Isr()
@@ -291,7 +292,10 @@ static void Ptc_Sink_Node_FSM()
             if (ptc.slot_count < PTC_RTC_SLOT_NUM)
                 ptc.next_state = PTC_S_WAIT_START_OF_SLOT;
             else
+            {
+                Ptc_Update_Test_Idx();
                 ptc.next_state = PTC_S_WAIT_START_OF_FRAME;
+            }
         }
         else
             ptc.next_state = PTC_S_WAIT_START_OF_SUBSLOT;
@@ -836,4 +840,23 @@ static void Ptc_Request_Test_Pkt_Tx(uint32_t rat_start_of_tx)
     ptc.tx_param.len = RFC_MAX_PAYLOAD_LEN;
     ptc.tx_param.rat_start_time = rat_start_of_tx;
     Rfc_BLE5_Adv_Aux(&ptc.tx_param);
+}
+
+static void Ptc_Update_Test_Idx()
+{
+    ptc.test->k++;
+    if (ptc.test->k >= sizeof(channel))
+    {
+        ptc.test->k = 0;
+
+        ptc.test->j++;
+        if (ptc.test->j >= sizeof(tx_power)/sizeof(rfc_tx_power_t))
+        {
+            ptc.test->j = 0;
+
+            ptc.test->i++;
+            if (ptc.test->i >= sizeof(phy_mode))
+                ptc.test->i = 0;
+        }
+    }
 }
