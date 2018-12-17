@@ -94,6 +94,10 @@ typedef struct
     uint8_t* phy_mode;
     rfc_tx_power_t* tx_power;
     uint8_t* channel;
+
+    uint8_t err_count;
+    uint8_t uplink_total_err_count;
+    uint8_t uplink_consec_err_count;
 } ptc_test_t;
 
 // ********************************
@@ -101,7 +105,14 @@ typedef struct
 // ********************************
 // Flags
 #define PTC_F_IN_SYNC               0x01
-#define PTC_F_BEACON_RXED           0x02
+#define PTC_F_CTRL_PKT_RXED         0x02
+
+// Data packet (reply from sensor node)
+typedef struct
+{
+    uint8_t dev_id;
+    uint8_t ack;
+} ptc_data_pkt_t;
 
 // FSM states
 typedef enum
@@ -148,6 +159,8 @@ typedef struct
     uint32_t start_of_next_subslot;
     uint8_t slot_count;
     uint8_t subslot_count;
+
+    ptc_data_pkt_t data_pkt;
 
     uint16_t tx_power;
     uint8_t phy_mode;
