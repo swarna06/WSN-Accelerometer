@@ -402,7 +402,10 @@ bool Rfc_BLE5_Scanner(uint32_t rat_start_time, uint32_t timeout_usec)
         cmd_ble5_scanner_p->startTime = rat_start_time;
     }
     else
+    {
+        tout_ms += RFC_TOUT_DEFAULT; // xxx find proper value
         cmd_ble5_scanner_p->startTrigger.triggerType = TRIG_NOW;
+    }
 
     // Reset data entry and queue
     data_entry_ptr.status = DATA_ENTRY_PENDING;
@@ -413,7 +416,7 @@ bool Rfc_BLE5_Scanner(uint32_t rat_start_time, uint32_t timeout_usec)
     cmd_ble5_scanner_p->pParams->timeoutTime = timeout_usec * RFC_RAT_TICKS_PER_USEC; // end time relative to start of command
 
     // Calculate FSM operation timeout
-    tout_ms += (timeout_usec/1024) + 1; // timeout in case the RF core is unresponsive
+    tout_ms += (timeout_usec/1000) + 1; // timeout in case the RF core is unresponsive
 
     // Start radio operation
     Rfc_Clear_CPE_Int_Flags(RFC_M_CPE_RX_INT_FLAGS);
