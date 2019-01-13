@@ -172,7 +172,9 @@ void Rfc_Process()
             if (rfc.radio_op_p != NULL) // radio operation or immediate command ?
             {
                 operation = (uint32_t)rfc.radio_op_p;
-                Rfc_Clear_CPE_Int_Flags(RFC_M_CPE_COMMAND_DONE);
+                Rfc_Clear_CPE_Int_Flags(RFC_M_CPE_COMMAND_DONE |
+                                        RFC_M_CPE_TX_INT_FLAGS |
+                                        RFC_M_CPE_RX_INT_FLAGS);
             }
             else
                 operation = (uint32_t)rfc.immediate_cmd_p;
@@ -576,9 +578,25 @@ static void Rfc_Start_Radio_Op(volatile void* radio_op, uint16_t timeout)
     rfc.radio_op_p = (rfc_radioOp_t*)radio_op;
     rfc.radio_op_p->status = IDLE;
     rfc.error.code = 0;
-    rfc.state = RFC_S_WAIT_CPE_READY;
-    Tm_Start_Timeout(TM_RFC_TOUT_ID, RFC_TOUT_CPE_READY_MSEC);
     rfc.op_timeout = timeout;
+
+    if (Rfc_CPE_Ready())
+    {
+        // Send command to CPE (RFC door bell)
+        Rfc_Clear_CPE_Int_Flags(RFC_M_CPE_COMMAND_DONE |
+                                RFC_M_CPE_TX_INT_FLAGS |
+                                RFC_M_CPE_RX_INT_FLAGS);
+        RFCAckIntClear();
+        Rfc_Send_To_CPE((uint32_t)rfc.radio_op_p);
+        rfc.state = RFC_S_WAIT_CPE_ACK;
+        Tm_Start_Timeout(TM_RFC_TOUT_ID, RFC_TOUT_CPE_ACK_MSEC);
+    }
+    else
+    {
+        // Wait until CPE becomes ready
+        rfc.state = RFC_S_WAIT_CPE_READY;
+        Tm_Start_Timeout(TM_RFC_TOUT_ID, RFC_TOUT_CPE_READY_MSEC);
+    }
 }
 
 static void Rfc_Handle_Error(uint8_t err_code)
