@@ -24,8 +24,8 @@
 #define RFC_TOUT_BOOT_MSEC              5
 #define RFC_TOUT_CPE_READY_MSEC         2
 #define RFC_TOUT_CPE_ACK_MSEC           2
-#define RFC_TOUT_TX_MSEC                100 // maximum TX time
-#define RFC_TOUT_RX_MSEC                100 // minimum RX time
+#define RFC_TOUT_TX_MSEC                20 // maximum TX time (transmitting a packet with max length @ 125 kbps takes ~18 ms)
+#define RFC_TOUT_RX_MSEC                20 // maximum RX time (receiving a packet with max length @ 125 kbps takes ~18 ms)
 
 // RF Core wake up time
 #define RFC_WAKEUP_TIME_USEC            1000
