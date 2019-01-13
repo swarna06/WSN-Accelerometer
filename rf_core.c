@@ -57,6 +57,7 @@ static volatile dataQueue_t data_queue;
 static volatile rfc_ble5ScanInitOutput_t ble5_scan_init_output;
 
 static void Rfc_Init_CPE_Structs();
+static void Rfc_Start_Radio_Op(volatile void* radio_op, uint16_t timeout);
 static void Rfc_Handle_Error(uint8_t err_code);
 
 void Rfc_Init()
@@ -568,6 +569,16 @@ static void Rfc_Init_CPE_Structs()
     // SYNC_STOP_RAT, SYNC_START_RAT
     cmd_sync_stop_rat_p->condition.rule = COND_NEVER;
     cmd_sync_start_rat_p->condition.rule = COND_NEVER;
+}
+
+static void Rfc_Start_Radio_Op(volatile void* radio_op, uint16_t timeout)
+{
+    rfc.radio_op_p = (rfc_radioOp_t*)radio_op;
+    rfc.radio_op_p->status = IDLE;
+    rfc.error.code = 0;
+    rfc.state = RFC_S_WAIT_CPE_READY;
+    Tm_Start_Timeout(TM_RFC_TOUT_ID, RFC_TOUT_CPE_READY_MSEC);
+    rfc.op_timeout = timeout;
 }
 
 static void Rfc_Handle_Error(uint8_t err_code)

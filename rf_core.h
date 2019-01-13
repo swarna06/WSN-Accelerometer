@@ -247,14 +247,14 @@ typedef struct
 #define Rfc_Start_Direct_Cmd(c)         Rfc_Start_Immediate_Cmd(CMDR_DIR_CMD(c));
                                         // NOTE: direct commands are immediate commands without parameters
 
-#define Rfc_Start_Radio_Op(op, to)      {\
-                                            rfc.radio_op_p = (rfc_radioOp_t*)op; \
-                                            rfc.radio_op_p->status = IDLE; \
-                                            rfc.error.code = 0; \
-                                            rfc.state = RFC_S_WAIT_CPE_READY; \
-                                            Tm_Start_Timeout(TM_RFC_TOUT_ID, RFC_TOUT_CPE_READY_MSEC); \
-                                            rfc.op_timeout = to; \
-                                        }
+/*//#define Rfc_Start_Radio_Op(op, to)      {\
+//                                            rfc.radio_op_p = (rfc_radioOp_t*)op; \
+//                                            rfc.radio_op_p->status = IDLE; \
+//                                            rfc.error.code = 0; \
+//                                            rfc.state = RFC_S_WAIT_CPE_READY; \
+//                                            Tm_Start_Timeout(TM_RFC_TOUT_ID, RFC_TOUT_CPE_READY_MSEC); \
+//                                            rfc.op_timeout = to; \
+//                                        } */
 
 #define Rfc_On_Success_Do(op)             { \
                                             rfc.flags |= rfc.set_flags_on_success; \
