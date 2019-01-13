@@ -205,10 +205,7 @@ void Rfc_Process()
             if (rfc.radio_op_p != NULL) // radio operation ?
             {
                 rfc.state = RFC_S_WAIT_RADIO_OP_EXECUTION;
-                if (rfc.op_timeout)
-                    Tm_Start_Timeout(TM_RFC_TOUT_ID, rfc.op_timeout);
-                else
-                    Tm_Start_Timeout(TM_RFC_TOUT_ID, RFC_TOUT_MAX_OP_TIME_MSEC);
+                Tm_Start_Timeout(TM_RFC_TOUT_ID, rfc.op_timeout);
             }
             else // immediate command ?
             {

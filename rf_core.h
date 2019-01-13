@@ -20,11 +20,10 @@
 // Timing
 // ********************************
 // Timeout values (milliseconds)
-#define RFC_TOUT_DEFAULT                0
-#define RFC_TOUT_BOOT_MSEC              100
-#define RFC_TOUT_CPE_READY_MSEC         100
-#define RFC_TOUT_CPE_ACK_MSEC           100 // xxx
-#define RFC_TOUT_MAX_OP_TIME_MSEC       1000 // 1 second xxx
+#define RFC_TOUT_DEFAULT                10 // xxx
+#define RFC_TOUT_BOOT_MSEC              5
+#define RFC_TOUT_CPE_READY_MSEC         2
+#define RFC_TOUT_CPE_ACK_MSEC           2
 #define RFC_TOUT_TX_MSEC                100 // maximum TX time
 #define RFC_TOUT_RX_MSEC                100 // minimum RX time
 
