@@ -259,6 +259,10 @@ void Rfc_Process()
     // Error handling
     // ********************************
     case RFC_S_WAIT_ERR_ACTION: // wait until error is read by external module and some action is taken
+
+        if (rfc.error.code == 0) // error cleared ?
+            rfc.state = RFC_S_IDLE;
+
         break;
     }
 }
@@ -527,7 +531,9 @@ inline bool Rfc_Ready()
 
 inline uint8_t Rfc_Error()
 {
-    return rfc.error.code;  // TODO return the error structure
+    uint8_t error_code = rfc.error.code;
+    rfc.error.code = 0;
+    return error_code;  // TODO return the error structure
 }
 
 void Rfc_Enable_Output_Signals()
