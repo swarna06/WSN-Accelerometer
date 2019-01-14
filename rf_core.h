@@ -68,6 +68,7 @@
                                         RFC_DBELL_RFCPEIFG_TX_CTRL | \
                                         RFC_DBELL_RFCPEIFG_TX_ACK | \
                                         RFC_DBELL_RFCPEIFG_TX_DONE)
+
 // CPE TX interrupt flags
 #define RFC_M_CPE_RX_INT_FLAGS          (RFC_DBELL_RFCPEIFG_RX_ABORTED | \
                                          RFC_DBELL_RFCPEIFG_RX_N_DATA_WRITTEN | \
@@ -80,6 +81,12 @@
                                          RFC_DBELL_RFCPEIFG_RX_IGNORED | \
                                          RFC_DBELL_RFCPEIFG_RX_NOK | \
                                          RFC_DBELL_RFCPEIFG_RX_OK)
+
+// Error interrupt flags
+#define RFC_M_CPE_RF_CORE_ERR           (RFC_DBELL_RFCPEIFG_INTERNAL_ERROR | \
+                                         RFC_DBELL_RFCPEIFG_SYNTH_NO_LOCK)
+#define RFC_M_CPE_RX_ERR_FLAGS          (RFC_DBELL_RFCPEIFG_RX_NOK)
+
 
 // Macro functions for interfacing with the Command and Packet Engine (CPE)
 #define Rfc_Get_CPE_Int_Flags()         (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG))
@@ -177,8 +184,7 @@ typedef enum
     RFC_ERR_NONE = 0,
     RFC_ERR_BOOT_FAILED,
     RFC_ERR_OPERATION_FAILED,
-    RFC_ERR_INTERNAL,
-    RFC_ERR_SYNTH_NO_LOCK,
+    RFC_ERR_RF_CORE,
     RFC_ERR_TIMEOUT,
 } rfc_error_code_t;
 

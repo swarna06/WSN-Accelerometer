@@ -231,18 +231,20 @@ void Rfc_Process()
                 Rfc_Handle_Error(RFC_ERR_OPERATION_FAILED);
                 rfc.state = RFC_S_WAIT_ERR_ACTION;
             }
-
+            else
+            {
+                Rfc_On_Success_Do(rfc.radio_op_p);
+                rfc.state = rfc.next_state;
+            }
+        }
+        else if (cpe_int_flags & RFC_DBELL_RFCPEIFG_RX_NOK)
+        {
             Rfc_On_Success_Do(rfc.radio_op_p);
             rfc.state = rfc.next_state;
         }
-        else if (cpe_int_flags & RFC_DBELL_RFCPEIFG_INTERNAL_ERROR)
+        else if (cpe_int_flags & RFC_M_CPE_RF_CORE_ERR)
         {
-            Rfc_Handle_Error(RFC_ERR_INTERNAL);
-            rfc.state = RFC_S_WAIT_ERR_ACTION;
-        }
-        else if (cpe_int_flags & RFC_DBELL_RFCPEIFG_SYNTH_NO_LOCK)
-        {
-            Rfc_Handle_Error(RFC_ERR_SYNTH_NO_LOCK);
+            Rfc_Handle_Error(RFC_ERR_RF_CORE); // internal error or PLL loss of lock
             rfc.state = RFC_S_WAIT_ERR_ACTION;
         }
         else if (Tm_Timeout_Completed(TM_RFC_TOUT_ID))
@@ -258,7 +260,6 @@ void Rfc_Process()
     // ********************************
     case RFC_S_WAIT_ERR_ACTION: // wait until error is read by external module and some action is taken
         break;
-
     }
 }
 
