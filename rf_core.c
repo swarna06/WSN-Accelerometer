@@ -87,6 +87,8 @@ void Rfc_Init()
     memset(&rfc, 0, sizeof(rfc_control_t));
     rfc.state = RFC_S_WAIT_RFC_BOOT;
     Tm_Start_Timeout(TM_RFC_TOUT_ID, RFC_TOUT_BOOT_MSEC);
+
+    Rfc_Enable_Output_Signals();
 }
 
 void Rfc_Wakeup()
@@ -224,6 +226,14 @@ void Rfc_Process()
     {
         uint32_t cpe_int_flags = Rfc_Get_CPE_Int_Flags();
 
+        if (!GPIO_readDio(BRD_GPIO_IN0) &&
+             (rfc.radio_op_p->commandNo == CMD_BLE5_SCANNER || rfc.radio_op_p->commandNo == CMD_BLE5_ADV_AUX))
+        {
+            // Generate operation error TODO remove (just for test)
+            GPIO_setDio(BRD_GPIO_OUT0);
+            Rfc_Handle_Error(RFC_ERR_OPERATION_FAILED);
+            rfc.state = RFC_S_WAIT_ERR_ACTION;
+        } else
         if (cpe_int_flags & RFC_M_CPE_COMMAND_DONE)
         {
             if (rfc.radio_op_p->status & RFC_F_RADIO_OP_STATUS_ERR)
@@ -239,6 +249,7 @@ void Rfc_Process()
         }
         else if (cpe_int_flags & RFC_DBELL_RFCPEIFG_RX_NOK)
         {
+            Rfc_Abort();
             Rfc_On_Success_Do(rfc.radio_op_p);
             rfc.state = rfc.next_state;
         }
@@ -260,9 +271,8 @@ void Rfc_Process()
     // ********************************
     case RFC_S_WAIT_ERR_ACTION: // wait until error is read by external module and some action is taken
 
-        if (rfc.error.code == 0) // error cleared ?
+        if (rfc.error.code == 0 && Rfc_CPE_Ready()) // error cleared ?
             rfc.state = RFC_S_IDLE;
-
         break;
     }
 }
@@ -441,8 +451,13 @@ void Rfc_BLE5_Get_Scanner_Result(rfc_rx_result_t* dest)
     uint32_t cpe_int_flags = Rfc_Get_CPE_Int_Flags();
     if (cpe_int_flags & RFC_DBELL_RFCPEIFG_RX_NOK)
         dest->err_flags |= RFC_F_RX_CRC_ERR;
-    if (cmd_ble5_scanner_p->status == BLE_DONE_RXTIMEOUT)
-        dest->err_flags |= RFC_F_RX_TOUT_ERR;
+    if (cmd_ble5_scanner_p->status != BLE_DONE_OK)
+    {
+        if (cmd_ble5_scanner_p->status == BLE_DONE_RXTIMEOUT)
+            dest->err_flags |= RFC_F_RX_TOUT_ERR;
+        else
+            dest->err_flags |= RFC_F_RX_OP_ERR; // other error TODO how to do proper error handling ?
+    }
 
     // Copy results if there were no errors
     if (dest->buf != NULL && !((uint8_t)dest->err_flags))
@@ -608,6 +623,9 @@ static void Rfc_Start_Radio_Op(volatile void* radio_op, uint16_t timeout)
 
 static void Rfc_Handle_Error(uint8_t err_code)
 {
+    // Abort command execution
+    Rfc_Abort();
+
     /*
      * Store context in which occurred the error
      */
@@ -635,13 +653,16 @@ static void Rfc_Handle_Error(uint8_t err_code)
             rfc.error.cmd_num = rfc.immediate_cmd_p->commandNo;
     }
 
+    rfc.radio_op_p = NULL;
+    rfc.immediate_cmd_p = NULL;
+
     // Log error
     Log_Line("RFC err:");
     Log_Val_Hex32("\tcode: ", rfc.error.code);
-    Log_Val_Hex32("\tfsm_st: ", rfc.error.fsm_state);
-    Log_Val_Hex32("\tCMDSTA: ", rfc.error.CMDSTA);
-    Log_Val_Hex32("\tRFHWIFG: ", rfc.error.RFHWIFG);
-    Log_Val_Hex32("\tRFCPEIFG: ", rfc.error.RFCPEIFG);
-    Log_Val_Hex32("\tcmd_num: ", rfc.error.cmd_num);
-    Log_Val_Hex32("\tcmd_sta: ", rfc.error.cmd_status);
+//    Log_Val_Hex32("\tfsm_st: ", rfc.error.fsm_state);
+//    Log_Val_Hex32("\tCMDSTA: ", rfc.error.CMDSTA);
+//    Log_Val_Hex32("\tRFHWIFG: ", rfc.error.RFHWIFG);
+//    Log_Val_Hex32("\tRFCPEIFG: ", rfc.error.RFCPEIFG);
+//    Log_Val_Hex32("\tcmd_num: ", rfc.error.cmd_num);
+//    Log_Val_Hex32("\tcmd_sta: ", rfc.error.cmd_status);
 }

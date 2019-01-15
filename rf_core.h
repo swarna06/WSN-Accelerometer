@@ -151,6 +151,7 @@ typedef enum
 // RX result flags
 #define RFC_F_RX_CRC_ERR                0x01
 #define RFC_F_RX_TOUT_ERR               0x02
+#define RFC_F_RX_OP_ERR                 0x04
 
 // RX buffer
 #define RFC_RX_BUF_LEN                  512
@@ -257,6 +258,8 @@ typedef struct
                                             rfc.set_flags_on_success = 0; \
                                             op = NULL; \
                                         }
+
+#define Rfc_Abort()                     Rfc_Send_To_CPE(CMDR_DIR_CMD(CMD_ABORT))
 
 // ********************************
 // Public functions
