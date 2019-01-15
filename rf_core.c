@@ -198,6 +198,13 @@ void Rfc_Process()
         {
             uint32_t cpe_cmd_sta = Rfc_Get_CPE_CMDSTA();
 
+            if (!GPIO_readDio(BRD_GPIO_IN1) &&
+                (rfc.radio_op_p->commandNo == CMD_BLE5_SCANNER || rfc.radio_op_p->commandNo == CMD_BLE5_ADV_AUX))
+            {
+                // Generate operation error TODO remove (just for test)
+                Rfc_Handle_Error(RFC_ERR_OPERATION_FAILED);
+                rfc.state = RFC_S_WAIT_ERR_ACTION;
+            } else
             if (cpe_cmd_sta != CMDSTA_Done)
             {
                 Rfc_Handle_Error(RFC_ERR_OPERATION_FAILED);
@@ -230,7 +237,6 @@ void Rfc_Process()
              (rfc.radio_op_p->commandNo == CMD_BLE5_SCANNER || rfc.radio_op_p->commandNo == CMD_BLE5_ADV_AUX))
         {
             // Generate operation error TODO remove (just for test)
-            GPIO_setDio(BRD_GPIO_OUT0);
             Rfc_Handle_Error(RFC_ERR_OPERATION_FAILED);
             rfc.state = RFC_S_WAIT_ERR_ACTION;
         } else

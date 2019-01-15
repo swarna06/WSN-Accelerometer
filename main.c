@@ -55,7 +55,9 @@ int main(void)
 
     // DEBUG TODO remove
     IOCPinTypeGpioInput(BRD_GPIO_IN0);
+    IOCPinTypeGpioInput(BRD_GPIO_IN1);
     IOCIOPortPullSet(BRD_GPIO_IN0, IOC_IOPULL_UP);
+    IOCIOPortPullSet(BRD_GPIO_IN1, IOC_IOPULL_UP);
 
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
