@@ -36,6 +36,12 @@
 // RF core control structure
 rfc_control_t rfc;
 
+// Structures to execute immediate (and direct) commands as radio operation
+static rfc_CMD_SCH_IMM_t cmd_sch_imm_ping = {.commandNo = CMD_SCH_IMM,};
+static volatile rfc_CMD_SCH_IMM_t* cmd_sch_imm_ping_p = &cmd_sch_imm_ping;
+static rfc_CMD_SCH_IMM_t cmd_sch_imm_start_rat = {.commandNo = CMD_SCH_IMM,};
+static volatile rfc_CMD_SCH_IMM_t* cmd_sch_imm_start_rat_p = &cmd_sch_imm_start_rat;
+
 // RF core radio operation structures
 static volatile rfc_CMD_BLE5_RADIO_SETUP_t* cmd_ble5_radio_setup_p = &RF_cmdBle5RadioSetup;
 static volatile rfc_CMD_FS_t* cmd_fs_p = &RF_cmdFs;
@@ -52,6 +58,7 @@ static volatile dataQueue_t data_queue;
 static volatile rfc_ble5ScanInitOutput_t ble5_scan_init_output;
 
 // Static (local) functions
+static void Rfc_Init_Startup_Cmd_Chain();
 static void Rfc_Init_CPE_Structs();
 static void Rfc_Enable_Output_Signals();
 static void Rfc_Start_Radio_Op(volatile void* radio_op, uint16_t timeout);
@@ -126,7 +133,8 @@ void Rfc_Process()
 
         if (cpe_int_flags & RFC_DBELL_RFCPEIFG_BOOT_DONE)
         {
-            Rfc_Start_Direct_Cmd(CMD_PING);
+//            Rfc_Start_Direct_Cmd(CMD_PING);
+            Rfc_Start_Radio_Op(cmd_sch_imm_ping_p, RFC_TOUT_DEFAULT);
             rfc.next_state = RFC_S_EXEC_RADIO_SETUP;
         }
         else if (cpe_int_flags & RFC_DBELL_RFCPEIFG_INTERNAL_ERROR ||
@@ -149,7 +157,8 @@ void Rfc_Process()
         break;
 
     case RFC_S_EXEC_START_RAT:
-        Rfc_Start_Direct_Cmd(CMD_START_RAT);
+//        Rfc_Start_Direct_Cmd(CMD_START_RAT);
+        Rfc_Start_Radio_Op(cmd_sch_imm_start_rat_p, RFC_TOUT_DEFAULT);
         rfc.next_state = RFC_S_IDLE;
         Rfc_Set_Flags_On_Success(RFC_F_INITIALIZED);
         break;
@@ -527,6 +536,15 @@ static void Rfc_Enable_Output_Signals()
 // Static functions
 // ********************************
 
+static void Rfc_Init_Startup_Cmd_Chain()
+{
+    cmd_sch_imm_ping_p->condition.rule = COND_NEVER;
+    cmd_sch_imm_ping_p->cmdrVal = CMDR_DIR_CMD(CMD_PING);
+
+    cmd_sch_imm_start_rat_p->condition.rule = COND_NEVER;
+    cmd_sch_imm_start_rat_p->cmdrVal = CMDR_DIR_CMD(CMD_START_RAT);
+}
+
 static void Rfc_Init_CPE_Structs()
 {
     // CMD_BLE5_ADV_AUX
@@ -551,6 +569,8 @@ static void Rfc_Init_CPE_Structs()
     // SYNC_STOP_RAT, SYNC_START_RAT
     cmd_sync_stop_rat_p->condition.rule = COND_NEVER;
     cmd_sync_start_rat_p->condition.rule = COND_NEVER;
+
+    Rfc_Init_Startup_Cmd_Chain();
 }
 
 static void Rfc_Start_Radio_Op(volatile void* radio_op, uint16_t timeout)
