@@ -88,6 +88,4 @@ void Tm_Start_Timeout(uint8_t tout_idx, uint16_t tout_val);
 
 bool Tm_Timeout_Completed(uint8_t tout_idx);
 
-void Tm_Enable_LF_Clock_Output();
-
 #endif /* TIMING_H_ */

@@ -290,6 +290,4 @@ bool Rfc_Ready();
 
 uint8_t Rfc_Error();
 
-void Rfc_Enable_Output_Signals();
-
 #endif /* RF_CORE_H_ */

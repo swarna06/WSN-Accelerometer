@@ -20,6 +20,7 @@
 static tm_control_t tcs;
 
 static void Tm_Start_System_Tick();
+static void Tm_Enable_LF_Clock_Output();
 static void Tm_Init_RTC();
 
 void Tm_Init()
@@ -142,7 +143,7 @@ bool Tm_Timeout_Completed(uint8_t tout_idx)
     return (!(tcs.timeout[tout_idx]));
 }
 
-void Tm_Enable_LF_Clock_Output()
+static void Tm_Enable_LF_Clock_Output()
 {
 #if (CFG_DEBUG_LF_OSC_OUT == CFG_SETTING_ENABLED)
     IOCPortConfigureSet(BRD_LF_OSC_PIN, IOC_PORT_AON_CLK32K, IOC_STD_OUTPUT);

@@ -52,6 +52,7 @@ static volatile dataQueue_t data_queue;
 static volatile rfc_ble5ScanInitOutput_t ble5_scan_init_output;
 
 static void Rfc_Init_CPE_Structs();
+static void Rfc_Enable_Output_Signals();
 static void Rfc_Start_Radio_Op(volatile void* radio_op, uint16_t timeout);
 static void Rfc_Handle_Error(uint8_t err_code);
 
@@ -507,7 +508,7 @@ inline uint8_t Rfc_Error()
     return error_code;  // TODO return the error structure
 }
 
-void Rfc_Enable_Output_Signals()
+static void Rfc_Enable_Output_Signals()
 {
 #if (CFG_DEBUG_RADIO_OUT == CFG_SETTING_ENABLED)
     // Signals RAT_GPO0 and RAT_GPO1 are routed to RFC_GPO3 and RFC_GPO2 using 'overrides' (see smartrf_settings.c)
