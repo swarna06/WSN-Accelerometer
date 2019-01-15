@@ -51,6 +51,7 @@ static volatile rfc_dataEntryPointer_t data_entry_ptr;
 static volatile dataQueue_t data_queue;
 static volatile rfc_ble5ScanInitOutput_t ble5_scan_init_output;
 
+// Static (local) functions
 static void Rfc_Init_CPE_Structs();
 static void Rfc_Enable_Output_Signals();
 static void Rfc_Start_Radio_Op(volatile void* radio_op, uint16_t timeout);
@@ -210,7 +211,7 @@ void Rfc_Process()
             if (rfc.radio_op_p != NULL) // radio operation ?
             {
                 rfc.state = RFC_S_WAIT_RADIO_OP_EXECUTION;
-                Tm_Start_Timeout(TM_RFC_TOUT_ID, rfc.op_timeout);
+                Tm_Start_Timeout(TM_RFC_TOUT_ID, rfc.radio_op_timeout);
             }
             else // immediate command ?
             {
@@ -557,7 +558,7 @@ static void Rfc_Start_Radio_Op(volatile void* radio_op, uint16_t timeout)
     rfc.radio_op_p = (rfc_radioOp_t*)radio_op;
     rfc.radio_op_p->status = IDLE;
     rfc.error.code = 0;
-    rfc.op_timeout = timeout;
+    rfc.radio_op_timeout = timeout;
 
     if (Rfc_CPE_Ready())
     {

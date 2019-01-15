@@ -233,8 +233,7 @@ typedef struct
     uint8_t flags, set_flags_on_success;
     volatile rfc_command_t* immediate_cmd_p;
     volatile rfc_radioOp_t* radio_op_p;
-    uint32_t radio_op_cpe_err_flags;
-    uint16_t op_timeout;
+    uint16_t radio_op_timeout;
     rfc_error_t error;
 } rfc_control_t;
 
