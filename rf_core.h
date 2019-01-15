@@ -286,10 +286,6 @@ void Rfc_BLE5_Get_Scanner_Result(rfc_rx_result_t* dest);
 
 bool Rfc_Synchronize_RAT();
 
-bool Rfc_Set_RAT_Compare(uint8_t rat_ch, uint32_t rat_compare_time);
-
-bool Rfc_Set_RAT_Output(uint8_t rat_ch, uint8_t output_sel, uint8_t output_mode);
-
 bool Rfc_Ready();
 
 uint8_t Rfc_Error();
