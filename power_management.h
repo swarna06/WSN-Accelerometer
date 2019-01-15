@@ -24,6 +24,9 @@
 //#define PMA_WAKEUP_TIME_USEC        400
 #define PMA_WAKEUP_TIME_USEC        2048 // xxx measure this time again later and update this constant
 
+// Minimum sleep time
+#define PMA_MIN_SLEEP_RTC_TICKS     (2000/TM_RTC_USEC_PER_TICK)
+
 // Power domain flags
 #define PMA_F_DOMAIN_RF_CORE        0x8000
 #define PMA_F_DOMAIN_SERIAL         0x4000
