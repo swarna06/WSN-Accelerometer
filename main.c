@@ -53,27 +53,13 @@ int main(void)
     Rfc_Init();
     Ptc_Init();
 
-    // Enable debug output signals according to configuration
-    Tm_Enable_LF_Clock_Output();
-    Rfc_Enable_Output_Signals();
-
-    // Start heart beat period
-    Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
-
-    // Variable to keep track of the state of a module's FSM
-    #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
-    uint8_t fsm_state = (uint8_t)-1;
-    uint8_t new_fsm_state = fsm_state;
-    #endif // #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
+    // DEBUG TODO remove
+    IOCPinTypeGpioInput(BRD_GPIO_IN0);
+    IOCIOPortPullSet(BRD_GPIO_IN0, IOC_IOPULL_UP);
 
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
     {
-        if (Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
-        {
-//            Brd_Led_Toggle(BRD_LED1); // heart beat
-        }
-
         if (Tm_Sys_Tick())
             Tm_Process();
 
@@ -81,18 +67,22 @@ int main(void)
 
         Rfc_Process();
 
+        if (Rfc_Ready())
+            Ptc_Process();
+        else if (Rfc_Error())
+            Ptc_Handle_Error();
+
+        // DEBUG
+        // Print state of FSM
         #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
+        static uint8_t fsm_state = (uint8_t)-1; // holds last assigned value (static)
+        uint8_t new_fsm_state;
         if (fsm_state != (new_fsm_state = Ptc_Get_FSM_State()))
         {
             fsm_state = new_fsm_state;
             Log_Val_Hex32("s:", fsm_state);
         }
         #endif // #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
-
-        if (Rfc_Ready())
-            Ptc_Process();
-        else if (Rfc_Error())
-            Ptc_Handle_Error();
     }
 
     return 0;

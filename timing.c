@@ -38,6 +38,8 @@ void Tm_Init()
 
     Tm_Init_RTC();
     Tm_Start_System_Tick(1); // system tick (~1 msec)
+
+    Tm_Enable_LF_Clock_Output();
 }
 
 bool Tm_Sys_Tick()
