@@ -396,11 +396,6 @@ static void Ptc_Sensor_Node_FSM()
             ptc.state = PTC_S_WAIT_START_OF_SLOT;
         else
         {
-//            Pma_MCU_Sleep(Tm_Get_RTC_Time() + PTC_RTC_FRAME_TIME);
-//
-//            ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
-//            ptc.next_state = PTC_S_SCHEDULE_FIRST_BEACON_RX;
-
             ptc.wakeup_time = Tm_Get_RTC_Time() + PTC_RTC_FRAME_TIME;
             ptc.Wakeup_Action = NULL;
 
@@ -424,24 +419,6 @@ static void Ptc_Sensor_Node_FSM()
         ptc.test->consec_err_count = 0;
 
         // Calculate wake up time and go to sleep
-//        uint32_t wakeup_time = ptc.start_of_next_frame - PTC_RTC_TOTAL_WAKEUP_TIME;
-//        Pma_MCU_Sleep(wakeup_time);
-//
-//        #ifdef PTC_START_OF_FRAME_OUT
-//        // Set RTC compare value to match the start of next frame
-//        AONRTCEventClear(AON_RTC_CH1);
-//        AONRTCCompareValueSet(AON_RTC_CH1, ptc.start_of_next_frame);
-//        #endif // #ifdef PTC_START_OF_FRAME_OUT
-//
-//        #ifdef PTC_VERBOSE
-//        Log_Val_Uint32("rtc_SoNF: ", ptc.start_of_next_frame);
-//        #endif // #ifdef PTC_VERBOSE
-//
-//        Ptc_Set_Default_Radio_Config();
-//
-//        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
-//        ptc.next_state = PTC_S_SCHEDULE_BEACON_RADIO_OP;
-
         ptc.wakeup_time = ptc.start_of_next_frame - PTC_RTC_TOTAL_WAKEUP_TIME;
         ptc.Wakeup_Action = Ptc_Start_Of_Frame_Wakeup_Action;
 
@@ -471,14 +448,6 @@ static void Ptc_Sensor_Node_FSM()
         ptc.subslot_count = PTC_SUBSLOT_NUM - 1;
 
         // Calculate wake up time and go to sleep
-//        uint32_t wakeup_time = ptc.start_of_next_slot - PTC_RTC_TOTAL_WAKEUP_TIME;
-//        Pma_MCU_Sleep(wakeup_time);
-//
-//        Ptc_Set_Default_Radio_Config();
-//
-//        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
-//        ptc.next_state = PTC_S_SCHEDULE_SLOT_RADIO_OP;
-
         ptc.wakeup_time = ptc.start_of_next_slot - PTC_RTC_TOTAL_WAKEUP_TIME;
         ptc.Wakeup_Action = Ptc_Start_Of_Slot_Wakeup_Action;
 
@@ -539,15 +508,6 @@ static void Ptc_Sensor_Node_FSM()
         ptc.start_of_next_subslot += PTC_RTC_SUBSLOT_TIME;
 
         // Calculate wake up time and go to sleep
-//        uint32_t wakeup_time = ptc.start_of_next_subslot - PTC_RTC_TOTAL_WAKEUP_TIME;
-//        Pma_MCU_Sleep(wakeup_time);
-//
-//        if (ptc.subslot_count == PTC_SUBSLOT_NUM - 1)
-//            Ptc_Set_Test_Radio_Config();
-//
-//        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
-//        ptc.next_state = PTC_S_SCHEDULE_SUBSLOT_RADIO_OP;
-
         ptc.wakeup_time = ptc.start_of_next_subslot - PTC_RTC_TOTAL_WAKEUP_TIME;
         ptc.Wakeup_Action = Ptc_Start_Of_Subslot_Wakeup_Action;
 
