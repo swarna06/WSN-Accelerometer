@@ -144,7 +144,7 @@ void Rfc_Process()
                 Tm_Timeout_Completed(TM_RFC_TOUT_ID))
         {
             Rfc_Handle_Error(RFC_ERR_BOOT_FAILED);
-            rfc.state = RFC_S_WAIT_ERR_ACTION;
+            rfc.state = RFC_S_HALTED;
         }
     }
         break;
@@ -158,7 +158,7 @@ void Rfc_Process()
                     if (cmd_sch_imm_start_rat_p->status & RFC_F_RADIO_OP_STATUS_ERR)
                     {
                         Rfc_Handle_Error(RFC_ERR_OPERATION_FAILED);
-                        rfc.state = RFC_S_WAIT_ERR_ACTION;
+                        rfc.state = RFC_S_HALTED;
                     }
                     else
                     {
@@ -168,23 +168,6 @@ void Rfc_Process()
                     }
                 }
         }
-        break;
-
-    case RFC_S_EXEC_RADIO_SETUP:
-        Rfc_Start_Radio_Op(cmd_ble5_radio_setup_p, RFC_TOUT_DEFAULT);
-        rfc.next_state = RFC_S_EXEC_FS;
-        break;
-
-    case RFC_S_EXEC_FS:
-        Rfc_Start_Radio_Op(cmd_fs_p, RFC_TOUT_DEFAULT);
-        rfc.next_state = RFC_S_EXEC_START_RAT;
-        break;
-
-    case RFC_S_EXEC_START_RAT:
-//        Rfc_Start_Direct_Cmd(CMD_START_RAT);
-        Rfc_Start_Radio_Op(cmd_sch_imm_start_rat_p, RFC_TOUT_DEFAULT);
-        rfc.next_state = RFC_S_IDLE;
-        Rfc_Set_Flags_On_Success(RFC_F_INITIALIZED);
         break;
 
     case RFC_S_EXEC_SYNC_START_RAT:
@@ -219,7 +202,7 @@ void Rfc_Process()
         else if (Tm_Timeout_Completed(TM_RFC_TOUT_ID))
         {
             Rfc_Handle_Error(RFC_ERR_TIMEOUT);
-            rfc.state = RFC_S_WAIT_ERR_ACTION;
+            rfc.state = RFC_S_HALTED;
         }
         break;
 
@@ -233,12 +216,12 @@ void Rfc_Process()
             {
                 // Generate operation error TODO remove (just for test)
                 Rfc_Handle_Error(RFC_ERR_OPERATION_FAILED);
-                rfc.state = RFC_S_WAIT_ERR_ACTION;
+                rfc.state = RFC_S_HALTED;
             } else
             if (cpe_cmd_sta != CMDSTA_Done)
             {
                 Rfc_Handle_Error(RFC_ERR_OPERATION_FAILED);
-                rfc.state = RFC_S_WAIT_ERR_ACTION;
+                rfc.state = RFC_S_HALTED;
             }
 
             if (rfc.radio_op_p != NULL) // radio operation ?
@@ -255,7 +238,7 @@ void Rfc_Process()
         else if (Tm_Timeout_Completed(TM_RFC_TOUT_ID))
         {
             Rfc_Handle_Error(RFC_ERR_TIMEOUT);
-            rfc.state = RFC_S_WAIT_ERR_ACTION;
+            rfc.state = RFC_S_HALTED;
         }
         break;
 
@@ -268,14 +251,14 @@ void Rfc_Process()
         {
             // Generate operation error TODO remove (just for test)
             Rfc_Handle_Error(RFC_ERR_OPERATION_FAILED);
-            rfc.state = RFC_S_WAIT_ERR_ACTION;
+            rfc.state = RFC_S_HALTED;
         } else
         if (cpe_int_flags & RFC_M_CPE_COMMAND_DONE)
         {
             if (rfc.radio_op_p->status & RFC_F_RADIO_OP_STATUS_ERR)
             {
                 Rfc_Handle_Error(RFC_ERR_OPERATION_FAILED);
-                rfc.state = RFC_S_WAIT_ERR_ACTION;
+                rfc.state = RFC_S_HALTED;
             }
             else
             {
@@ -292,12 +275,12 @@ void Rfc_Process()
         else if (cpe_int_flags & RFC_M_CPE_RF_CORE_ERR)
         {
             Rfc_Handle_Error(RFC_ERR_RF_CORE); // internal error or PLL loss of lock
-            rfc.state = RFC_S_WAIT_ERR_ACTION;
+            rfc.state = RFC_S_HALTED;
         }
         else if (Tm_Timeout_Completed(TM_RFC_TOUT_ID))
         {
             Rfc_Handle_Error(RFC_ERR_TIMEOUT);
-            rfc.state = RFC_S_WAIT_ERR_ACTION;
+            rfc.state = RFC_S_HALTED;
         }
     }
         break;
@@ -305,7 +288,7 @@ void Rfc_Process()
     // ********************************
     // Error handling
     // ********************************
-    case RFC_S_WAIT_ERR_ACTION: // wait until error is read by external module and some action is taken
+    case RFC_S_HALTED: // wait until error is read by external module and some action is taken
 
         if (rfc.error.code == 0 && Rfc_CPE_Ready()) // error cleared ?
             rfc.state = RFC_S_IDLE;

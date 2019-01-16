@@ -211,19 +211,15 @@ typedef struct
 typedef enum
 {
     RFC_S_IDLE = 0x00,
+    RFC_S_HALTED,
 
     RFC_S_WAIT_RFC_BOOT = 0x10,
     RFC_S_WAIT_INITIALIZATION,
-    RFC_S_EXEC_RADIO_SETUP,
-    RFC_S_EXEC_FS,
-    RFC_S_EXEC_START_RAT,
     RFC_S_EXEC_SYNC_START_RAT,
 
     RFC_S_WAIT_CPE_READY = 0x20,
     RFC_S_WAIT_CPE_ACK,
     RFC_S_WAIT_RADIO_OP_EXECUTION,
-
-    RFC_S_WAIT_ERR_ACTION = 0x30,
 
 } rfc_state_t;
 
