@@ -134,8 +134,11 @@ void Rfc_Process()
         if (cpe_int_flags & RFC_DBELL_RFCPEIFG_BOOT_DONE)
         {
 //            Rfc_Start_Direct_Cmd(CMD_PING);
+//            Rfc_Start_Radio_Op(cmd_sch_imm_ping_p, RFC_TOUT_DEFAULT);
+//            rfc.next_state = RFC_S_EXEC_RADIO_SETUP;
+            Rfc_Init_Startup_Cmd_Chain();
             Rfc_Start_Radio_Op(cmd_sch_imm_ping_p, RFC_TOUT_DEFAULT);
-            rfc.next_state = RFC_S_EXEC_RADIO_SETUP;
+            rfc.next_state = RFC_S_WAIT_INITIALIZATION;
         }
         else if (cpe_int_flags & RFC_DBELL_RFCPEIFG_INTERNAL_ERROR ||
                 Tm_Timeout_Completed(TM_RFC_TOUT_ID))
@@ -144,6 +147,27 @@ void Rfc_Process()
             rfc.state = RFC_S_WAIT_ERR_ACTION;
         }
     }
+        break;
+
+    case RFC_S_WAIT_INITIALIZATION:
+        {
+                uint32_t cpe_int_flags = Rfc_Get_CPE_Int_Flags();
+
+                if (cpe_int_flags & RFC_DBELL_RFCPEIFG_LAST_COMMAND_DONE)
+                {
+                    if (cmd_sch_imm_start_rat_p->status & RFC_F_RADIO_OP_STATUS_ERR)
+                    {
+                        Rfc_Handle_Error(RFC_ERR_OPERATION_FAILED);
+                        rfc.state = RFC_S_WAIT_ERR_ACTION;
+                    }
+                    else
+                    {
+                        Rfc_Set_Flags_On_Success(RFC_F_INITIALIZED);
+                        Rfc_On_Success_Do(rfc.radio_op_p);
+                        rfc.state = RFC_S_IDLE;
+                    }
+                }
+        }
         break;
 
     case RFC_S_EXEC_RADIO_SETUP:
@@ -538,11 +562,21 @@ static void Rfc_Enable_Output_Signals()
 
 static void Rfc_Init_Startup_Cmd_Chain()
 {
-    cmd_sch_imm_ping_p->condition.rule = COND_NEVER;
+    // Define the command execution chain
+    // ble5_radio_setup -> fs -> start_rat
     cmd_sch_imm_ping_p->cmdrVal = CMDR_DIR_CMD(CMD_PING);
+    cmd_sch_imm_ping_p->condition.rule = COND_STOP_ON_FALSE;
+    cmd_sch_imm_ping_p->pNextOp = (rfc_radioOp_t*)cmd_ble5_radio_setup_p;
 
-    cmd_sch_imm_start_rat_p->condition.rule = COND_NEVER;
+    cmd_ble5_radio_setup_p->pNextOp = (rfc_radioOp_t*)cmd_fs_p;
+    cmd_ble5_radio_setup_p->condition.rule = COND_STOP_ON_FALSE;
+
+    cmd_fs_p->pNextOp = (rfc_radioOp_t*)cmd_sch_imm_start_rat_p;
+    cmd_fs_p->condition.rule = COND_STOP_ON_FALSE;
+
     cmd_sch_imm_start_rat_p->cmdrVal = CMDR_DIR_CMD(CMD_START_RAT);
+    cmd_sch_imm_start_rat_p->pNextOp = NULL;
+    cmd_sch_imm_start_rat_p->condition.rule = COND_NEVER;
 }
 
 static void Rfc_Init_CPE_Structs()
