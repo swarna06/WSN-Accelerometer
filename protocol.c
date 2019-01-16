@@ -193,23 +193,6 @@ static void Ptc_Sink_Node_FSM()
 
         // Calculate wake up time and go to sleep
         ptc.wakeup_time = ptc.start_of_next_frame - PTC_RTC_TOTAL_WAKEUP_TIME;
-//        Pma_MCU_Sleep(ptc.wakeup_time);
-//
-//        #ifdef PTC_START_OF_FRAME_OUT
-//        // Set RTC compare value to match the start of next frame
-//        AONRTCEventClear(AON_RTC_CH1);
-//        AONRTCCompareValueSet(AON_RTC_CH1, ptc.start_of_next_frame);
-//        #endif // #ifdef PTC_START_OF_FRAME_OUT
-//
-//        #ifdef PTC_VERBOSE
-//        Log_Val_Uint32("rtc_SoNF: ", ptc.start_of_next_frame);
-//        #endif // #ifdef PTC_VERBOSE
-//
-//        Ptc_Set_Default_Radio_Config();
-//
-//        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
-//        ptc.next_state = PTC_S_SCHEDULE_BEACON_RADIO_OP;
-
         ptc.Wakeup_Action = Ptc_Start_Of_Frame_Wakeup_Action;
         ptc.state = PTC_S_RFC_PREPARE_TO_SLEEP;
         ptc.next_state = PTC_S_SCHEDULE_BEACON_RADIO_OP;
@@ -244,13 +227,6 @@ static void Ptc_Sink_Node_FSM()
 
         // Calculate wake up time and go to sleep
         ptc.wakeup_time = ptc.start_of_next_slot - PTC_RTC_TOTAL_WAKEUP_TIME;
-//        Pma_MCU_Sleep(ptc.wakeup_time);
-//
-//        Ptc_Set_Default_Radio_Config();
-//
-//        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
-//        ptc.next_state = PTC_S_SCHEDULE_SLOT_RADIO_OP;
-
         ptc.Wakeup_Action = Ptc_Start_Of_Slot_Wakeup_Action;
         ptc.state = PTC_S_RFC_PREPARE_TO_SLEEP;
         ptc.next_state = PTC_S_SCHEDULE_SLOT_RADIO_OP;
@@ -289,14 +265,6 @@ static void Ptc_Sink_Node_FSM()
 
         // Calculate wake up time and go to sleep
         ptc.wakeup_time = ptc.start_of_next_subslot - PTC_RTC_TOTAL_WAKEUP_TIME;
-//        Pma_MCU_Sleep(ptc.wakeup_time);
-//
-//        if (ptc.subslot_count == PTC_SUBSLOT_NUM - 1)
-//            Ptc_Set_Test_Radio_Config();
-//
-//        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
-//        ptc.next_state = PTC_S_SCHEDULE_SUBSLOT_RADIO_OP;
-
         ptc.Wakeup_Action = Ptc_Start_Of_Subslot_Wakeup_Action;
         ptc.state = PTC_S_RFC_PREPARE_TO_SLEEP;
         ptc.next_state = PTC_S_SCHEDULE_SUBSLOT_RADIO_OP;
