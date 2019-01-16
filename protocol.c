@@ -69,6 +69,10 @@ static void Ptc_Request_Test_Pkt_Tx(uint32_t rat_start_of_tx);
 static void Ptc_Update_Test_Idx();
 static void Ptc_Set_Test_Radio_Config();
 
+static void Ptc_Start_Of_Frame_Wakeup_Action();
+static void Ptc_Start_Of_Slot_Wakeup_Action();
+static void Ptc_Start_Of_Subslot_Wakeup_Action();
+
 #ifdef PTC_START_OF_FRAME_OUT
 void Ptc_RTC_Isr()
 {
@@ -117,6 +121,9 @@ void Ptc_Init()
     // Set start time of the first frame
     ptc.start_of_next_frame = 0;
 
+    ptc.wakeup_time = 0;
+    ptc.Wakeup_Action = NULL;
+
     // Initialize FSM variables
     ptc.flags = 0;
     ptc.state = PTC_S_WAIT_RF_CORE_INIT;
@@ -157,6 +164,17 @@ static void Ptc_Sink_Node_FSM()
         ptc.state = PTC_S_WAIT_START_OF_FRAME;
         break;
 
+    case PTC_S_RFC_PREPARE_TO_SLEEP:
+        ptc.state = PTC_S_WAIT_RFC_READY_TO_SLEEP;
+        break;
+
+    case PTC_S_WAIT_RFC_READY_TO_SLEEP:
+        Pma_MCU_Sleep(ptc.wakeup_time);
+        if (ptc.Wakeup_Action != NULL)
+            ptc.Wakeup_Action();
+        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
+        break;
+
     case PTC_S_WAIT_RF_CORE_WAKEUP:
         Rfc_Synchronize_RAT();
         ptc.state = ptc.next_state;
@@ -174,22 +192,26 @@ static void Ptc_Sink_Node_FSM()
         ptc.subslot_count = PTC_SUBSLOT_NUM - 1;
 
         // Calculate wake up time and go to sleep
-        uint32_t wakeup_time = ptc.start_of_next_frame - PTC_RTC_TOTAL_WAKEUP_TIME;
-        Pma_MCU_Sleep(wakeup_time);
+        ptc.wakeup_time = ptc.start_of_next_frame - PTC_RTC_TOTAL_WAKEUP_TIME;
+//        Pma_MCU_Sleep(ptc.wakeup_time);
+//
+//        #ifdef PTC_START_OF_FRAME_OUT
+//        // Set RTC compare value to match the start of next frame
+//        AONRTCEventClear(AON_RTC_CH1);
+//        AONRTCCompareValueSet(AON_RTC_CH1, ptc.start_of_next_frame);
+//        #endif // #ifdef PTC_START_OF_FRAME_OUT
+//
+//        #ifdef PTC_VERBOSE
+//        Log_Val_Uint32("rtc_SoNF: ", ptc.start_of_next_frame);
+//        #endif // #ifdef PTC_VERBOSE
+//
+//        Ptc_Set_Default_Radio_Config();
+//
+//        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
+//        ptc.next_state = PTC_S_SCHEDULE_BEACON_RADIO_OP;
 
-        #ifdef PTC_START_OF_FRAME_OUT
-        // Set RTC compare value to match the start of next frame
-        AONRTCEventClear(AON_RTC_CH1);
-        AONRTCCompareValueSet(AON_RTC_CH1, ptc.start_of_next_frame);
-        #endif // #ifdef PTC_START_OF_FRAME_OUT
-
-        #ifdef PTC_VERBOSE
-        Log_Val_Uint32("rtc_SoNF: ", ptc.start_of_next_frame);
-        #endif // #ifdef PTC_VERBOSE
-
-        Ptc_Set_Default_Radio_Config();
-
-        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
+        ptc.Wakeup_Action = Ptc_Start_Of_Frame_Wakeup_Action;
+        ptc.state = PTC_S_RFC_PREPARE_TO_SLEEP;
         ptc.next_state = PTC_S_SCHEDULE_BEACON_RADIO_OP;
     }
     break;
@@ -221,12 +243,16 @@ static void Ptc_Sink_Node_FSM()
         ptc.test->consec_err_count = 0;
 
         // Calculate wake up time and go to sleep
-        uint32_t wakeup_time = ptc.start_of_next_slot - PTC_RTC_TOTAL_WAKEUP_TIME;
-        Pma_MCU_Sleep(wakeup_time);
+        ptc.wakeup_time = ptc.start_of_next_slot - PTC_RTC_TOTAL_WAKEUP_TIME;
+//        Pma_MCU_Sleep(ptc.wakeup_time);
+//
+//        Ptc_Set_Default_Radio_Config();
+//
+//        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
+//        ptc.next_state = PTC_S_SCHEDULE_SLOT_RADIO_OP;
 
-        Ptc_Set_Default_Radio_Config();
-
-        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
+        ptc.Wakeup_Action = Ptc_Start_Of_Slot_Wakeup_Action;
+        ptc.state = PTC_S_RFC_PREPARE_TO_SLEEP;
         ptc.next_state = PTC_S_SCHEDULE_SLOT_RADIO_OP;
     }
     break;
@@ -262,13 +288,17 @@ static void Ptc_Sink_Node_FSM()
         ptc.start_of_next_subslot += PTC_RTC_SUBSLOT_TIME;
 
         // Calculate wake up time and go to sleep
-        uint32_t wakeup_time = ptc.start_of_next_subslot - PTC_RTC_TOTAL_WAKEUP_TIME;
-        Pma_MCU_Sleep(wakeup_time);
+        ptc.wakeup_time = ptc.start_of_next_subslot - PTC_RTC_TOTAL_WAKEUP_TIME;
+//        Pma_MCU_Sleep(ptc.wakeup_time);
+//
+//        if (ptc.subslot_count == PTC_SUBSLOT_NUM - 1)
+//            Ptc_Set_Test_Radio_Config();
+//
+//        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
+//        ptc.next_state = PTC_S_SCHEDULE_SUBSLOT_RADIO_OP;
 
-        if (ptc.subslot_count == PTC_SUBSLOT_NUM - 1)
-            Ptc_Set_Test_Radio_Config();
-
-        ptc.state = PTC_S_WAIT_RF_CORE_WAKEUP;
+        ptc.Wakeup_Action = Ptc_Start_Of_Subslot_Wakeup_Action;
+        ptc.state = PTC_S_RFC_PREPARE_TO_SLEEP;
         ptc.next_state = PTC_S_SCHEDULE_SUBSLOT_RADIO_OP;
     }
     break;
@@ -887,4 +917,30 @@ static void Ptc_Set_Test_Radio_Config()
     Rfc_BLE5_Set_PHY_Mode(phy_mode[ptc.test->i]);
     Rfc_Set_Tx_Power(tx_power[ptc.test->j]);
     Rfc_BLE5_Set_Channel(channel[ptc.test->k]);
+}
+
+static void Ptc_Start_Of_Frame_Wakeup_Action()
+{
+    #ifdef PTC_START_OF_FRAME_OUT
+    // Set RTC compare value to match the start of next frame
+    AONRTCEventClear(AON_RTC_CH1);
+    AONRTCCompareValueSet(AON_RTC_CH1, ptc.start_of_next_frame);
+    #endif // #ifdef PTC_START_OF_FRAME_OUT
+
+    #ifdef PTC_VERBOSE
+    Log_Val_Uint32("rtc_SoNF: ", ptc.start_of_next_frame);
+    #endif // #ifdef PTC_VERBOSE
+
+    Ptc_Set_Default_Radio_Config();
+}
+
+static void Ptc_Start_Of_Slot_Wakeup_Action()
+{
+    Ptc_Set_Default_Radio_Config();
+}
+
+static void Ptc_Start_Of_Subslot_Wakeup_Action()
+{
+    if (ptc.subslot_count == PTC_SUBSLOT_NUM - 1)
+        Ptc_Set_Test_Radio_Config();
 }

@@ -122,6 +122,8 @@ typedef enum
     // Common states for both device roles
     PTC_S_IDLE = 0,
     PTC_S_WAIT_RF_CORE_INIT,
+    PTC_S_RFC_PREPARE_TO_SLEEP,
+    PTC_S_WAIT_RFC_READY_TO_SLEEP,
     PTC_S_WAIT_RF_CORE_WAKEUP,
 
     // Initialization states
@@ -161,6 +163,9 @@ typedef struct
     uint32_t start_of_next_subslot;
     uint8_t slot_count;
     uint8_t subslot_count;
+
+    uint32_t wakeup_time;
+    void (*Wakeup_Action)();
 
     ptc_data_pkt_t data_pkt;
 
