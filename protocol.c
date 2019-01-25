@@ -225,6 +225,7 @@ static void Ptc_Sink_Node_FSM()
         ptc.test->err_count = 0;
         ptc.test->total_err_count = 0;
         ptc.test->consec_err_count = 0;
+        ptc.test->rssi_sum = 0;
 
         // Calculate wake up time and go to sleep
         ptc.wakeup_time = ptc.start_of_next_slot - PTC_RTC_TOTAL_WAKEUP_TIME;
@@ -317,7 +318,10 @@ static void Ptc_Sink_Node_FSM()
                 ptc.test->consec_err_count = ptc.test->err_count;
         }
         else
+        {
             ptc.test->err_count = 0;
+            ptc.test->rssi_sum += ptc.rx_result.rssi_db;
+        }
 
         if (ptc.subslot_count == 0) // end of slot ?
         {
@@ -331,6 +335,13 @@ static void Ptc_Sink_Node_FSM()
             Log_String_Literal(", "); Log_Value_Int(ptc.data_pkt.total_err_count);
             Log_String_Literal(", "); Log_Value_Int(ptc.test->consec_err_count);
             Log_String_Literal(", "); Log_Value_Int(ptc.test->total_err_count);
+
+            // Calculate the average and demote the variable
+            uint8_t rssi_samp_num = PTC_SUBSLOT_NUM - 1 - ptc.test->total_err_count;
+            int8_t meas_ave_rssi = (int8_t)(ptc.test->rssi_sum / rssi_samp_num);
+
+            Log_String_Literal(", "); Log_Value_Int(meas_ave_rssi);
+            Log_String_Literal(", "); Log_Value_Int(ptc.data_pkt.average_rssi);
             Log_Line(""); // new line
         }
 
@@ -417,6 +428,7 @@ static void Ptc_Sensor_Node_FSM()
         ptc.test->err_count = 0;
         ptc.test->total_err_count = 0;
         ptc.test->consec_err_count = 0;
+        ptc.test->rssi_sum = 0;
 
         // Calculate wake up time and go to sleep
         ptc.wakeup_time = ptc.start_of_next_frame - PTC_RTC_TOTAL_WAKEUP_TIME;
@@ -560,7 +572,10 @@ static void Ptc_Sensor_Node_FSM()
                 ptc.test->consec_err_count = ptc.test->err_count;
         }
         else
+        {
             ptc.test->err_count = 0;
+            ptc.test->rssi_sum += ptc.rx_result.rssi_db;
+        }
 
         ptc.state = PTC_S_WAIT_TIMEOUT;
         break;
@@ -787,6 +802,12 @@ static void Ptc_Request_Data_Pkt_Tx(uint32_t rat_start_of_tx)
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.test->consec_err_count));
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.test->total_err_count));
 
+    // Calculate the average and demote the variable
+    uint8_t rssi_samp_num = PTC_SUBSLOT_NUM - 1 - ptc.test->total_err_count;
+    int8_t meas_ave_rssi = (int8_t)(ptc.test->rssi_sum / rssi_samp_num);
+
+    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(meas_ave_rssi));
+
     ptc.tx_param.buf = ptc.tx_buf;
     ptc.tx_param.len = payload_len;
     ptc.tx_param.rat_start_time = rat_start_of_tx;
@@ -803,6 +824,7 @@ static void Ptc_Process_Data_Pkt()
         Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(ptc.data_pkt.ack));
         Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(ptc.data_pkt.consec_err_count));
         Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(ptc.data_pkt.total_err_count));
+        Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(ptc.data_pkt.average_rssi));
     }
     else
     {
@@ -810,6 +832,7 @@ static void Ptc_Process_Data_Pkt()
         ptc.data_pkt.ack = ptc.rx_result.err_flags << 1;
         ptc.data_pkt.consec_err_count = -1;
         ptc.data_pkt.total_err_count = -1;
+        ptc.data_pkt.average_rssi = 127;
     }
 }
 
