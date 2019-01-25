@@ -224,11 +224,6 @@ static void Ptc_Sink_Node_FSM()
         // Test
         ptc.start_of_next_subslot = ptc.start_of_next_slot;
         ptc.subslot_count = PTC_SUBSLOT_NUM - 1;
-
-//        ptc.test->err_count = 0;
-//        ptc.test->total_err_count = 0;
-//        ptc.test->consec_err_count = 0;
-//        ptc.test->rssi_sum = 0;
         Ptc_Reset_Test_Results();
 
         // Calculate wake up time and go to sleep
@@ -429,11 +424,6 @@ static void Ptc_Sensor_Node_FSM()
         // Test
         ptc.start_of_next_subslot = ptc.start_of_next_frame;
         ptc.subslot_count = PTC_SUBSLOT_NUM - 1;
-
-//        ptc.test->err_count = 0;
-//        ptc.test->total_err_count = 0;
-//        ptc.test->consec_err_count = 0;
-//        ptc.test->rssi_sum = 0;
         Ptc_Reset_Test_Results();
 
         // Calculate wake up time and go to sleep
