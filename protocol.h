@@ -99,6 +99,7 @@ typedef struct
     int8_t consec_err_count;
     int8_t total_err_count;
     int16_t rssi_sum;
+    int8_t average_rssi;
 } ptc_test_t;
 
 // ********************************
