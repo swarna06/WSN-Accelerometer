@@ -27,6 +27,9 @@
 // Minimum sleep time
 #define PMA_MIN_SLEEP_RTC_TICKS     (2000/TM_RTC_USEC_PER_TICK)
 
+// Battery voltage readings
+#define PMA_BATT_VOLT_SAMP_NUM      4
+
 // Power domain flags
 #define PMA_F_DOMAIN_RF_CORE        0x8000
 #define PMA_F_DOMAIN_SERIAL         0x4000
@@ -41,7 +44,17 @@ typedef enum
     PMA_PERIPH_GPIO = PMA_F_DOMAIN_PERIPH,
 } pma_peripherals_t;
 
+typedef struct
+{
+    size_t idx;
+    uint16_t batt_volt[PMA_BATT_VOLT_SAMP_NUM]; // used to implement a moving average
+} pma_control_t;
+
 void Pma_Init();
+
+bool Pma_Batt_Volt_Meas_Ready();
+
+void Pma_Process();
 
 void Pma_Power_On_Peripheral(uint16_t peripheral);
 
@@ -51,6 +64,6 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time);
 
 void Pma_MCU_Wakeup();
 
-//void Pma_Dummy_MCU_Sleep(uint32_t rtc_wakeup_time);
+void Pma_Get_Batt_Volt(uint8_t* int_part, uint16_t* frac_part);
 
 #endif /* POWER_MANAGEMENT_H_ */

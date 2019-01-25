@@ -16,6 +16,8 @@
 #include <driverlib/sys_ctrl.h>
 #include <driverlib/ioc.h>
 
+#include <driverlib/aon_batmon.h>
+
 #include "power_management.h"
 #include "timing.h"
 #include "rf_core.h"
@@ -24,6 +26,8 @@
 #include "board.h"
 #include "log.h"
 #include "misc.h"
+
+static pma_control_t pmc;
 
 void Pma_RTC_Isr()
 {
@@ -80,6 +84,27 @@ void Pma_Init()
     IOCPinTypeGpioOutput(BRD_SLEEP_PIN);
     Brd_Led_On(BRD_SLEEP_PIN);
     #endif // #ifdef PMA_SLEEP_OUT
+
+    // Initialize battery voltage buffer and index
+    pmc.idx = PMA_BATT_VOLT_SAMP_NUM - 1;
+    uint16_t batt_volt = AONBatMonBatteryVoltageGet();
+    for (size_t i = 0; i < PMA_BATT_VOLT_SAMP_NUM; i++)
+        pmc.batt_volt[i] = batt_volt;
+}
+
+inline bool Pma_Batt_Volt_Meas_Ready()
+{
+    return AONBatMonNewTempMeasureReady();
+}
+
+void Pma_Process()
+{
+    // Add sample to buffer
+    pmc.batt_volt[pmc.idx] = (uint16_t)AONBatMonBatteryVoltageGet();
+    if (pmc.idx > 0)
+        pmc.idx--;
+    else
+        pmc.idx = PMA_BATT_VOLT_SAMP_NUM - 1;
 }
 
 void Pma_Power_On_Peripheral(uint16_t peripheral)
@@ -264,3 +289,26 @@ void Pma_MCU_Wakeup()
     Rfc_Wakeup();
     Sep_Wakeup();
 }
+
+void Pma_Get_Batt_Volt(uint8_t* int_part, uint16_t* frac_part)
+{
+    // Calculate average
+    uint32_t sum = 0;
+    for (size_t i = 0; i < PMA_BATT_VOLT_SAMP_NUM; i++)
+        sum += pmc.batt_volt[i];
+
+    // Battery voltage measurement in a <int.frac> format size <3.8> in units of volt
+    // The 3 least significant bits are discarded to fit the value in a single byte
+    uint8_t average = (sum / PMA_BATT_VOLT_SAMP_NUM) >> 3;
+
+    // Extract the integer and fractional parts
+    *int_part = average >> 5;
+
+    *frac_part = 0;
+    if (average & (1 << 4)) *frac_part += 50000 / (1 << 0);
+    if (average & (1 << 3)) *frac_part += 50000 / (1 << 1);
+    if (average & (1 << 2)) *frac_part += 50000 / (1 << 2);
+    if (average & (1 << 1)) *frac_part += 50000 / (1 << 3);
+    if (average & (1 << 0)) *frac_part += 50000 / (1 << 4);
+}
+

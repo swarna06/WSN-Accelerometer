@@ -22,8 +22,6 @@
 #include <driverlib/interrupt.h>
 #include <driverlib/sys_ctrl.h>
 
-#include <driverlib/aon_batmon.h>
-
 #include "protocol.h"
 #include "rf_core.h"
 #include "power_management.h"
@@ -77,9 +75,6 @@ static void Ptc_Start_Of_Subslot_Wakeup_Action();
 
 static void Ptc_Reset_Test_Results();
 static void Ptc_Print_Test_Results();
-
-static uint8_t Ptc_Batt_Volt_Get_Int_Part();
-static uint16_t Ptc_Batt_Volt_Get_Frac_Part();
 
 #ifdef PTC_START_OF_FRAME_OUT
 void Ptc_RTC_Isr()
@@ -334,7 +329,7 @@ static void Ptc_Sink_Node_FSM()
             uint8_t rssi_samp_num = PTC_SUBSLOT_NUM - 1 - ptc.test->total_err_count;
             ptc.test->average_rssi = (int8_t)(ptc.test->rssi_sum / rssi_samp_num);
             // Read battery voltage
-            ptc.test->batt_volt = (uint8_t)(AONBatMonBatteryVoltageGet() >> 3);
+            Pma_Get_Batt_Volt(&ptc.test->batt_volt_int, &ptc.test->batt_volt_frac);
 
             Ptc_Print_Test_Results();
         }
@@ -931,7 +926,6 @@ static void Ptc_Reset_Test_Results()
     ptc.test->total_err_count = 0;
     ptc.test->consec_err_count = 0;
     ptc.test->rssi_sum = 0;
-    ptc.test->batt_volt = 0;
 }
 
 static void Ptc_Print_Test_Results()
@@ -948,26 +942,7 @@ static void Ptc_Print_Test_Results()
     Log_String_Literal(", "); Log_Value_Int(ptc.test->total_err_count);
     Log_String_Literal(", "); Log_Value_Int(ptc.test->average_rssi);
     Log_String_Literal(", "); Log_Value_Int(ptc.data_pkt.average_rssi);
-    Log_String_Literal(", "); Log_Value_Hex(ptc.test->batt_volt);
-    Log_String_Literal(", "); Log_Value_Uint(Ptc_Batt_Volt_Get_Int_Part());
-    Log_String_Literal("."); Log_Value_Uint(Ptc_Batt_Volt_Get_Frac_Part());
+    Log_String_Literal(", "); Log_Value_Uint(ptc.test->batt_volt_int);
+    Log_String_Literal("."); Log_Value_Uint(ptc.test->batt_volt_frac);
     Log_Line(""); // new line
-}
-
-static uint8_t Ptc_Batt_Volt_Get_Int_Part()
-{
-    return ptc.test->batt_volt >> 5;
-}
-
-static uint16_t Ptc_Batt_Volt_Get_Frac_Part()
-{
-    uint16_t batt_volt_frac = 0;
-
-    if (ptc.test->batt_volt & (1 << 4)) batt_volt_frac += 50000 / (1 << 0);
-    if (ptc.test->batt_volt & (1 << 3)) batt_volt_frac += 50000 / (1 << 1);
-    if (ptc.test->batt_volt & (1 << 2)) batt_volt_frac += 50000 / (1 << 2);
-    if (ptc.test->batt_volt & (1 << 1)) batt_volt_frac += 50000 / (1 << 3);
-    if (ptc.test->batt_volt & (1 << 0)) batt_volt_frac += 50000 / (1 << 4);
-
-    return batt_volt_frac;
 }

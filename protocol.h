@@ -100,7 +100,8 @@ typedef struct
     int8_t total_err_count;
     int16_t rssi_sum;
     int8_t average_rssi;
-    uint8_t batt_volt;
+    uint8_t batt_volt_int;
+    uint16_t batt_volt_frac;
 } ptc_test_t;
 
 // ********************************

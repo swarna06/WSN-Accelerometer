@@ -67,6 +67,9 @@ int main(void)
 
         Log_Process();
 
+        if (Pma_Batt_Volt_Meas_Ready())
+            Pma_Process();
+
         Rfc_Process();
 
         if (Rfc_Ready())
