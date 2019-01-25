@@ -465,6 +465,9 @@ static void Ptc_Sensor_Node_FSM()
         uint8_t rssi_samp_num = PTC_SUBSLOT_NUM - 1 - ptc.test->total_err_count;
         ptc.test->average_rssi = (int8_t)(ptc.test->rssi_sum / rssi_samp_num);
 
+        // Get Battery voltage
+        ptc.test->batt_volt_fixed_point = Pma_Get_Batt_Volt_Fixed_Point();
+
         // Request radio operation to the RF core
         Ptc_Request_Data_Pkt_Tx(rat_start_time);
         ptc.state = PTC_S_WAIT_TIMEOUT;
@@ -793,6 +796,7 @@ static void Ptc_Request_Data_Pkt_Tx(uint32_t rat_start_of_tx)
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.test->consec_err_count));
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.test->total_err_count));
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.test->average_rssi));
+    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.test->batt_volt_fixed_point));
 
     ptc.tx_param.buf = ptc.tx_buf;
     ptc.tx_param.len = payload_len;
@@ -811,6 +815,7 @@ static void Ptc_Process_Data_Pkt()
         Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(ptc.data_pkt.consec_err_count));
         Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(ptc.data_pkt.total_err_count));
         Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(ptc.data_pkt.average_rssi));
+        Ptc_Get_Field_From_Payload(&payload_p, Ptc_Payload_Field(ptc.data_pkt.batt_volt_fixed_point));
     }
     else
     {
@@ -819,6 +824,7 @@ static void Ptc_Process_Data_Pkt()
         ptc.data_pkt.consec_err_count = -1;
         ptc.data_pkt.total_err_count = -1;
         ptc.data_pkt.average_rssi = 0;
+        ptc.data_pkt.batt_volt_fixed_point = 0;
     }
 }
 
@@ -944,5 +950,15 @@ static void Ptc_Print_Test_Results()
     Log_String_Literal(", "); Log_Value_Int(ptc.data_pkt.average_rssi);
     Log_String_Literal(", "); Log_Value_Uint(ptc.test->batt_volt_int);
     Log_String_Literal("."); Log_Value_Uint(ptc.test->batt_volt_frac);
+
+    uint8_t rxed_batt_volt_int;
+    uint16_t rxed_batt_volt_frac;
+
+    Pma_Get_Batt_Volt_Parts(ptc.data_pkt.batt_volt_fixed_point,
+                            &rxed_batt_volt_int, &rxed_batt_volt_frac);
+
+    Log_String_Literal(", "); Log_Value_Uint(rxed_batt_volt_int);
+    Log_String_Literal("."); Log_Value_Uint(rxed_batt_volt_frac);
+
     Log_Line(""); // new line
 }
