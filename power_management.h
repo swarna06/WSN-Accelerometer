@@ -64,6 +64,12 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time);
 
 void Pma_MCU_Wakeup();
 
+uint8_t Pma_Get_Batt_Volt_Fixed_Point();
+
+void Pma_Get_Batt_Volt_Parts(uint8_t batt_volt,
+                             uint8_t* int_part,
+                             uint16_t* frac_part);
+
 void Pma_Get_Batt_Volt(uint8_t* int_part, uint16_t* frac_part);
 
 #endif /* POWER_MANAGEMENT_H_ */

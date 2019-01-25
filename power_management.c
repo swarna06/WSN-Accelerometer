@@ -290,7 +290,7 @@ void Pma_MCU_Wakeup()
     Sep_Wakeup();
 }
 
-void Pma_Get_Batt_Volt(uint8_t* int_part, uint16_t* frac_part)
+uint8_t Pma_Get_Batt_Volt_Fixed_Point()
 {
     // Calculate average
     uint32_t sum = 0;
@@ -299,16 +299,28 @@ void Pma_Get_Batt_Volt(uint8_t* int_part, uint16_t* frac_part)
 
     // Battery voltage measurement in a <int.frac> format size <3.8> in units of volt
     // The 3 least significant bits are discarded to fit the value in a single byte
-    uint8_t average = (sum / PMA_BATT_VOLT_SAMP_NUM) >> 3;
+    return (sum / PMA_BATT_VOLT_SAMP_NUM) >> 3;
+}
 
+void Pma_Get_Batt_Volt_Parts(uint8_t batt_volt,
+                             uint8_t* int_part,
+                             uint16_t* frac_part)
+{
     // Extract the integer and fractional parts
-    *int_part = average >> 5;
+    *int_part = batt_volt >> 5;
 
     *frac_part = 0;
-    if (average & (1 << 4)) *frac_part += 50000 / (1 << 0);
-    if (average & (1 << 3)) *frac_part += 50000 / (1 << 1);
-    if (average & (1 << 2)) *frac_part += 50000 / (1 << 2);
-    if (average & (1 << 1)) *frac_part += 50000 / (1 << 3);
-    if (average & (1 << 0)) *frac_part += 50000 / (1 << 4);
+    if (batt_volt & (1 << 4)) *frac_part += 50000 / (1 << 0);
+    if (batt_volt & (1 << 3)) *frac_part += 50000 / (1 << 1);
+    if (batt_volt & (1 << 2)) *frac_part += 50000 / (1 << 2);
+    if (batt_volt & (1 << 1)) *frac_part += 50000 / (1 << 3);
+    if (batt_volt & (1 << 0)) *frac_part += 50000 / (1 << 4);
+}
+
+void Pma_Get_Batt_Volt(uint8_t* int_part, uint16_t* frac_part)
+{
+    uint8_t batt_volt = Pma_Get_Batt_Volt_Fixed_Point();
+
+    Pma_Get_Batt_Volt_Parts(batt_volt, int_part, frac_part);
 }
 
