@@ -167,6 +167,11 @@ static void Tm_Init_RTC()
         AONRTCEnable();
     }
 
+    // Set increment value of RTC counter
+    HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINC0) = 0;
+    HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINC1) = 0x80;
+    HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINCCTL) = 0x01;
+
     // Make sure writes take effect
     SysCtrlAonSync();
 
