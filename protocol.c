@@ -329,19 +329,6 @@ static void Ptc_Sink_Node_FSM()
             uint8_t rssi_samp_num = PTC_SUBSLOT_NUM - 1 - ptc.test->total_err_count;
             ptc.test->average_rssi = (int8_t)(ptc.test->rssi_sum / rssi_samp_num);
 
-//            Log_String_Literal(""); Log_Value_Int(ptc.start_of_next_frame);
-//            Log_String_Literal(", "); Log_Value_Int(ptc.test->i);
-//            Log_String_Literal(", "); Log_Value_Int(ptc.test->j);
-//            Log_String_Literal(", "); Log_Value_Int(ptc.test->k);
-//            Log_String_Literal(", "); Log_Value_Hex(ptc.data_pkt.dev_id);
-//            Log_String_Literal(", "); Log_Value_Hex(ptc.data_pkt.ack);
-//            Log_String_Literal(", "); Log_Value_Int(ptc.data_pkt.consec_err_count);
-//            Log_String_Literal(", "); Log_Value_Int(ptc.data_pkt.total_err_count);
-//            Log_String_Literal(", "); Log_Value_Int(ptc.test->consec_err_count);
-//            Log_String_Literal(", "); Log_Value_Int(ptc.test->total_err_count);
-//            Log_String_Literal(", "); Log_Value_Int(ptc.test->average_rssi);
-//            Log_String_Literal(", "); Log_Value_Int(ptc.data_pkt.average_rssi);
-//            Log_Line(""); // new line
             Ptc_Print_Test_Results();
         }
 
