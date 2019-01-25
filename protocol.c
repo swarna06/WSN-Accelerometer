@@ -73,6 +73,8 @@ static void Ptc_Start_Of_Frame_Wakeup_Action();
 static void Ptc_Start_Of_Slot_Wakeup_Action();
 static void Ptc_Start_Of_Subslot_Wakeup_Action();
 
+static void Ptc_Reset_Test_Results();
+
 #ifdef PTC_START_OF_FRAME_OUT
 void Ptc_RTC_Isr()
 {
@@ -222,10 +224,12 @@ static void Ptc_Sink_Node_FSM()
         // Test
         ptc.start_of_next_subslot = ptc.start_of_next_slot;
         ptc.subslot_count = PTC_SUBSLOT_NUM - 1;
-        ptc.test->err_count = 0;
-        ptc.test->total_err_count = 0;
-        ptc.test->consec_err_count = 0;
-        ptc.test->rssi_sum = 0;
+
+//        ptc.test->err_count = 0;
+//        ptc.test->total_err_count = 0;
+//        ptc.test->consec_err_count = 0;
+//        ptc.test->rssi_sum = 0;
+        Ptc_Reset_Test_Results();
 
         // Calculate wake up time and go to sleep
         ptc.wakeup_time = ptc.start_of_next_slot - PTC_RTC_TOTAL_WAKEUP_TIME;
@@ -425,10 +429,12 @@ static void Ptc_Sensor_Node_FSM()
         // Test
         ptc.start_of_next_subslot = ptc.start_of_next_frame;
         ptc.subslot_count = PTC_SUBSLOT_NUM - 1;
-        ptc.test->err_count = 0;
-        ptc.test->total_err_count = 0;
-        ptc.test->consec_err_count = 0;
-        ptc.test->rssi_sum = 0;
+
+//        ptc.test->err_count = 0;
+//        ptc.test->total_err_count = 0;
+//        ptc.test->consec_err_count = 0;
+//        ptc.test->rssi_sum = 0;
+        Ptc_Reset_Test_Results();
 
         // Calculate wake up time and go to sleep
         ptc.wakeup_time = ptc.start_of_next_frame - PTC_RTC_TOTAL_WAKEUP_TIME;
@@ -932,4 +938,12 @@ static void Ptc_Start_Of_Subslot_Wakeup_Action()
 {
     if (ptc.subslot_count == PTC_SUBSLOT_NUM - 1)
         Ptc_Set_Test_Radio_Config();
+}
+
+static void Ptc_Reset_Test_Results()
+{
+    ptc.test->err_count = 0;
+    ptc.test->total_err_count = 0;
+    ptc.test->consec_err_count = 0;
+    ptc.test->rssi_sum = 0;
 }
