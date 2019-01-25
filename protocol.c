@@ -458,6 +458,11 @@ static void Ptc_Sensor_Node_FSM()
         // An offset is used to compensate for (measured) latencies of the RF core in the start of the reception/transmission
         uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_slot, PTC_RAT_TX_START_OFFSET);
 
+
+        // Calculate the average and demote the variable
+        uint8_t rssi_samp_num = PTC_SUBSLOT_NUM - 1 - ptc.test->total_err_count;
+        ptc.test->average_rssi = (int8_t)(ptc.test->rssi_sum / rssi_samp_num);
+
         // Request radio operation to the RF core
         Ptc_Request_Data_Pkt_Tx(rat_start_time);
         ptc.state = PTC_S_WAIT_TIMEOUT;
@@ -785,12 +790,7 @@ static void Ptc_Request_Data_Pkt_Tx(uint32_t rat_start_of_tx)
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ack));
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.test->consec_err_count));
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.test->total_err_count));
-
-    // Calculate the average and demote the variable
-    uint8_t rssi_samp_num = PTC_SUBSLOT_NUM - 1 - ptc.test->total_err_count;
-    int8_t meas_ave_rssi = (int8_t)(ptc.test->rssi_sum / rssi_samp_num);
-
-    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(meas_ave_rssi));
+    payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.test->average_rssi));
 
     ptc.tx_param.buf = ptc.tx_buf;
     ptc.tx_param.len = payload_len;
