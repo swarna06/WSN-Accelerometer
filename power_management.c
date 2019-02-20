@@ -187,6 +187,9 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
 #ifdef PMA_DUMMY_SLEEP
 
     // Dummy sleep; busy-wait until RTC event
+    uint32_t curr_time = Tm_Get_RTC_Time();
+    assertion(rtc_wakeup_time > curr_time + PMA_MIN_SLEEP_RTC_TICKS);
+
     AONRTCEventClear(AON_RTC_CH0);
     AONRTCCompareValueSet(AON_RTC_CH0, rtc_wakeup_time);
     while (!AONRTCEventGet(AON_RTC_CH0)) // busy wait
@@ -201,7 +204,7 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
 
     // Set compare value of RTC channel
     uint32_t curr_time = Tm_Get_RTC_Time();
-    assertion(rtc_wakeup_time - curr_time > PMA_MIN_SLEEP_RTC_TICKS);
+    assertion(rtc_wakeup_time > curr_time + PMA_MIN_SLEEP_RTC_TICKS);
     AONRTCEventClear(AON_RTC_CH0);
     AONRTCCompareValueSet(AON_RTC_CH0, rtc_wakeup_time);
 

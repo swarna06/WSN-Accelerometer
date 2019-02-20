@@ -393,7 +393,7 @@ static void Ptc_Sensor_Node_FSM()
     case PTC_S_WAIT_FIRST_BEACON:
         Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);
         if ((ptc.rx_result.err_flags == 0) && Ptc_Process_Beacon()) // no errors
-            ptc.state = PTC_S_WAIT_START_OF_SLOT;
+            ptc.state = PTC_S_WAIT_START_OF_FRAME;
         else
         {
             ptc.wakeup_time = Tm_Get_RTC_Time() + PTC_RTC_FRAME_TIME;
@@ -759,8 +759,9 @@ static bool Ptc_Process_Beacon()
     if (!(ptc.flags & PTC_F_IN_SYNC))
     {
         // Calculate start of next slot and frame
-        ptc.start_of_next_slot = rtc_start_of_curr_frame + (PTC_RTC_SLOT_TIME * ptc.dev_id);
-        ptc.start_of_next_frame = rtc_start_of_curr_frame + PTC_RTC_FRAME_TIME;
+//        ptc.start_of_next_slot = rtc_start_of_curr_frame + (PTC_RTC_SLOT_TIME * ptc.dev_id);
+//        ptc.start_of_next_frame = rtc_start_of_curr_frame + PTC_RTC_FRAME_TIME;
+        ptc.start_of_next_frame = rtc_start_of_curr_frame;
         ptc.flags |= PTC_F_IN_SYNC;
     }
 
