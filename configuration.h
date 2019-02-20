@@ -14,7 +14,7 @@
 
 // Network parameters
 #define CFG_DEFAULT_DEV_ID              0
-#define CFG_SENSOR_NODE_NUM             1
+#define CFG_SENSOR_NODE_NUM             3
 #if (CFG_DEFAULT_DEV_ID > CFG_SENSOR_NODE_NUM)
 #error Device id is greater than total number of sensors
 #endif // #if (CFG_DEFAULT_DEV_ID > CFG_SENSOR_NODE_NUM)
@@ -33,10 +33,11 @@
 #define CFG_DEBUG_FSM_STATE             CFG_SETTING_DISABLED
 
 // Reliability test configuration
-#define CFG_RELIAB_TEST_PHY_MODES       {RFC_PHY_MODE_125KBPS, \
-                                         RFC_PHY_MODE_500KBPS, \
-                                         RFC_PHY_MODE_1MBPS, \
-                                         RFC_PHY_MODE_2MBPS}
+/*//#define CFG_RELIAB_TEST_PHY_MODES       {RFC_PHY_MODE_125KBPS, \
+//                                         RFC_PHY_MODE_500KBPS, \
+//                                         RFC_PHY_MODE_1MBPS, \
+//                                         RFC_PHY_MODE_2MBPS}*/
+#define CFG_RELIAB_TEST_PHY_MODES       {RFC_PHY_MODE_125KBPS}
 
 #define CFG_RELIAB_TEST_TX_POWER        {RFC_TX_POW_MINUS_21dBm, \
                                          RFC_TX_POW_MINUS_9dBm, \

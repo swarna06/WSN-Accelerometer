@@ -25,7 +25,7 @@
 #define PMA_WAKEUP_TIME_USEC        2048 // xxx measure this time again later and update this constant
 
 // Minimum sleep time
-#define PMA_MIN_SLEEP_RTC_TICKS     (2000/TM_RTC_USEC_PER_TICK)
+#define PMA_MIN_SLEEP_RTC_TICKS     (1500/TM_RTC_USEC_PER_TICK)
 
 // Battery voltage readings
 #define PMA_BATT_VOLT_SAMP_NUM      4
