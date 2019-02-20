@@ -15,6 +15,7 @@
 #include <driverlib/aon_rtc.h>
 #include <driverlib/sys_ctrl.h>
 #include <driverlib/ioc.h>
+#include <inc/hw_ccfg.h>
 
 #include <driverlib/aon_batmon.h>
 
@@ -22,12 +23,17 @@
 #include "timing.h"
 #include "rf_core.h"
 #include "serial_port.h"
+#include "protocol.h"
 
 #include "board.h"
 #include "log.h"
 #include "misc.h"
 
+#include "sensor_test.h"
+#include "spi_bus.h"
+
 static pma_control_t pmc;
+
 
 void Pma_RTC_Isr()
 {
@@ -189,9 +195,21 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     // Dummy sleep; busy-wait until RTC event
     AONRTCEventClear(AON_RTC_CH0);
     AONRTCCompareValueSet(AON_RTC_CH0, rtc_wakeup_time);
+    uint8_t abuf[4];
     while (!AONRTCEventGet(AON_RTC_CH0)) // busy wait
     {
-        Log_Process(); // flush log queue meanwhile
+        //Log_Process(); // flush log queue meanwhile
+
+
+        if((uint8_t )(HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0))!=0)  // poll sensor data and accumulate buffer(pointer) if it is a sensor node
+        {
+            Sen_Read_Acc_Test(abuf);
+           // Log_Value_Int(abuf[3]);
+
+            Ptc_Get_Acc(abuf);
+        }
+
+
     }
 
 #else

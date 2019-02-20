@@ -33,6 +33,7 @@
 #define CFG_DEBUG_FSM_STATE             CFG_SETTING_DISABLED
 
 // Reliability test configuration
+/*
 #define CFG_RELIAB_TEST_PHY_MODES       {RFC_PHY_MODE_125KBPS, \
                                          RFC_PHY_MODE_500KBPS, \
                                          RFC_PHY_MODE_1MBPS, \
@@ -44,6 +45,13 @@
                                          RFC_TX_POW_PLUS_5dBm}
 
 #define CFG_RELIAB_TEST_CHANNELS        {4, 38, 18, 22, 34, 39}
+*/
+
+#define CFG_RELIAB_TEST_PHY_MODES       {RFC_PHY_MODE_125KBPS}
+
+#define CFG_RELIAB_TEST_TX_POWER        {RFC_TX_POW_0dBm}
+
+#define CFG_RELIAB_TEST_CHANNELS        {4}
 
 // Device (CC2640R2F) configuration (see ccfg.h)
 #ifndef SET_CCFG_IEEE_BLE_0

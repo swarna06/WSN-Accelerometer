@@ -37,6 +37,13 @@
     #define BRD_RFC_RXOUT_PIN       23
     #define BRD_RTC_OUT_PIN         BRD_LED1
 
+    #define BRD_SPI_CLK     15
+    #define BRD_SPI_MOSI    25
+    #define BRD_SPI_MISO    26
+
+    #define BRD_MEM_CS      1
+    #define BRD_SEN_CS      0   //using this
+
     // LEDs are active high
     #define Brd_Led_On(l)           GPIO_setDio(l)
     #define Brd_Led_Off(l)          GPIO_clearDio(l)

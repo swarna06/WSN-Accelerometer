@@ -182,6 +182,7 @@ typedef struct
     uint8_t tx_buf[PTC_RXTX_BUF_LEN];
     uint8_t rx_buf[PTC_RXTX_BUF_LEN];
 
+    uint8_t* accbuf;
     ptc_test_t* test;
 } ptc_control_t;
 
@@ -190,6 +191,7 @@ void Ptc_Init();
 void (*Ptc_Process)();
 
 uint8_t Ptc_Get_FSM_State();
+void Ptc_Get_Acc(uint8_t* abuf);
 
 void Ptc_Handle_Error();
 

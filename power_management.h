@@ -35,6 +35,8 @@
 #define PMA_F_DOMAIN_SERIAL         0x4000
 #define PMA_F_DOMAIN_PERIPH         0x2000
 
+extern int *accbuf;
+
 typedef enum
 {
     PMA_PERIPH_RF_CORE = PMA_F_DOMAIN_RF_CORE,

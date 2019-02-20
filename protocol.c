@@ -33,6 +33,9 @@
 #include "misc.h"
 #include "board.h"
 
+#include "sensor_test.h"
+#include "spi_bus.h"
+
 // Module's control structure
 static ptc_control_t ptc;
 
@@ -66,6 +69,10 @@ static void Ptc_Get_Field_From_Payload(uint8_t** payload_p, void* data_p, size_t
 static void Ptc_Set_Default_Radio_Config();
 
 static void Ptc_Request_Test_Pkt_Tx(uint32_t rat_start_of_tx);
+
+//sensor inclusion
+static void Ptc_Process_Acc_Pkt();
+
 static void Ptc_Update_Test_Idx();
 static void Ptc_Set_Test_Radio_Config();
 
@@ -308,8 +315,11 @@ static void Ptc_Sink_Node_FSM()
 
     case PTC_S_WAIT_TEST_PKT_RECEPTION:
 
-        Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);
-
+        Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);  // might have acc data
+        if (ptc.rx_result.err_flags != 0 && ptc.rx_result.buf_len == 4) // error ?
+                Ptc_Process_Acc_Pkt();
+        else
+        {
         if (ptc.rx_result.err_flags != 0) // error ?
         {
             ptc.test->total_err_count++;
@@ -332,6 +342,7 @@ static void Ptc_Sink_Node_FSM()
             Pma_Get_Batt_Volt(&ptc.test->batt_volt_int, &ptc.test->batt_volt_frac);
 
             Ptc_Print_Test_Results();
+        }
         }
 
         if (ptc.slot_count >= PTC_RTC_SLOT_NUM)
@@ -798,6 +809,8 @@ static void Ptc_Request_Data_Pkt_Tx(uint32_t rat_start_of_tx)
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.test->average_rssi));
     payload_len += Ptc_Add_Field_To_Payload(&payload_p, Ptc_Payload_Field(ptc.test->batt_volt_fixed_point));
 
+    // if acc buffer is full, put those in the payload
+
     ptc.tx_param.buf = ptc.tx_buf;
     ptc.tx_param.len = payload_len;
     ptc.tx_param.rat_start_time = rat_start_of_tx;
@@ -857,21 +870,57 @@ static void Ptc_Set_Default_Radio_Config()
 // Test functions
 // ********************************
 
+void Ptc_Get_Acc(uint8_t* abuf)
+{
+    ptc.accbuf = abuf;
+}
+
 static void Ptc_Request_Test_Pkt_Tx(uint32_t rat_start_of_tx)
 {
-    uint16_t* payload_p = (uint16_t*)ptc.tx_buf;
-    uint16_t random_val;
+   // uint16_t* payload_p = (uint16_t*)ptc.tx_buf;
+   // uint16_t random_val;
 
-    for (size_t n = 0; n < RFC_MAX_PAYLOAD_LEN/sizeof(random_val); n++)
+    // ACC BUFFER
+    if(sizeof(ptc.accbuf))
     {
-        random_val = Lfsr_Fibonacci();
-        payload_p[n] = random_val;
-    }
+        uint16_t* payload_p = ptc.accbuf;
+        ptc.tx_param.buf = ptc.accbuf;
+        ptc.tx_param.len = 4;
 
-    ptc.tx_param.buf = ptc.tx_buf;
-    ptc.tx_param.len = RFC_MAX_PAYLOAD_LEN;
+    }
+    else
+    {
+        uint16_t* payload_p = (uint16_t*)ptc.tx_buf;
+        uint16_t random_val;
+        for (size_t n = 0; n < RFC_MAX_PAYLOAD_LEN/sizeof(random_val); n++)
+        {
+            random_val = Lfsr_Fibonacci();
+            payload_p[n] = random_val;
+        }
+        ptc.tx_param.buf = ptc.tx_buf;
+        ptc.tx_param.len = RFC_MAX_PAYLOAD_LEN;
+    }
+  //  ptc.tx_param.buf = ptc.tx_buf;
+  //  ptc.tx_param.len = RFC_MAX_PAYLOAD_LEN;
     ptc.tx_param.rat_start_time = rat_start_of_tx;
     Rfc_BLE5_Adv_Aux(&ptc.tx_param);
+}
+
+static void Ptc_Process_Acc_Pkt()
+{
+    if (ptc.rx_result.err_flags == 0) // success ?
+        {
+            uint8_t* payload_p = ptc.rx_result.buf;
+
+            for(int i=0; i< 4; i++)
+            {
+                Log_Value_Int(payload_p[i]);
+                Log_String_Literal(",");
+            }
+            Log_Value_Int(ptc.slot_count);
+            Log_Line("");
+        }
+
 }
 
 static void Ptc_Update_Test_Idx()
@@ -953,12 +1002,14 @@ static void Ptc_Print_Test_Results()
 
     uint8_t rxed_batt_volt_int;
     uint16_t rxed_batt_volt_frac;
+    uint8_t acbuf[4];
 
     Pma_Get_Batt_Volt_Parts(ptc.data_pkt.batt_volt_fixed_point,
                             &rxed_batt_volt_int, &rxed_batt_volt_frac);
 
     Log_String_Literal(", "); Log_Value_Uint(rxed_batt_volt_int);
     Log_String_Literal("."); Log_Value_Uint(rxed_batt_volt_frac);
+
 
     Log_Line(""); // new line
 }
