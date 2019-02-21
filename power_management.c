@@ -33,7 +33,7 @@
 #include "spi_bus.h"
 
 static pma_control_t pmc;
-
+int16_t abuf[4];
 
 void Pma_RTC_Isr()
 {
@@ -191,23 +191,28 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     while (Sep_UART_Busy()); // wait until the UART FIFO becomes FIXME remove
 
 #ifdef PMA_DUMMY_SLEEP
-
+    uint32_t curr_time = Tm_Get_RTC_Time();
+    assertion(rtc_wakeup_time > curr_time + PMA_MIN_SLEEP_RTC_TICKS);
     // Dummy sleep; busy-wait until RTC event
     AONRTCEventClear(AON_RTC_CH0);
     AONRTCCompareValueSet(AON_RTC_CH0, rtc_wakeup_time);
-    uint8_t abuf[4];
+
+
+Ptc_Get_Acc(abuf);
+    if((uint8_t )(HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0))!=0)  // poll sensor data and accumulate buffer(pointer) if it is a sensor node
+    {
+                                Sen_Read_Acc_Test(abuf);
+                               /* Log_Value_Int(abuf[0]);Log_String_Literal(",");
+                                  Log_Value_Int(abuf[1]);Log_String_Literal(",");
+                                  Log_Value_Int(abuf[2]);Log_String_Literal(",");
+                                  Log_Value_Int(abuf[3]);
+                                  Log_Line(" ");*/
+
+    }
     while (!AONRTCEventGet(AON_RTC_CH0)) // busy wait
     {
         //Log_Process(); // flush log queue meanwhile
 
-
-        if((uint8_t )(HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0))!=0)  // poll sensor data and accumulate buffer(pointer) if it is a sensor node
-        {
-            Sen_Read_Acc_Test(abuf);
-           // Log_Value_Int(abuf[3]);
-
-            Ptc_Get_Acc(abuf);
-        }
 
 
     }

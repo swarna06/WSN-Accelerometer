@@ -162,7 +162,7 @@ typedef enum
 typedef struct
 {
     size_t len;
-    uint8_t* buf;
+    int16_t* buf;
     uint32_t rat_start_time;
 } rfc_tx_param_t;
 

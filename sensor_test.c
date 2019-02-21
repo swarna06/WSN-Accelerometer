@@ -55,7 +55,7 @@ void Sen_Init()
     const uint8_t RESET_CODE = 0x52;
 
     Sen_Single_Byte_Write(ADDR_RESET, RESET_CODE); // reset sensor
-    Sen_Single_Byte_Write(ADDR_FILTER, 0x0A); // set ODR
+    Sen_Single_Byte_Write(ADDR_FILTER, 0x03); // set ODR
     Sen_Single_Byte_Write(ADDR_POWER_CTL, 0x00); // start measurement
 }
 
@@ -143,10 +143,10 @@ void Sen_Read_Acc_Test(int16_t* abuf)
         abuf[3]= (int)zdata;
 
 
-        Log_Value_Int(temp);Log_String_Literal(",");
+ /*     Log_Value_Int(temp);Log_String_Literal(",");
         Log_Value_Int(xdata);Log_String_Literal(",");
         Log_Value_Int(ydata);Log_String_Literal(",");
         Log_Value_Int(zdata);
-        Log_Line(" ");
+        Log_Line(" ");*/
     }
 }

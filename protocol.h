@@ -32,7 +32,7 @@
 // Default radio parameters
 #define PTC_DEFAULT_TX_POW          RFC_TX_POW_0dBm
 #define PTC_DEFAULT_PHY_MODE        RFC_PHY_MODE_125KBPS
-#define PTC_DEFAULT_CHANNEL         37
+#define PTC_DEFAULT_CHANNEL         4
 
 // Maximum number of consecutive errors
 #define PTC_MAX_ERR_NUM             3
@@ -182,7 +182,7 @@ typedef struct
     uint8_t tx_buf[PTC_RXTX_BUF_LEN];
     uint8_t rx_buf[PTC_RXTX_BUF_LEN];
 
-    uint8_t* accbuf;
+    int16_t* accbuf;
     ptc_test_t* test;
 } ptc_control_t;
 
@@ -191,7 +191,7 @@ void Ptc_Init();
 void (*Ptc_Process)();
 
 uint8_t Ptc_Get_FSM_State();
-void Ptc_Get_Acc(uint8_t* abuf);
+void Ptc_Get_Acc(int16_t* abuf);
 
 void Ptc_Handle_Error();
 

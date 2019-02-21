@@ -60,7 +60,7 @@ int main(void)
     Spi_Init();
     Sen_Init();
     // DEBUG TODO remove
-    Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
+    //Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
     IOCPinTypeGpioInput(BRD_GPIO_IN0);
     IOCPinTypeGpioInput(BRD_GPIO_IN1);
     IOCIOPortPullSet(BRD_GPIO_IN0, IOC_IOPULL_UP);
@@ -70,16 +70,17 @@ int main(void)
     while (1)
     {
         Log_Process();
-        if (Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
+      /*  if (Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
                     {
                         Brd_Led_Toggle(BRD_LED0);
                         //Log_Line("heartbeat");
-                        Sen_Read_Acc_Test(abuf);
+                        //Sen_Read_Acc_Test(abuf);
                     }
+                    */
 
        if (Tm_Sys_Tick())
            Tm_Process();
-       /* if (Pma_Batt_Volt_Meas_Ready())
+        if (Pma_Batt_Volt_Meas_Ready())
             Pma_Process();
 
 
@@ -89,7 +90,7 @@ int main(void)
             Ptc_Process();
         else if (Rfc_Error())
             Ptc_Handle_Error();
-*/
+
         // DEBUG
         // Print state of FSM
         #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)

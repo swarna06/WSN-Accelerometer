@@ -128,6 +128,7 @@ void Ptc_Init()
     ptc.rx_result.buf = ptc.rx_buf;
     ptc.rx_result.buf_len = PTC_RXTX_BUF_LEN;
 
+
     // Set start time of the first frame
     ptc.start_of_next_frame = 0;
 
@@ -316,8 +317,11 @@ static void Ptc_Sink_Node_FSM()
     case PTC_S_WAIT_TEST_PKT_RECEPTION:
 
         Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);  // might have acc data
-        if (ptc.rx_result.err_flags != 0 && ptc.rx_result.buf_len == 4) // error ?
-                Ptc_Process_Acc_Pkt();
+        Ptc_Process_Acc_Pkt();
+   /*     if (ptc.rx_result.err_flags != 0 && ptc.rx_result.buf_len == 4*sizeof(uint8_t)) // error ?
+        {  Ptc_Process_Acc_Pkt();
+
+        }
         else
         {
         if (ptc.rx_result.err_flags != 0) // error ?
@@ -344,7 +348,7 @@ static void Ptc_Sink_Node_FSM()
             Ptc_Print_Test_Results();
         }
         }
-
+*/
         if (ptc.slot_count >= PTC_RTC_SLOT_NUM)
             Ptc_Update_Test_Idx();
 
@@ -404,7 +408,7 @@ static void Ptc_Sensor_Node_FSM()
     case PTC_S_WAIT_FIRST_BEACON:
         Rfc_BLE5_Get_Scanner_Result(&ptc.rx_result);
         if ((ptc.rx_result.err_flags == 0) && Ptc_Process_Beacon()) // no errors
-            ptc.state = PTC_S_WAIT_START_OF_SLOT;
+            ptc.state = PTC_S_WAIT_START_OF_FRAME;
         else
         {
             ptc.wakeup_time = Tm_Get_RTC_Time() + PTC_RTC_FRAME_TIME;
@@ -544,7 +548,23 @@ static void Ptc_Sensor_Node_FSM()
         else
         {
             uint32_t rat_start_time = Ptc_Calculate_RAT_Start_Time(ptc.start_of_next_subslot, PTC_RAT_TX_START_OFFSET);
-            Ptc_Request_Test_Pkt_Tx(rat_start_time);
+         //   Ptc_Request_Test_Pkt_Tx(rat_start_time);
+            //SENDING ACC DATA
+            //int16_t ab[4]={1,1,1,1};
+            ptc.tx_param.buf = abuf;
+            ptc.tx_param.len = 4*sizeof(abuf[0]);
+            ptc.tx_param.rat_start_time = rat_start_time;
+            Log_Value_Int(ptc.tx_param.buf[0]);Log_String_Literal(",");
+            Log_Value_Int(ptc.tx_param.buf[1]);Log_String_Literal(",");
+            Log_Value_Int(ptc.tx_param.buf[2]);Log_String_Literal(",");
+            Log_Value_Int(ptc.tx_param.buf[3]);Log_Line("Tx");
+         /*   Log_Value_Int(ptc.accbuf[0]);Log_String_Literal(",");
+                                                  Log_Value_Int(ptc.accbuf[1]);Log_String_Literal(",");
+                                                  Log_Value_Int(ptc.accbuf[2]);Log_String_Literal(",");
+                                                  Log_Value_Int(ptc.accbuf[3]);
+                                                  Log_Line(" ");*/
+
+            Rfc_BLE5_Adv_Aux(&ptc.tx_param);
             ptc.state = PTC_S_WAIT_TIMEOUT;
         }
 
@@ -770,8 +790,9 @@ static bool Ptc_Process_Beacon()
     if (!(ptc.flags & PTC_F_IN_SYNC))
     {
         // Calculate start of next slot and frame
-        ptc.start_of_next_slot = rtc_start_of_curr_frame + (PTC_RTC_SLOT_TIME * ptc.dev_id);
-        ptc.start_of_next_frame = rtc_start_of_curr_frame + PTC_RTC_FRAME_TIME;
+       // ptc.start_of_next_slot = rtc_start_of_curr_frame + (PTC_RTC_SLOT_TIME * ptc.dev_id);
+       // ptc.start_of_next_frame = rtc_start_of_curr_frame + PTC_RTC_FRAME_TIME;
+        ptc.start_of_next_frame = rtc_start_of_curr_frame;
         ptc.flags |= PTC_F_IN_SYNC;
     }
 
@@ -870,26 +891,33 @@ static void Ptc_Set_Default_Radio_Config()
 // Test functions
 // ********************************
 
-void Ptc_Get_Acc(uint8_t* abuf)
+void Ptc_Get_Acc(int16_t* abuf)
 {
     ptc.accbuf = abuf;
+   /*Log_Value_Int(ptc.accbuf[0]);Log_String_Literal(",");
+    Log_Value_Int(ptc.accbuf[1]);Log_String_Literal(",");
+    Log_Value_Int(ptc.accbuf[2]);Log_String_Literal(",");
+    Log_Value_Int(ptc.accbuf[3]);Log_Line(" ");*/
+
 }
 
 static void Ptc_Request_Test_Pkt_Tx(uint32_t rat_start_of_tx)
 {
-   // uint16_t* payload_p = (uint16_t*)ptc.tx_buf;
-   // uint16_t random_val;
+
 
     // ACC BUFFER
-    if(sizeof(ptc.accbuf))
-    {
-        uint16_t* payload_p = ptc.accbuf;
-        ptc.tx_param.buf = ptc.accbuf;
-        ptc.tx_param.len = 4;
+    //packet sending from sensor node only should access accbuf
 
-    }
-    else
-    {
+       // uint16_t* payload_p = ptc.accbuf;
+     /*   ptc.tx_param.buf = ptc.accbuf;
+        ptc.tx_param.len = 4*sizeof(ptc.accbuf[0]);
+        Log_Value_Int(ptc.accbuf[0]);Log_String_Literal(",");
+        Log_Value_Int(ptc.accbuf[1]);Log_String_Literal(",");
+        Log_Value_Int(ptc.accbuf[2]);Log_String_Literal(",");
+        Log_Value_Int(ptc.accbuf[3]);Log_String_Literal("\r\n");
+*/
+
+
         uint16_t* payload_p = (uint16_t*)ptc.tx_buf;
         uint16_t random_val;
         for (size_t n = 0; n < RFC_MAX_PAYLOAD_LEN/sizeof(random_val); n++)
@@ -897,11 +925,10 @@ static void Ptc_Request_Test_Pkt_Tx(uint32_t rat_start_of_tx)
             random_val = Lfsr_Fibonacci();
             payload_p[n] = random_val;
         }
-        ptc.tx_param.buf = ptc.tx_buf;
-        ptc.tx_param.len = RFC_MAX_PAYLOAD_LEN;
-    }
-  //  ptc.tx_param.buf = ptc.tx_buf;
-  //  ptc.tx_param.len = RFC_MAX_PAYLOAD_LEN;
+
+
+    ptc.tx_param.buf = ptc.tx_buf;
+    ptc.tx_param.len = RFC_MAX_PAYLOAD_LEN;
     ptc.tx_param.rat_start_time = rat_start_of_tx;
     Rfc_BLE5_Adv_Aux(&ptc.tx_param);
 }
@@ -910,15 +937,15 @@ static void Ptc_Process_Acc_Pkt()
 {
     if (ptc.rx_result.err_flags == 0) // success ?
         {
-            uint8_t* payload_p = ptc.rx_result.buf;
+            int16_t* pp = ptc.rx_result.buf;
 
             for(int i=0; i< 4; i++)
             {
-                Log_Value_Int(payload_p[i]);
+                Log_Value_Int(pp[i]);
                 Log_String_Literal(",");
             }
             Log_Value_Int(ptc.slot_count);
-            Log_Line("");
+            Log_Line("Rx");
         }
 
 }

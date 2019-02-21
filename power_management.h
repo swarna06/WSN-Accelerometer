@@ -9,7 +9,7 @@
 #define POWER_MANAGEMENT_H_
 
 #include "configuration.h"
-
+extern int16_t abuf[4];
 // Debug signal; indicates active and sleep states
 #if (CFG_DEBUG_SLEEP_OUT == CFG_SETTING_ENABLED)
 #define PMA_SLEEP_OUT
@@ -35,7 +35,6 @@
 #define PMA_F_DOMAIN_SERIAL         0x4000
 #define PMA_F_DOMAIN_PERIPH         0x2000
 
-extern int *accbuf;
 
 typedef enum
 {
