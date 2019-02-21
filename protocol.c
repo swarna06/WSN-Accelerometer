@@ -937,7 +937,7 @@ static void Ptc_Reset_Test_Results()
 
 static void Ptc_Print_Test_Results()
 {
-    Log_String_Literal(""); Log_Value_Int(ptc.start_of_next_frame);
+    Log_String_Literal(""); Log_Value_Uint(ptc.start_of_next_frame);
     Log_String_Literal(", "); Log_Value_Int(ptc.test->i);
     Log_String_Literal(", "); Log_Value_Int(ptc.test->j);
     Log_String_Literal(", "); Log_Value_Int(ptc.test->k);
