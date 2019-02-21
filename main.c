@@ -53,11 +53,13 @@ int main(void)
     Rfc_Init();
     Ptc_Init();
 
+    #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
     // DEBUG TODO remove
     IOCPinTypeGpioInput(BRD_GPIO_IN0);
     IOCPinTypeGpioInput(BRD_GPIO_IN1);
     IOCIOPortPullSet(BRD_GPIO_IN0, IOC_IOPULL_UP);
     IOCIOPortPullSet(BRD_GPIO_IN1, IOC_IOPULL_UP);
+    #endif // #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
 
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
