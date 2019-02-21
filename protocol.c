@@ -953,7 +953,7 @@ static void Ptc_Print_Test_Results()
     Log_String_Literal("."); Log_Value_Uint(ptc.test->batt_volt_frac);
 
     uint8_t rxed_batt_volt_int;
-    uint16_t rxed_batt_volt_frac;
+    uint32_t rxed_batt_volt_frac;
 
     Pma_Get_Batt_Volt_Parts(ptc.data_pkt.batt_volt_fixed_point,
                             &rxed_batt_volt_int, &rxed_batt_volt_frac);

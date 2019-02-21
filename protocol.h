@@ -102,7 +102,7 @@ typedef struct
     int8_t average_rssi;
     uint8_t batt_volt_fixed_point;
     uint8_t batt_volt_int;
-    uint16_t batt_volt_frac;
+    uint32_t batt_volt_frac;
 } ptc_test_t;
 
 // ********************************

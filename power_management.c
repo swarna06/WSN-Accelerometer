@@ -300,7 +300,7 @@ uint8_t Pma_Get_Batt_Volt_Fixed_Point()
 {
     // Calculate average
     uint32_t sum = 0;
-    for (size_t i = 0; i < PMA_BATT_VOLT_SAMP_NUM; i++)
+    for (size_t i = 0; i < PMA_BATT_VOLT_SAMP_NUM; i++) // TODO validate if average of fixed point variable is done properly
         sum += pmc.batt_volt[i];
 
     // Battery voltage measurement in a <int.frac> format size <3.8> in units of volt
@@ -310,7 +310,7 @@ uint8_t Pma_Get_Batt_Volt_Fixed_Point()
 
 void Pma_Get_Batt_Volt_Parts(uint8_t batt_volt,
                              uint8_t* int_part,
-                             uint16_t* frac_part)
+                             uint32_t* frac_part)
 {
     // Extract the integer and fractional parts
     *int_part = batt_volt >> 5;
@@ -321,9 +321,15 @@ void Pma_Get_Batt_Volt_Parts(uint8_t batt_volt,
     if (batt_volt & (1 << 2)) *frac_part += 50000 / (1 << 2);
     if (batt_volt & (1 << 1)) *frac_part += 50000 / (1 << 3);
     if (batt_volt & (1 << 0)) *frac_part += 50000 / (1 << 4);
+
+    if (*frac_part < 10000) // hotfix TODO how to do zero padding for correct representation?
+    {
+        if (*frac_part > 500) *frac_part = 10000;
+        else *frac_part = 0;
+    }
 }
 
-void Pma_Get_Batt_Volt(uint8_t* int_part, uint16_t* frac_part)
+void Pma_Get_Batt_Volt(uint8_t* int_part, uint32_t* frac_part)
 {
     uint8_t batt_volt = Pma_Get_Batt_Volt_Fixed_Point();
 
