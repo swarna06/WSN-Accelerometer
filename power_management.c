@@ -237,6 +237,9 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
         powered_domains |= PRCM_DOMAIN_PERIPH;
     PRCMPowerDomainOff(powered_domains | PRCM_DOMAIN_CPU);
 
+    // 5a. Request JTAG power domain off, noise in the TCK could power on this domain (TODO is this necessary?)
+    AONWUCJtagPowerOff();
+
     // 6. Request uLDO during standby
     PRCMMcuUldoConfigure(true);
 
