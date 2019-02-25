@@ -13,6 +13,7 @@
 #include <driverlib/aon_rtc.h>
 #include <driverlib/aux_timer.h>
 #include <driverlib/aon_event.h>
+#include <inc/hw_ccfg.h>
 
 //#include <stdio.h>
 
@@ -141,6 +142,7 @@ void Sen_Read_Acc_Test(int16_t* abuf)
         abuf[1]= (int)xdata;
         abuf[2]= (int)ydata;
         abuf[3]= (int)zdata;
+        abuf[4]= (int)(HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0));
 
 
  /*     Log_Value_Int(temp);Log_String_Literal(",");

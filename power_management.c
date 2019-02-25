@@ -33,7 +33,7 @@
 #include "spi_bus.h"
 
 static pma_control_t pmc;
-int16_t abuf[4];
+int16_t abuf[5];
 
 void Pma_RTC_Isr()
 {
@@ -202,6 +202,7 @@ Ptc_Get_Acc(abuf);
     if((uint8_t )(HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0))!=0)  // poll sensor data and accumulate buffer(pointer) if it is a sensor node
     {
                                 Sen_Read_Acc_Test(abuf);
+
                                /* Log_Value_Int(abuf[0]);Log_String_Literal(",");
                                   Log_Value_Int(abuf[1]);Log_String_Literal(",");
                                   Log_Value_Int(abuf[2]);Log_String_Literal(",");
@@ -211,7 +212,7 @@ Ptc_Get_Acc(abuf);
     }
     while (!AONRTCEventGet(AON_RTC_CH0)) // busy wait
     {
-        //Log_Process(); // flush log queue meanwhile
+        Log_Process(); // flush log queue meanwhile
 
 
 

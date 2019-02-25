@@ -9,7 +9,7 @@
 #define POWER_MANAGEMENT_H_
 
 #include "configuration.h"
-extern int16_t abuf[4];
+extern int16_t abuf[5];
 // Debug signal; indicates active and sleep states
 #if (CFG_DEBUG_SLEEP_OUT == CFG_SETTING_ENABLED)
 #define PMA_SLEEP_OUT

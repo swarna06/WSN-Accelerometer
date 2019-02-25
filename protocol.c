@@ -552,12 +552,13 @@ static void Ptc_Sensor_Node_FSM()
             //SENDING ACC DATA
             //int16_t ab[4]={1,1,1,1};
             ptc.tx_param.buf = abuf;
-            ptc.tx_param.len = 4*sizeof(abuf[0]);
+            ptc.tx_param.len = 5*sizeof(abuf[0]);
             ptc.tx_param.rat_start_time = rat_start_time;
             Log_Value_Int(ptc.tx_param.buf[0]);Log_String_Literal(",");
             Log_Value_Int(ptc.tx_param.buf[1]);Log_String_Literal(",");
             Log_Value_Int(ptc.tx_param.buf[2]);Log_String_Literal(",");
-            Log_Value_Int(ptc.tx_param.buf[3]);Log_Line("Tx");
+            Log_Value_Int(ptc.tx_param.buf[3]);Log_String_Literal(",");
+            Log_Value_Int(ptc.tx_param.buf[4]);Log_Line("Tx");
          /*   Log_Value_Int(ptc.accbuf[0]);Log_String_Literal(",");
                                                   Log_Value_Int(ptc.accbuf[1]);Log_String_Literal(",");
                                                   Log_Value_Int(ptc.accbuf[2]);Log_String_Literal(",");
@@ -938,14 +939,14 @@ static void Ptc_Process_Acc_Pkt()
     if (ptc.rx_result.err_flags == 0) // success ?
         {
             int16_t* pp = ptc.rx_result.buf;
-
-            for(int i=0; i< 4; i++)
+            Log_Value_Int(ptc.start_of_next_frame);Log_String_Literal(",");
+            for(int i=0; i< 5; i++)
             {
                 Log_Value_Int(pp[i]);
                 Log_String_Literal(",");
             }
-            Log_Value_Int(ptc.slot_count);
-            Log_Line("Rx");
+           Log_String_Literal("\r\n");
+
         }
 
 }
