@@ -25,16 +25,16 @@ extern int16_t abuf[5];
 #define PMA_WAKEUP_TIME_USEC        2048 // xxx measure this time again later and update this constant
 
 // Minimum sleep time
-#define PMA_MIN_SLEEP_RTC_TICKS     (2000/TM_RTC_USEC_PER_TICK)
+#define PMA_MIN_SLEEP_RTC_TICKS     (1500/TM_RTC_USEC_PER_TICK)
 
 // Battery voltage readings
-#define PMA_BATT_VOLT_SAMP_NUM      4
+//#define PMA_BATT_VOLT_SAMP_NUM      4 // TODO enable moving average
+#define PMA_BATT_VOLT_SAMP_NUM      1
 
 // Power domain flags
 #define PMA_F_DOMAIN_RF_CORE        0x8000
 #define PMA_F_DOMAIN_SERIAL         0x4000
 #define PMA_F_DOMAIN_PERIPH         0x2000
-
 
 typedef enum
 {
@@ -69,8 +69,8 @@ uint8_t Pma_Get_Batt_Volt_Fixed_Point();
 
 void Pma_Get_Batt_Volt_Parts(uint8_t batt_volt,
                              uint8_t* int_part,
-                             uint16_t* frac_part);
+                             uint32_t* frac_part);
 
-void Pma_Get_Batt_Volt(uint8_t* int_part, uint16_t* frac_part);
+void Pma_Get_Batt_Volt(uint8_t* int_part, uint32_t* frac_part);
 
 #endif /* POWER_MANAGEMENT_H_ */

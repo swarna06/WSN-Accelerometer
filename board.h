@@ -13,8 +13,8 @@
 #define BRD_LAUNCHPAD               1
 #define BRD_SENSOR_NODE_V1          2
 
-#define BRD_BOARD                   BRD_LAUNCHPAD
-//#define BRD_BOARD                   BRD_SENSOR_NODE_V1
+//#define BRD_BOARD                   BRD_LAUNCHPAD
+#define BRD_BOARD                   BRD_SENSOR_NODE_V1
 
 #define Brd_Led_Toggle(l)           GPIO_toggleDio(l)
 
@@ -37,12 +37,14 @@
     #define BRD_RFC_RXOUT_PIN       23
     #define BRD_RTC_OUT_PIN         BRD_LED1
 
+// SPI sensor
     #define BRD_SPI_CLK     15
     #define BRD_SPI_MOSI    25
     #define BRD_SPI_MISO    26
 
     #define BRD_MEM_CS      1
     #define BRD_SEN_CS      0   //using this
+
 
     // LEDs are active high
     #define Brd_Led_On(l)           GPIO_setDio(l)
@@ -61,6 +63,14 @@
     #define BRD_UART_TX             4
     #define BRD_UART_RX             5
 
+    //SPI sensor
+
+    #define BRD_SPI_CLK     2
+    #define BRD_SPI_MOSI    1
+    #define BRD_SPI_MISO    0
+
+    #define BRD_MEM_CS      3
+    #define BRD_SEN_CS      7
     // LEDs are active low
     #define Brd_Led_On(l)           GPIO_clearDio(l)
     #define Brd_Led_Off(l)          GPIO_setDio(l)

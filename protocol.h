@@ -32,7 +32,7 @@
 // Default radio parameters
 #define PTC_DEFAULT_TX_POW          RFC_TX_POW_0dBm
 #define PTC_DEFAULT_PHY_MODE        RFC_PHY_MODE_125KBPS
-#define PTC_DEFAULT_CHANNEL         4
+#define PTC_DEFAULT_CHANNEL         37
 
 // Maximum number of consecutive errors
 #define PTC_MAX_ERR_NUM             3
@@ -83,10 +83,10 @@
 // ********************************
 // Reliability test
 // ********************************
-#define PTC_SUBSLOT_NUM             8
+#define PTC_SUBSLOT_NUM             11
 //#define PTC_SUBSLOT_NUM             2 // xxx
 #define PTC_RTC_SUBSLOT_TIME        (PTC_RTC_SLOT_TIME/PTC_SUBSLOT_NUM) // ~30 ms
-#define PTC_TEST_TOUT_MSEC          25
+#define PTC_TEST_TOUT_MSEC          0
 
 typedef struct
 {
@@ -102,7 +102,7 @@ typedef struct
     int8_t average_rssi;
     uint8_t batt_volt_fixed_point;
     uint8_t batt_volt_int;
-    uint16_t batt_volt_frac;
+    uint32_t batt_volt_frac;
 } ptc_test_t;
 
 // ********************************
@@ -191,8 +191,9 @@ void Ptc_Init();
 void (*Ptc_Process)();
 
 uint8_t Ptc_Get_FSM_State();
-void Ptc_Get_Acc(int16_t* abuf);
 
 void Ptc_Handle_Error();
+
+void Ptc_Get_Acc(int16_t* abuf);
 
 #endif /* PROTOCOL_H_ */

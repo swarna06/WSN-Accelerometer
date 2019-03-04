@@ -211,6 +211,7 @@ void Rfc_Process()
         {
             uint32_t cpe_cmd_sta = Rfc_Get_CPE_CMDSTA();
 
+            #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
             if (!GPIO_readDio(BRD_GPIO_IN1) &&
                 (rfc.radio_op_p->commandNo == CMD_BLE5_SCANNER || rfc.radio_op_p->commandNo == CMD_BLE5_ADV_AUX))
             {
@@ -218,6 +219,7 @@ void Rfc_Process()
                 Rfc_Handle_Error(RFC_ERR_OPERATION_FAILED);
                 rfc.state = RFC_S_HALTED;
             } else
+            #endif // #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
             if (cpe_cmd_sta != CMDSTA_Done)
             {
                 Rfc_Handle_Error(RFC_ERR_OPERATION_FAILED);
@@ -246,6 +248,7 @@ void Rfc_Process()
     {
         uint32_t cpe_int_flags = Rfc_Get_CPE_Int_Flags();
 
+        #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
         if (!GPIO_readDio(BRD_GPIO_IN0) &&
              (rfc.radio_op_p->commandNo == CMD_BLE5_SCANNER || rfc.radio_op_p->commandNo == CMD_BLE5_ADV_AUX))
         {
@@ -253,6 +256,7 @@ void Rfc_Process()
             Rfc_Handle_Error(RFC_ERR_OPERATION_FAILED);
             rfc.state = RFC_S_HALTED;
         } else
+        #endif // #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
         if (cpe_int_flags & RFC_M_CPE_COMMAND_DONE)
         {
             if (rfc.radio_op_p->status & RFC_F_RADIO_OP_STATUS_ERR)

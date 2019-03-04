@@ -23,14 +23,13 @@
 #include "timing.h"
 #include "rf_core.h"
 #include "serial_port.h"
-#include "protocol.h"
 
 #include "board.h"
 #include "log.h"
 #include "misc.h"
-
 #include "sensor_test.h"
 #include "spi_bus.h"
+#include "protocol.h"
 
 static pma_control_t pmc;
 int16_t abuf[5];
@@ -191,31 +190,28 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     while (Sep_UART_Busy()); // wait until the UART FIFO becomes FIXME remove
 
 #ifdef PMA_DUMMY_SLEEP
+
+    // Dummy sleep; busy-wait until RTC event
     uint32_t curr_time = Tm_Get_RTC_Time();
     assertion(rtc_wakeup_time > curr_time + PMA_MIN_SLEEP_RTC_TICKS);
-    // Dummy sleep; busy-wait until RTC event
+
     AONRTCEventClear(AON_RTC_CH0);
     AONRTCCompareValueSet(AON_RTC_CH0, rtc_wakeup_time);
+    Ptc_Get_Acc(abuf);
+        if((uint8_t )(HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0))!=0)  // poll sensor data and accumulate buffer(pointer) if it is a sensor node
+        {
+                                    Sen_Read_Acc_Test(abuf);
 
+                                   /* Log_Value_Int(abuf[0]);Log_String_Literal(",");
+                                      Log_Value_Int(abuf[1]);Log_String_Literal(",");
+                                      Log_Value_Int(abuf[2]);Log_String_Literal(",");
+                                      Log_Value_Int(abuf[3]);
+                                      Log_Line(" ");*/
 
-Ptc_Get_Acc(abuf);
-    if((uint8_t )(HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0))!=0)  // poll sensor data and accumulate buffer(pointer) if it is a sensor node
-    {
-                                Sen_Read_Acc_Test(abuf);
-
-                               /* Log_Value_Int(abuf[0]);Log_String_Literal(",");
-                                  Log_Value_Int(abuf[1]);Log_String_Literal(",");
-                                  Log_Value_Int(abuf[2]);Log_String_Literal(",");
-                                  Log_Value_Int(abuf[3]);
-                                  Log_Line(" ");*/
-
-    }
+        }
     while (!AONRTCEventGet(AON_RTC_CH0)) // busy wait
     {
         Log_Process(); // flush log queue meanwhile
-
-
-
     }
 
 #else
@@ -225,7 +221,7 @@ Ptc_Get_Acc(abuf);
 
     // Set compare value of RTC channel
     uint32_t curr_time = Tm_Get_RTC_Time();
-    assertion(rtc_wakeup_time - curr_time > PMA_MIN_SLEEP_RTC_TICKS);
+    assertion(rtc_wakeup_time > curr_time + PMA_MIN_SLEEP_RTC_TICKS);
     AONRTCEventClear(AON_RTC_CH0);
     AONRTCCompareValueSet(AON_RTC_CH0, rtc_wakeup_time);
 
@@ -257,6 +253,9 @@ Ptc_Get_Acc(abuf);
     if (PRCMPowerDomainStatus(PRCM_DOMAIN_PERIPH) == PRCM_DOMAIN_POWER_ON)
         powered_domains |= PRCM_DOMAIN_PERIPH;
     PRCMPowerDomainOff(powered_domains | PRCM_DOMAIN_CPU);
+
+    // 5a. Request JTAG power domain off, noise in the TCK could power on this domain (TODO is this necessary?)
+    AONWUCJtagPowerOff();
 
     // 6. Request uLDO during standby
     PRCMMcuUldoConfigure(true);
@@ -318,7 +317,7 @@ uint8_t Pma_Get_Batt_Volt_Fixed_Point()
 {
     // Calculate average
     uint32_t sum = 0;
-    for (size_t i = 0; i < PMA_BATT_VOLT_SAMP_NUM; i++)
+    for (size_t i = 0; i < PMA_BATT_VOLT_SAMP_NUM; i++) // TODO validate if average of fixed point variable is done properly
         sum += pmc.batt_volt[i];
 
     // Battery voltage measurement in a <int.frac> format size <3.8> in units of volt
@@ -328,7 +327,7 @@ uint8_t Pma_Get_Batt_Volt_Fixed_Point()
 
 void Pma_Get_Batt_Volt_Parts(uint8_t batt_volt,
                              uint8_t* int_part,
-                             uint16_t* frac_part)
+                             uint32_t* frac_part)
 {
     // Extract the integer and fractional parts
     *int_part = batt_volt >> 5;
@@ -339,9 +338,15 @@ void Pma_Get_Batt_Volt_Parts(uint8_t batt_volt,
     if (batt_volt & (1 << 2)) *frac_part += 50000 / (1 << 2);
     if (batt_volt & (1 << 1)) *frac_part += 50000 / (1 << 3);
     if (batt_volt & (1 << 0)) *frac_part += 50000 / (1 << 4);
+
+    if (*frac_part < 10000) // hotfix TODO how to do zero padding for correct representation?
+    {
+        if (*frac_part > 500) *frac_part = 10000;
+        else *frac_part = 0;
+    }
 }
 
-void Pma_Get_Batt_Volt(uint8_t* int_part, uint16_t* frac_part)
+void Pma_Get_Batt_Volt(uint8_t* int_part, uint32_t* frac_part)
 {
     uint8_t batt_volt = Pma_Get_Batt_Volt_Fixed_Point();
 

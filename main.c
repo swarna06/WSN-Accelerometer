@@ -33,13 +33,11 @@
 #include "configuration.h"
 
 #include "printf.h"
-
 #include "sensor_test.h"
 #include "spi_bus.h"
 
 // Global profiling variables
 volatile uint32_t pfl_tic, pfl_toc, pfl_wcet = 0;
-
 
 void GPIO_Init();
 
@@ -59,32 +57,27 @@ int main(void)
 
     Spi_Init();
     Sen_Init();
+
+    #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
     // DEBUG TODO remove
-    //Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
     IOCPinTypeGpioInput(BRD_GPIO_IN0);
     IOCPinTypeGpioInput(BRD_GPIO_IN1);
     IOCIOPortPullSet(BRD_GPIO_IN0, IOC_IOPULL_UP);
     IOCIOPortPullSet(BRD_GPIO_IN1, IOC_IOPULL_UP);
-    int16_t abuf[4];
+    #endif // #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
+
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
     {
-        Log_Process();
-      /*  if (Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
-                    {
-                        Brd_Led_Toggle(BRD_LED0);
-                        //Log_Line("heartbeat");
-                        //Sen_Read_Acc_Test(abuf);
-                    }
-                    */
+        if (Tm_Sys_Tick())
+            Tm_Process();
 
-       if (Tm_Sys_Tick())
-           Tm_Process();
+        Log_Process();
+
         if (Pma_Batt_Volt_Meas_Ready())
             Pma_Process();
 
-
-       Rfc_Process();
+        Rfc_Process();
 
         if (Rfc_Ready())
             Ptc_Process();
