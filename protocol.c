@@ -949,8 +949,8 @@ static void Ptc_Print_Test_Results()
     Log_String_Literal(", "); Log_Value_Int(ptc.test->total_err_count);
     Log_String_Literal(", "); Log_Value_Int(ptc.test->average_rssi);
     Log_String_Literal(", "); Log_Value_Int(ptc.data_pkt.average_rssi);
-    Log_String_Literal(", "); Log_Value_Uint(ptc.test->batt_volt_int);
-    Log_String_Literal("."); Log_Value_Uint(ptc.test->batt_volt_frac);
+//    Log_String_Literal(", "); Log_Value_Uint(ptc.test->batt_volt_int);
+//    Log_String_Literal("."); Log_Value_Uint(ptc.test->batt_volt_frac);
 
     uint8_t rxed_batt_volt_int;
     uint32_t rxed_batt_volt_frac;
