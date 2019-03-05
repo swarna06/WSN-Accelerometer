@@ -19,8 +19,7 @@
 // Number of RTC clocks used to generate the system ticks
 #define TM_SYS_TICK_RTC_CYCLES  (TM_RTC_TICKS_PER_MSEC*1) // ~1 ms
 
-// List of periods, values in milliseconds
-#define TM_PER_HEARTBEAT_VAL    1000
+// List of periods
 enum
 {
     TM_PER_HEARTBEAT_ID = 0,
@@ -29,8 +28,7 @@ enum
     TM_PER_NUM
 };
 
-// List of timeouts, values in milliseconds
-#define TM_TOUT_TEST_VAL        500
+// List of timeouts
 enum
 {
     TM_TOUT_TEST_ID = 0,
