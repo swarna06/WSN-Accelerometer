@@ -19,23 +19,27 @@
 // Number of RTC clocks used to generate the system ticks
 #define TM_SYS_TICK_RTC_CYCLES  (TM_RTC_TICKS_PER_MSEC*1) // ~1 ms
 
-// Total number of periods and timeouts
-#define TM_PER_NUM              2       // xxx do not forget to update !
-#define TM_TOUT_NUM             3       // xxx do not forget to update !
-
 // List of periods, values in milliseconds
-#define TM_PER_HEARTBEAT_ID     0
 #define TM_PER_HEARTBEAT_VAL    1000
+enum
+{
+    TM_PER_HEARTBEAT_ID = 0,
+    TM_PER_PTC_ID,
 
-#define TM_PER_PTC_ID           1
+    TM_PER_NUM
+};
 
 // List of timeouts, values in milliseconds
-#define TM_TOUT_TEST_ID         0
 #define TM_TOUT_TEST_VAL        500
+enum
+{
+    TM_TOUT_TEST_ID = 0,
+    TM_RFC_TOUT_ID,
+    TM_TOUT_PTC_ID,
+    TM_RF_DRIVER_TOUT_ID,
 
-#define TM_RFC_TOUT_ID          1
-
-#define TM_TOUT_PTC_ID          2
+    TM_TOUT_NUM
+};
 
 // Synchronize with RTC (write to SYNC register prior reading to force a wait until next SCLK_LF edge)
 #define Tm_Synch_With_RTC()     HWREG(AON_RTC_BASE + AON_RTC_O_SYNC) = 1; \
