@@ -25,7 +25,6 @@
 #include "timing.h"
 #include "serial_port.h"
 #include "rf_core.h"
-#include "host_interface.h"
 #include "protocol.h"
 #include "log.h"
 #include "power_management.h"
