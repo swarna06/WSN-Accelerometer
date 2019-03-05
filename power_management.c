@@ -127,7 +127,7 @@ void Pma_Power_On_Peripheral(uint16_t peripheral)
     // Assign PRMC value for peripheral module
     switch(peripheral)
     {
-    case PMA_PERIPH_RF_CORE: periph_module = (uint32_t)-1; // value doesn't matter
+    case PMA_PERIPH_RF_CORE: periph_module = (uint32_t)-1; break; // value doesn't matter
     case PMA_PERIPH_UART0: periph_module = PRCM_PERIPH_UART0; break;
     case PMA_PERIPH_GPIO: periph_module = PRCM_PERIPH_GPIO; break;
     default:
