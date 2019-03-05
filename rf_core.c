@@ -360,7 +360,7 @@ void Rfc_BLE5_Set_Channel(uint8_t channel)
         ch_offset = 12;
     else if (channel == 39)
         ch_offset = 39;
-    else if ((channel >= 0) && (channel <= 10))
+    else if (channel <= 10) // 0 <= channel <= 10
         ch_offset = channel + 1;
     else if ((channel >= 11) && (channel <= 36))
         ch_offset = channel + 2;

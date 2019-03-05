@@ -15,7 +15,8 @@
 #define LOG_HEX_BASE                16
 
 // Macros for logging
-#define Log_String_Literal(s)       (sizeof(s) > 1 ? Log : Log_Dummy)(s, sizeof(s) - 1) // excludes '\0'
+//#define Log_String_Literal(s)       (sizeof(s) > 1 ? Log : Log_Dummy)(s, sizeof(s) - 1) // excludes '\0'
+#define Log_String_Literal(s)       if (sizeof(s) > 1) Log(s, sizeof(s) - 1); // excludes '\0'
 #define Log_Line(l)                 Log_String_Literal(l "\r\n")
 #define Log_Val_Uint32(s,v)         { \
                                         Log_String_Literal(s); \
@@ -53,7 +54,5 @@ void Log_Value_Uint(uint32_t val);
 void Log_Value_Int(int32_t val);
 
 void Log_Value_Hex(uint32_t val);
-
-void Log_Dummy(void* data, size_t data_len);
 
 #endif /* LOG_H_ */
