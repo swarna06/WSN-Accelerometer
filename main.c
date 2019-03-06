@@ -24,8 +24,9 @@
 #include "board.h"
 #include "timing.h"
 #include "serial_port.h"
-#include "rf_core.h"
-#include "protocol.h"
+//#include "rf_core.h"
+//#include "protocol.h"
+#include "rfc_driver.h"
 #include "log.h"
 #include "power_management.h"
 #include "profiling.h"
@@ -49,8 +50,10 @@ int main(void)
     Log_Init();
     Pfl_Init();
 
-    Rfc_Init();
-    Ptc_Init();
+//    Rfc_Init();
+//    Ptc_Init();
+
+    Rfd_Init();
 
     #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
     // DEBUG TODO remove
@@ -60,9 +63,22 @@ int main(void)
     IOCIOPortPullSet(BRD_GPIO_IN1, IOC_IOPULL_UP);
     #endif // #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
 
+    Tm_Start_Period(TM_PER_HEARTBEAT_ID, 1000);
+    Rfd_Turn_On();
+
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
     {
+        if (Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
+        {
+            Brd_Led_Toggle(BRD_LED0);
+
+            if (Rfd_Ready())
+            {
+                Brd_Led_Toggle(BRD_LED1);
+            }
+        }
+
         if (Tm_Sys_Tick())
             Tm_Process();
 
@@ -71,19 +87,21 @@ int main(void)
         if (Pma_Batt_Volt_Meas_Ready())
             Pma_Process();
 
-        Rfc_Process();
+        Rfd_Process();
 
-        if (Rfc_Ready())
-            Ptc_Process();
-        else if (Rfc_Error())
-            Ptc_Handle_Error();
+//        Rfc_Process();
+//
+//        if (Rfc_Ready())
+//            Ptc_Process();
+//        else if (Rfc_Error())
+//            Ptc_Handle_Error();
 
         // DEBUG
         // Print state of FSM
         #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
         static uint8_t fsm_state = (uint8_t)-1; // holds last assigned value (static)
         uint8_t new_fsm_state;
-        if (fsm_state != (new_fsm_state = Ptc_Get_FSM_State()))
+        if (fsm_state != (new_fsm_state = Rfd_Get_FSM_State()))
         {
             fsm_state = new_fsm_state;
             Log_Val_Hex32("s:", fsm_state);
