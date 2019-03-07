@@ -46,7 +46,7 @@ static void Rdv_Handle_Error(uint8_t err_code);
 rfd_control_t rdc;
 
 // State procedures array
-void (*rfd_state_proc_ptr[RDV_STATE_NUM])() =
+static void (*rfd_state_proc_ptr[RDV_STATE_NUM])() =
 {
      [RDV_S_IDLE] = Rdv_S_Idle,
 
