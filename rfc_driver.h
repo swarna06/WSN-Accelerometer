@@ -76,6 +76,9 @@ enum
 
 #define Rdv_Abort_Cmd_Execution()       Rdv_Set_CMD_Reg(CMDR_DIR_CMD(CMD_ABORT))
 
+// Radio operation status field error flag
+#define RDV_F_RADIO_OP_STATUS_ERR       0x0800
+
 // ********************************
 // Error handling
 // ********************************
@@ -87,6 +90,9 @@ enum
     RDV_ERR_BOOT_FAILED,
     RDV_ERR_RFC_UNRESPONSIVE,
     RDV_ERR_CMD_PARSING,
+    RDV_ERR_RADIO_OP_FAILED,
+    RDV_ERR_RFC_INTERNAL,
+    RDV_ERR_SYNTH_NO_LOCK,
 };
 
 // Error structure
@@ -122,6 +128,7 @@ typedef enum
 {
     RDV_F_RFC_HAS_BOOTED = 0x01,
     RDV_F_CMD_IS_RADIO_OP = 0x02,
+    RDV_F_CMD_CHAIN = 0x04,
 } rfd_flags_t;
 
 typedef struct
@@ -131,7 +138,7 @@ typedef struct
     rfd_error_t error;
 
     volatile rfc_command_t* cmd_p;
-    uint8_t cmd_type;
+    uint16_t radio_op_tout_ms;
 } rfd_control_t;
 
 void Rdv_Init();
@@ -150,11 +157,9 @@ bool Rdv_Start_Direct_Cmd(uint16_t command);
 
 bool Rdv_Start_Immediate_Cmd(rfc_command_t* command);
 
-bool Rdv_Start_Radio_Op(rfc_radioOp_t* radio_op);
+bool Rdv_Start_Radio_Op(rfc_radioOp_t* radio_op, uint16_t timeout_ms);
 
-bool Rdv_Start_Radio_Op_Chain(rfc_radioOp_t* radio_op);
-
-bool Rdv_Abort();
+bool Rdv_Start_Radio_Op_Chain(rfc_radioOp_t* radio_op, uint16_t timeout_ms);
 
 bool Rdv_Ready();
 

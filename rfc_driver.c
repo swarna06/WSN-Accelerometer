@@ -151,14 +151,28 @@ bool Rdv_Start_Immediate_Cmd(rfc_command_t* command)
     return true;
 }
 
-bool Rdv_Start_Radio_Op(rfc_radioOp_t* radio_op)
+bool Rdv_Start_Radio_Op(rfc_radioOp_t* radio_op, uint16_t timeout_ms)
 {
     if (!Rdv_Ready())
         return false;
 
     rdc.flags |= RDV_F_CMD_IS_RADIO_OP;
+    rdc.radio_op_tout_ms = timeout_ms;  // 0 means wait forever
+
+    radio_op->status = IDLE;
     Rdv_Start_Cmd_Execution((rfc_command_t*)radio_op);
     return true;
+}
+
+bool Rdv_Start_Radio_Op_Chain(rfc_radioOp_t* radio_op, uint16_t timeout_ms)
+{
+    if (Rdv_Start_Radio_Op(radio_op, timeout_ms) == true) // success ?
+    {
+        rdc.flags |= RDV_F_CMD_CHAIN;
+        return true;
+    }
+    else
+        return false;
 }
 
 bool Rdv_Ready()
@@ -260,10 +274,10 @@ void Rdv_S_Wait_CPE_Ack()
         if (rdc.flags & RDV_F_CMD_IS_RADIO_OP) // radio operation ?
         {
             rdc.state = RDV_S_WAIT_RADIO_OP_DONE;
-            Tm_Start_Timeout(TM_RF_DRIVER_TOUT_ID, RDV_TOUT_RADIO_OP_MSEC); // xxx should this be variable
+            Tm_Start_Timeout(TM_RF_DRIVER_TOUT_ID, rdc.radio_op_tout_ms);
         }
         else // Immediate command has finished successfully
-            rdc.state = RDV_S_WAIT_ERR_CLEARED;
+            rdc.state = RDV_S_IDLE;
     }
     else if (Tm_Timeout_Completed(TM_RF_DRIVER_TOUT_ID))
     {
@@ -274,7 +288,52 @@ void Rdv_S_Wait_CPE_Ack()
 
 void Rdv_S_Wait_Radio_Op_Done()
 {
+    rfc_radioOp_t* radio_op_p = (rfc_radioOp_t*)rdc.cmd_p;
+    uint32_t cpe_int_flags = Rdv_Get_CPE_Int_Flags();
 
+    // Determine if radio operation (single or chain) has finished
+    bool command_done = false;
+    if (cpe_int_flags & RDV_M_CPE_COMMAND_DONE)
+    {
+        if (!(rdc.flags & RDV_F_CMD_CHAIN)) // single radio operation ?
+            command_done = true;
+        else if (cpe_int_flags & RFC_DBELL_RFCPEIFG_LAST_COMMAND_DONE) // last command done ?
+            command_done = true;
+    }
+
+    if (command_done == true)
+    {
+        if (rdc.flags & RDV_F_CMD_CHAIN) // comand chain ?
+            rdc.state = RDV_S_IDLE; // do not check for errors
+        else if (!(radio_op_p->status & RDV_F_RADIO_OP_STATUS_ERR)) // success ?
+            rdc.state = RDV_S_IDLE;
+        else
+        {
+            Rdv_Handle_Error(RDV_ERR_RADIO_OP_FAILED);
+            rdc.state = RDV_S_WAIT_ERR_CLEARED;
+        }
+    }
+    else if (cpe_int_flags & RFC_DBELL_RFCPEIFG_RX_NOK) // CRC error ?
+    {
+        // Sometimes the RX_NOK flag is set but not the COMMAND_DONE flag
+        Rdv_Abort_Cmd_Execution();
+        radio_op_p->status = DONE_RXERR; // CRC error
+        rdc.state = RDV_S_IDLE;
+    }
+    else if (cpe_int_flags & RDV_M_CPE_RF_CORE_ERR) // internal or synth-no-lock error ?
+    {
+        uint8_t err_code = RDV_ERR_RFC_INTERNAL;
+        if (cpe_int_flags & RFC_DBELL_RFCPEIFG_SYNTH_NO_LOCK)
+            err_code = RDV_ERR_SYNTH_NO_LOCK;
+
+        Rdv_Handle_Error(err_code);
+        rdc.state = RDV_S_WAIT_ERR_CLEARED;
+    }
+    else if (rdc.radio_op_tout_ms && Tm_Timeout_Completed(TM_RF_DRIVER_TOUT_ID))
+    {
+        Rdv_Handle_Error(RDV_ERR_RFC_UNRESPONSIVE);
+        rdc.state = RDV_S_WAIT_ERR_CLEARED;
+    }
 }
 
 void Rdv_S_Wait_Err_Cleared()
@@ -293,6 +352,10 @@ static bool Rdv_Send_To_CPE(volatile rfc_command_t* command)
 {
     if (Rdv_CPE_Ready()) // RF Core is ready ?
     {
+        // Clear interrupt flags and start command execution
+        Rdv_Clear_CPE_Int_Flags(RDV_M_CPE_COMMAND_DONE |
+                                    RDV_M_CPE_TX_INT_FLAGS |
+                                    RDV_M_CPE_RX_INT_FLAGS);
         Rdv_Clear_CPE_Ack();
         Rdv_Set_CMD_Reg(command);
         return true;
@@ -331,8 +394,7 @@ static void Rdv_Handle_Error(uint8_t err_code)
 {
     Rdv_Abort_Cmd_Execution(); // abort execution of current command (if any is running)
 
-    rdc.error.code = err_code;
-
+    rdc.error.code = err_code; // error code must be set before calling Rdv_Turn_Off()
     Rdv_Turn_Off();
 
     // Log error
