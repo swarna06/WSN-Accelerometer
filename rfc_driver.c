@@ -194,7 +194,7 @@ uint8_t Rdv_Get_Err_Code()
 
 static void Rdv_S_Idle()
 {
-
+    // do nothing
 }
 
 static void Rdv_S_Wait_Power_On()
