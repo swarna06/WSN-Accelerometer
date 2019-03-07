@@ -32,17 +32,45 @@ typedef struct
 } rad_rx_param_t;
 
 // ********************************
+// Error handling
+// ********************************
+// Error codes
+enum
+{
+    RAD_ERR_NONE = 0,
+    RAD_ERR_START_UP_FAILED,
+};
+
+
+// ********************************
 // State machine and control structure
 // ********************************
 
+// FSM states
 typedef enum
 {
+    RAD_S_IDLE = 0,
 
+    RAD_S_WAIT_RFC_BOOT,
+    RAD_S_WAIT_RFC_CONFIG_SEQUENCE,
+
+    RAD_S_WAIT_ERR_CLEARED,
+
+    RAD_STATE_NUM
 } rad_state_t;
 
+typedef enum
+{
+    RAD_F_RFC_CONFIGURED = 0x01,
+} rad_flags_t;
+
+// Control structure (module's state)
 typedef struct
 {
+    rad_state_t state;
+    rad_flags_t flags;
 
+    uint8_t err_code;
 } rad_control_t;
 
 // ********************************
