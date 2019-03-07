@@ -11,10 +11,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include <driverlib/rf_common_cmd.h>
-#include <driverlib/rf_mailbox.h>
-#include <inc/hw_rfc_rat.h>
-#include <inc/hw_rfc_dbell.h>
+#include <driverlib/rfc.h>
 
 // ********************************
 // Timing

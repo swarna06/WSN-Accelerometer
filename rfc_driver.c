@@ -9,15 +9,7 @@
 #include <stdbool.h>
 
 #include <driverlib/prcm.h>
-#include <driverlib/sys_ctrl.h>
-
 #include <driverlib/rfc.h>
-#include <driverlib/rf_mailbox.h>
-#include <driverlib/rf_common_cmd.h>
-#include <driverlib/rf_data_entry.h>
-#include <inc/hw_rfc_rat.h>
-#include <driverlib/rf_ble_mailbox.h>
-#include <driverlib/rf_ble_cmd.h>
 
 #include "rfc_driver.h"
 #include "misc.h"
