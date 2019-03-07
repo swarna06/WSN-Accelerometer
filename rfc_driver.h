@@ -107,6 +107,10 @@ typedef struct
     uint32_t RFCPEIFG; // copy of register value
 } rfd_error_t;
 
+// ********************************
+// State machine and control structure
+// ********************************
+
 // Data types
 typedef enum
 {
@@ -124,6 +128,7 @@ typedef enum
     RDV_STATE_NUM
 } rfd_state_t;
 
+// Flags
 typedef enum
 {
     RDV_F_RFC_HAS_BOOTED = 0x01,
@@ -131,6 +136,7 @@ typedef enum
     RDV_F_CMD_CHAIN = 0x04,
 } rfd_flags_t;
 
+// Control structure (module's state)
 typedef struct
 {
     rfd_state_t state;
@@ -140,6 +146,10 @@ typedef struct
     volatile rfc_command_t* cmd_p;
     uint16_t radio_op_tout_ms;
 } rfd_control_t;
+
+// ********************************
+// Public functions
+// ********************************
 
 void Rdv_Init();
 
