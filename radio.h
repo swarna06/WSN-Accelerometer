@@ -11,6 +11,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include <driverlib/rfc.h>
+
+// ********************************
+// RF core API
+// ********************************
+
 // ********************************
 // Transmission and reception
 // ********************************
