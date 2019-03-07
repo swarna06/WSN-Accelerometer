@@ -43,7 +43,7 @@ static void Rdv_Handle_Error(uint8_t err_code);
 // ********************************
 
 // Control structure
-rfd_control_t rdc;
+static rfd_control_t rdc;
 
 // State procedures array
 static void (*rfd_state_proc_ptr[RDV_STATE_NUM])() =
