@@ -34,7 +34,7 @@ static void Rdv_S_Wait_Err_Cleared();
 
 // Other static functions
 static bool Rdv_Send_To_CPE(volatile rfc_command_t* command);
-static void Rdv_Start_Cmd_Execution(rfc_command_t* command);
+static void Rdv_Start_Cmd_Execution(volatile  rfc_command_t* command);
 static void Rdv_Hardware_Init();
 static void Rdv_Handle_Error(uint8_t err_code);
 
@@ -88,8 +88,7 @@ inline rfd_state_t Rdv_Get_FSM_State()
 
 bool Rdv_Turn_On()
 {
-    if (rdc.state != RDV_S_IDLE)
-        return false;
+    if (rdc.state != RDV_S_IDLE) return false;
 
     if (Rdv_Is_On() == false)
     {
@@ -133,20 +132,18 @@ bool Rdv_Start_Direct_Cmd(uint16_t command)
     return Rdv_Start_Immediate_Cmd((rfc_command_t*)CMDR_DIR_CMD(command));
 }
 
-bool Rdv_Start_Immediate_Cmd(rfc_command_t* command)
+bool Rdv_Start_Immediate_Cmd(volatile rfc_command_t* command)
 {
-    if (!Rdv_Ready())
-        return false;
+    if (!Rdv_Ready()) return false;
 
     rdc.flags &= ~RDV_F_CMD_IS_RADIO_OP;
     Rdv_Start_Cmd_Execution(command);
     return true;
 }
 
-bool Rdv_Start_Radio_Op(rfc_radioOp_t* radio_op, uint16_t timeout_ms)
+bool Rdv_Start_Radio_Op(volatile rfc_radioOp_t* radio_op, uint16_t timeout_ms)
 {
-    if (!Rdv_Ready())
-        return false;
+    if (!Rdv_Ready()) return false;
 
     rdc.flags |= RDV_F_CMD_IS_RADIO_OP;
     rdc.radio_op_tout_ms = timeout_ms;  // 0 means wait forever
@@ -156,7 +153,7 @@ bool Rdv_Start_Radio_Op(rfc_radioOp_t* radio_op, uint16_t timeout_ms)
     return true;
 }
 
-bool Rdv_Start_Radio_Op_Chain(rfc_radioOp_t* radio_op, uint16_t timeout_ms)
+bool Rdv_Start_Radio_Op_Chain(volatile rfc_radioOp_t* radio_op, uint16_t timeout_ms)
 {
     if (Rdv_Start_Radio_Op(radio_op, timeout_ms) == true) // success ?
     {
@@ -356,7 +353,7 @@ static bool Rdv_Send_To_CPE(volatile rfc_command_t* command)
         return false;
 }
 
-static void Rdv_Start_Cmd_Execution(rfc_command_t* command)
+static void Rdv_Start_Cmd_Execution(volatile rfc_command_t* command)
 {
     rdc.cmd_p = command;
 

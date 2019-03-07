@@ -160,13 +160,13 @@ bool Rdv_Turn_Off();
 
 bool Rdv_Is_On();
 
-bool Rdv_Start_Direct_Cmd(uint16_t command);
+bool Rdv_Start_Direct_Cmd(volatile uint16_t command);
 
-bool Rdv_Start_Immediate_Cmd(rfc_command_t* command);
+bool Rdv_Start_Immediate_Cmd(volatile rfc_command_t* command);
 
-bool Rdv_Start_Radio_Op(rfc_radioOp_t* radio_op, uint16_t timeout_ms);
+bool Rdv_Start_Radio_Op(volatile rfc_radioOp_t* radio_op, uint16_t timeout_ms);
 
-bool Rdv_Start_Radio_Op_Chain(rfc_radioOp_t* radio_op, uint16_t timeout_ms);
+bool Rdv_Start_Radio_Op_Chain(volatile rfc_radioOp_t* radio_op, uint16_t timeout_ms);
 
 bool Rdv_Ready();
 
