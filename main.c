@@ -53,7 +53,7 @@ int main(void)
 //    Rfc_Init();
 //    Ptc_Init();
 
-    Rfd_Init();
+    Rdv_Init();
 
     #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
     // DEBUG TODO remove
@@ -64,7 +64,7 @@ int main(void)
     #endif // #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
 
     Tm_Start_Period(TM_PER_HEARTBEAT_ID, 1000);
-    Rfd_Turn_On();
+    Rdv_Turn_On();
 
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
@@ -73,9 +73,10 @@ int main(void)
         {
             Brd_Led_Toggle(BRD_LED0);
 
-            if (Rfd_Ready())
+            if (Rdv_Ready())
             {
                 Brd_Led_Toggle(BRD_LED1);
+                Rdv_Turn_Off();
             }
         }
 
@@ -87,7 +88,7 @@ int main(void)
         if (Pma_Batt_Volt_Meas_Ready())
             Pma_Process();
 
-        Rfd_Process();
+        Rdv_Process();
 
 //        Rfc_Process();
 //
@@ -101,7 +102,7 @@ int main(void)
         #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
         static uint8_t fsm_state = (uint8_t)-1; // holds last assigned value (static)
         uint8_t new_fsm_state;
-        if (fsm_state != (new_fsm_state = Rfd_Get_FSM_State()))
+        if (fsm_state != (new_fsm_state = Rdv_Get_FSM_State()))
         {
             fsm_state = new_fsm_state;
             Log_Val_Hex32("s:", fsm_state);

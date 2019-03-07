@@ -22,21 +22,23 @@
 // Timeout values (milliseconds)
 enum
 {
-    RFD_TOUT_DEFAULT_MSEC = 10,
-    RFD_TOUT_POWER_ON_MSEC = RFD_TOUT_DEFAULT_MSEC,
-    RFD_TOUT_BOOT_MSEC = RFD_TOUT_DEFAULT_MSEC,
-
+    RDV_TOUT_DEFAULT_MSEC = 10,
+    RDV_TOUT_POWER_ON_MSEC = RDV_TOUT_DEFAULT_MSEC,
+    RDV_TOUT_BOOT_MSEC = RDV_TOUT_DEFAULT_MSEC,
+    RDV_TOUT_CPE_READY_MSEC = RDV_TOUT_DEFAULT_MSEC,
+    RDV_TOUT_CPE_ACK_MSEC = RDV_TOUT_DEFAULT_MSEC,
+    RDV_TOUT_RADIO_OP_MSEC = RDV_TOUT_DEFAULT_MSEC,
 };
 
 // ********************************
 // RF Core interface
 // ********************************
 // CPE command done interrupt flags
-#define RFD_M_CPE_COMMAND_DONE          (RFC_DBELL_RFCPEIFG_LAST_COMMAND_DONE | \
+#define RDV_M_CPE_COMMAND_DONE          (RFC_DBELL_RFCPEIFG_LAST_COMMAND_DONE | \
                                          RFC_DBELL_RFCPEIFG_COMMAND_DONE)
 
 // CPE TX interrupt flags
-#define RFD_M_CPE_TX_INT_FLAGS          (RFC_DBELL_RFCPEIFG_TX_BUFFER_CHANGED | \
+#define RDV_M_CPE_TX_INT_FLAGS          (RFC_DBELL_RFCPEIFG_TX_BUFFER_CHANGED | \
                                         RFC_DBELL_RFCPEIFG_TX_ENTRY_DONE | \
                                         RFC_DBELL_RFCPEIFG_TX_RETRANS | \
                                         RFC_DBELL_RFCPEIFG_TX_CTRL_ACK_ACK | \
@@ -46,7 +48,7 @@ enum
                                         RFC_DBELL_RFCPEIFG_TX_DONE)
 
 // CPE TX interrupt flags
-#define RFD_M_CPE_RX_INT_FLAGS          (RFC_DBELL_RFCPEIFG_RX_ABORTED | \
+#define RDV_M_CPE_RX_INT_FLAGS          (RFC_DBELL_RFCPEIFG_RX_ABORTED | \
                                          RFC_DBELL_RFCPEIFG_RX_N_DATA_WRITTEN | \
                                          RFC_DBELL_RFCPEIFG_RX_DATA_WRITTEN | \
                                          RFC_DBELL_RFCPEIFG_RX_ENTRY_DONE | \
@@ -59,19 +61,20 @@ enum
                                          RFC_DBELL_RFCPEIFG_RX_OK)
 
 // Error interrupt flags
-#define RFD_M_CPE_RF_CORE_ERR           (RFC_DBELL_RFCPEIFG_INTERNAL_ERROR | \
+#define RDV_M_CPE_RF_CORE_ERR           (RFC_DBELL_RFCPEIFG_INTERNAL_ERROR | \
                                          RFC_DBELL_RFCPEIFG_SYNTH_NO_LOCK)
-#define RFD_M_CPE_RX_ERR_FLAGS          (RFC_DBELL_RFCPEIFG_RX_NOK)
+#define RDV_M_CPE_RX_ERR_FLAGS          (RFC_DBELL_RFCPEIFG_RX_NOK)
 
 // Macro functions for interfacing with the Command and Packet Engine (CPE)
-#define Rfd_Get_CPE_Int_Flags()         (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG))
-#define Rfd_Clear_CPE_Int_Flags(msk)    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG) = ~msk;
-#define Rfd_CPE_Ready()                 (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDR) == 0)
-#define Rfd_Send_To_CPE(op)             HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDR) = (uint32_t)op;
-#define Rfd_CPE_Ack()                   (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFACKIFG))
-#define Rfd_Get_CPE_CMDSTA()            (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDSTA))
+#define Rdv_Get_CPE_Int_Flags()         (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG))
+#define Rdv_Clear_CPE_Int_Flags(msk)    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFCPEIFG) = ~msk;
+#define Rdv_CPE_Ready()                 (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDR) == 0)
+#define Rdv_Set_CMD_Reg(op)             HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDR) = (uint32_t)op;
+#define Rdv_Clear_CPE_Ack()             HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFACKIFG) = 0x0;
+#define Rdv_CPE_Ack()                   (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFACKIFG))
+#define Rdv_Get_CPE_CMDSTA()            (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_CMDSTA))
 
-#define Rfd_Abort_Cmd_Execution()       Rfd_Send_To_CPE(CMDR_DIR_CMD(CMD_ABORT))
+#define Rdv_Abort_Cmd_Execution()       Rdv_Set_CMD_Reg(CMDR_DIR_CMD(CMD_ABORT))
 
 // ********************************
 // Error handling
@@ -79,9 +82,11 @@ enum
 // Error codes
 enum
 {
-    RFD_ERR_NONE = 0,
-    RFD_ERR_POW_ON_TOUT,
-    RFD_ERR_BOOT_FAILED,
+    RDV_ERR_NONE = 0,
+    RDV_ERR_POWER_ON_TOUT,
+    RDV_ERR_BOOT_FAILED,
+    RDV_ERR_RFC_UNRESPONSIVE,
+    RDV_ERR_CMD_PARSING,
 };
 
 // Error structure
@@ -99,19 +104,24 @@ typedef struct
 // Data types
 typedef enum
 {
-    RFD_S_IDLE = 0,
+    RDV_S_IDLE = 0,
 
-    RFD_S_WAIT_POW_DOMAIN_ON,
-    RFD_S_WAIT_RFC_BOOT,
+    RDV_S_WAIT_POW_DOMAIN_ON,
+    RDV_S_WAIT_RFC_BOOT,
 
-    RFD_S_WAIT_ERR_CLEARED,
+    RDV_S_WAIT_CPE_READY,
+    RDV_S_WAIT_CPE_ACK,
+    RDV_S_WAIT_RADIO_OP_DONE,
 
-    RFD_STATE_NUM
+    RDV_S_WAIT_ERR_CLEARED,
+
+    RDV_STATE_NUM
 } rfd_state_t;
 
 typedef enum
 {
-    RFD_F_RFC_HAS_BOOTED = 0x01,
+    RDV_F_RFC_HAS_BOOTED = 0x01,
+    RDV_F_CMD_IS_RADIO_OP = 0x02,
 } rfd_flags_t;
 
 typedef struct
@@ -121,35 +131,36 @@ typedef struct
     rfd_error_t error;
 
     volatile rfc_command_t* cmd_p;
+    uint8_t cmd_type;
 } rfd_control_t;
 
-void Rfd_Init();
+void Rdv_Init();
 
-void Rfd_Process();
+void Rdv_Process();
 
-rfd_state_t Rfd_Get_FSM_State();
+rfd_state_t Rdv_Get_FSM_State();
 
-bool Rfd_Turn_On();
+bool Rdv_Turn_On();
 
-bool Rfd_Turn_Off();
+bool Rdv_Turn_Off();
 
-bool Rfd_Is_On();
+bool Rdv_Is_On();
 
-bool Rfd_Start_Direct_Cmd(uint16_t cmd);
+bool Rdv_Start_Direct_Cmd(uint16_t command);
 
-bool Rfd_Start_Immediate_Cmd(rfc_command_t* cmd);
+bool Rdv_Start_Immediate_Cmd(rfc_command_t* command);
 
-bool Rfd_Start_Radio_Op(rfc_radioOp_t* radio_op);
+bool Rdv_Start_Radio_Op(rfc_radioOp_t* radio_op);
 
-bool Rfd_Start_Radio_Op_Chain(rfc_radioOp_t* radio_op);
+bool Rdv_Start_Radio_Op_Chain(rfc_radioOp_t* radio_op);
 
-bool Rfd_Abort();
+bool Rdv_Abort();
 
-bool Rfd_Ready();
+bool Rdv_Ready();
 
-bool Rfd_Error_Occurred();
+bool Rdv_Error_Occurred();
 
-uint8_t Rfd_Get_Error(rfd_error_t error);
+uint8_t Rdv_Get_Error(rfd_error_t error);
 
 
 #endif /* RFC_DRIVER_H_ */
