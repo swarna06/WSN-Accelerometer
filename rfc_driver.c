@@ -72,6 +72,7 @@ void Rdv_Init()
     // Control structure initialization
     rdc.flags = 0;
     rdc.state = RDV_S_IDLE;
+    rdc.error.code = 0;
 }
 
 inline void Rdv_Process()
@@ -181,7 +182,6 @@ uint8_t Rdv_Get_Err_Code()
 {
     uint8_t err_code = rdc.error.code;
     rdc.error.code = RDV_ERR_NONE;
-
     return err_code;
 }
 
