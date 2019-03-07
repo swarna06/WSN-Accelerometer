@@ -108,7 +108,7 @@ typedef struct
 // State machine and control structure
 // ********************************
 
-// Data types
+// FSM states
 typedef enum
 {
     RDV_S_IDLE = 0,

@@ -21,16 +21,16 @@
 // ********************************
 
 // State procedures
-void Rdv_S_Idle();
+static void Rdv_S_Idle();
 
-void Rdv_S_Wait_Power_On();
-void Rdv_S_Wait_Boot();
+static void Rdv_S_Wait_Power_On();
+static void Rdv_S_Wait_Boot();
 
-void Rdv_S_Wait_CPE_Ready();
-void Rdv_S_Wait_CPE_Ack();
-void Rdv_S_Wait_Radio_Op_Done();
+static void Rdv_S_Wait_CPE_Ready();
+static void Rdv_S_Wait_CPE_Ack();
+static void Rdv_S_Wait_Radio_Op_Done();
 
-void Rdv_S_Wait_Err_Cleared();
+static void Rdv_S_Wait_Err_Cleared();
 
 // Other static functions
 static bool Rdv_Send_To_CPE(volatile rfc_command_t* command);
@@ -192,12 +192,12 @@ uint8_t Rdv_Get_Err_Code()
 // FSM procedures (static)
 // ********************************
 
-void Rdv_S_Idle()
+static void Rdv_S_Idle()
 {
 
 }
 
-void Rdv_S_Wait_Power_On()
+static void Rdv_S_Wait_Power_On()
 {
     // Wait until RFC power domain is turned on
     if (Rdv_Is_On())
@@ -220,7 +220,7 @@ void Rdv_S_Wait_Power_On()
     }
 }
 
-void Rdv_S_Wait_Boot()
+static void Rdv_S_Wait_Boot()
 {
     uint32_t cpe_int_flags = Rdv_Get_CPE_Int_Flags();
 
@@ -237,7 +237,7 @@ void Rdv_S_Wait_Boot()
     }
 }
 
-void Rdv_S_Wait_CPE_Ready()
+static void Rdv_S_Wait_CPE_Ready()
 {
     if (Rdv_Send_To_CPE(rdc.cmd_p) == true) // command accepted ?
     {
@@ -251,7 +251,7 @@ void Rdv_S_Wait_CPE_Ready()
     }
 }
 
-void Rdv_S_Wait_CPE_Ack()
+static void Rdv_S_Wait_CPE_Ack()
 {
     if (Rdv_CPE_Ack() == true) // command acknowledged by the RFC ?
     {
@@ -278,7 +278,7 @@ void Rdv_S_Wait_CPE_Ack()
     }
 }
 
-void Rdv_S_Wait_Radio_Op_Done()
+static void Rdv_S_Wait_Radio_Op_Done()
 {
     rfc_radioOp_t* radio_op_p = (rfc_radioOp_t*)rdc.cmd_p;
     uint32_t cpe_int_flags = Rdv_Get_CPE_Int_Flags();
@@ -328,7 +328,7 @@ void Rdv_S_Wait_Radio_Op_Done()
     }
 }
 
-void Rdv_S_Wait_Err_Cleared()
+static void Rdv_S_Wait_Err_Cleared()
 {
     // Wait until error code is cleared
     // The error code is cleared by calling Rdv_Get_Err_Code()
