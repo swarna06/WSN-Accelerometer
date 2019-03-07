@@ -165,7 +165,7 @@ bool Rdv_Ready();
 
 bool Rdv_Error_Occurred();
 
-uint8_t Rdv_Get_Error(rfd_error_t error);
+uint8_t Rdv_Get_Err_Code();
 
 
 #endif /* RFC_DRIVER_H_ */
