@@ -25,8 +25,10 @@
 // Timing
 // ********************************
 
-// Get time of radio domain
+// Macro functions to obtain and convert RAT time
 #define Rad_Get_Radio_Time()            Cpe_Get_RAT_Time()
+#define Rad_RAT_Ticks_To_Nanosec(t)     ((t)*RAD_RAT_NSEC_PER_TICK)
+#define Rad_RAT_Ticks_To_Microsec(t)    ((t)/RAD_RAT_TICKS_PER_USEC)
 
 // RAT time conversion
 enum
@@ -40,9 +42,6 @@ enum
 
     RAD_RAT_TICKS_PER_RTC_TICK = 122, // 30.5175 usec / 0.25 usec = 122.07 (~122)
 };
-
-#define Rad_RAT_Ticks_To_Nanosec(t)     ((t)*RAD_RAT_NSEC_PER_TICK)
-#define Rad_RAT_Ticks_To_Microsec(t)    ((t)/RAD_RAT_TICKS_PER_USEC)
 
 
 // ********************************
