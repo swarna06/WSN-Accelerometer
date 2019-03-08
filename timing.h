@@ -34,7 +34,7 @@ enum
     TM_TOUT_TEST_ID = 0,
     TM_RFC_TOUT_ID,
     TM_TOUT_PTC_ID,
-    TM_RF_DRIVER_TOUT_ID,
+    TM_CPE_TOUT_ID,
 
     TM_TOUT_NUM
 };

@@ -11,7 +11,7 @@
 #include <driverlib/rfc.h>
 
 #include "radio.h"
-#include "rfc_driver.h"
+#include "cp_engine.h"
 #include "misc.h"
 #include "smartrf_settings.h"
 
@@ -89,7 +89,7 @@ bool Rad_Turn_On_Radio()
     if (rac.state != RAD_S_IDLE || rac.flags & RAD_F_RFC_CONFIGURED) // busy or already on ?
         return false;
 
-    if (Rdv_Turn_On_RFC() == true) // success ?
+    if (Cpe_Turn_On_RFC() == true) // success ?
     {
         rac.state = RAD_S_WAIT_RFC_BOOT;
         return true;
@@ -103,7 +103,7 @@ bool Rad_Turn_Off_Radio()
     if (rac.state != RAD_S_IDLE || !(rac.flags & RAD_F_RFC_CONFIGURED)) // busy or already off ?
         return false;
 
-    if (Rdv_Start_Radio_Op((rfc_radioOp_t*)cmd_sync_stop_rat_p, 0) == true) // success ? xxx timeout
+    if (Cpe_Start_Radio_Op((rfc_radioOp_t*)cmd_sync_stop_rat_p, 0) == true) // success ? xxx timeout
     {
         rac.state = RAD_S_WAIT_RFC_SYNC_STOP_RAT;
         return true;
@@ -152,13 +152,13 @@ static void Rad_S_Idle()
 
 static void Rad_S_Wait_RFC_Boot()
 {
-    if (Rdv_Ready() == true) // wait until the RFC becomes ready
+    if (Cpe_Ready() == true) // wait until the RFC becomes ready
     {
         // Start radio configuration
-        Rdv_Start_Radio_Op_Chain(rad_config_cmd_chain_p, 0); // xxx timeout
+        Cpe_Start_Radio_Op_Chain(rad_config_cmd_chain_p, 0); // xxx timeout
         rac.state = RAD_S_WAIT_RFC_CONFIG_SEQUENCE;
     }
-    else if (Rdv_Error_Occurred() == true)
+    else if (Cpe_Error_Occurred() == true)
     {
         Rad_Handle_Error(RAD_ERR_START_UP_FAILED);
         rac.state = RAD_S_WAIT_ERR_CLEARED;
@@ -167,15 +167,15 @@ static void Rad_S_Wait_RFC_Boot()
 
 static void Rad_S_Wait_RFC_Config_Sequence()
 {
-    if (Rdv_Ready() == true) // wait end of execution of command chain
+    if (Cpe_Ready() == true) // wait end of execution of command chain
     {
         // Success; radio is now ready to transmit and receive
         rac.flags |= RAD_F_RFC_CONFIGURED;
         rac.state = RAD_S_IDLE;
     }
-    else if (Rdv_Error_Occurred() == true)
+    else if (Cpe_Error_Occurred() == true)
     {
-        Rdv_Get_Err_Code(); // ignore value; must be called to resume
+        Cpe_Get_Err_Code(); // ignore value; must be called to resume
                             // execution of the RF core driver
         Rad_Handle_Error(RAD_ERR_START_UP_FAILED);
         rac.state = RAD_S_WAIT_ERR_CLEARED;
@@ -184,18 +184,18 @@ static void Rad_S_Wait_RFC_Config_Sequence()
 
 static void Rad_S_Wait_RFC_Sync_Stop_RAT()
 {
-    if (Rdv_Ready() == true) // radio operation finished ?
+    if (Cpe_Ready() == true) // radio operation finished ?
     {
-        Rdv_Turn_Off_RFC();
+        Cpe_Turn_Off_RFC();
         rac.flags &= ~RAD_F_RFC_CONFIGURED;
         // Store rat0 value in SYNC_START_RAT for synchronization
         // with RTC next time the RFC is initialized.
         cmd_sync_start_rat_p->rat0 = cmd_sync_stop_rat_p->rat0;
         rac.state = RAD_S_IDLE;
     }
-    else if (Rdv_Error_Occurred() == true)
+    else if (Cpe_Error_Occurred() == true)
     {
-        Rdv_Get_Err_Code(); // ignore value; must be called to resume
+        Cpe_Get_Err_Code(); // ignore value; must be called to resume
         // execution of the RF core driver
         Rad_Handle_Error(RAD_ERR_SHUTDOWN_FAILED);
         rac.state = RAD_S_WAIT_ERR_CLEARED;

@@ -14,7 +14,7 @@
 #include <driverlib/rfc.h>
 #include <inc/hw_rfc_rat.h>
 
-#include "rfc_driver.h"
+#include "cp_engine.h"
 
 // ********************************
 // RF core API
@@ -26,7 +26,7 @@
 // ********************************
 
 // Get time of radio domain
-#define Rad_Get_Radio_Time()            Rdv_Get_RAT_Time()
+#define Rad_Get_Radio_Time()            Cpe_Get_RAT_Time()
 
 // RAT time conversion
 enum

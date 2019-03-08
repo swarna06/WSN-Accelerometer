@@ -26,7 +26,7 @@
 #include "serial_port.h"
 //#include "rf_core.h"
 //#include "protocol.h"
-#include "rfc_driver.h"
+#include "cp_engine.h"
 #include "radio.h"
 #include "log.h"
 #include "power_management.h"
@@ -54,7 +54,7 @@ int main(void)
 //    Rfc_Init();
 //    Ptc_Init();
 
-    Rdv_Init();
+    Cpe_Init();
     Rad_Init();
 
     #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
@@ -111,7 +111,7 @@ int main(void)
 //        else if (Rfc_Error())
 //            Ptc_Handle_Error();
 
-        Rdv_Process();
+        Cpe_Process();
 
         Rad_Process();
 
@@ -120,7 +120,7 @@ int main(void)
         #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
         static uint8_t fsm_state = (uint8_t)-1; // holds last assigned value (static)
         uint8_t new_fsm_state;
-        if (fsm_state != (new_fsm_state = Rdv_Get_FSM_State()))
+        if (fsm_state != (new_fsm_state = Cpe_Get_FSM_State()))
         {
             fsm_state = new_fsm_state;
             Log_Val_Hex32("s:", fsm_state);
