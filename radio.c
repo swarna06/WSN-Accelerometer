@@ -77,6 +77,11 @@ void Rad_Process()
     rad_state_proc_ptr[rac.state](); // execute state procedure
 }
 
+uint8_t Rad_Get_FSM_State()
+{
+    return rac.state;
+}
+
 bool Rad_Turn_On()
 {
     if (rac.state != RAD_S_IDLE || rac.flags & RAD_F_RFC_CONFIGURED) // busy or already on ?
@@ -87,6 +92,14 @@ bool Rad_Turn_On()
         rac.state = RAD_S_WAIT_RFC_BOOT;
         return true;
     }
+    else
+        return false;
+}
+
+bool Rad_Ready()
+{
+    if (rac.state == RAD_S_IDLE && rac.flags & RAD_F_RFC_CONFIGURED)
+        return true;
     else
         return false;
 }

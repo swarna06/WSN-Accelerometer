@@ -27,6 +27,7 @@
 //#include "rf_core.h"
 //#include "protocol.h"
 #include "rfc_driver.h"
+#include "radio.h"
 #include "log.h"
 #include "power_management.h"
 #include "profiling.h"
@@ -54,6 +55,7 @@ int main(void)
 //    Ptc_Init();
 
     Rdv_Init();
+    Rad_Init();
 
     #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
     // DEBUG TODO remove
@@ -64,7 +66,7 @@ int main(void)
     #endif // #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
 
     Tm_Start_Period(TM_PER_HEARTBEAT_ID, 1000);
-    Rdv_Turn_On();
+    Rad_Turn_On();
 
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
@@ -73,7 +75,7 @@ int main(void)
         {
             Brd_Led_Toggle(BRD_LED0);
 
-            if (Rdv_Ready())
+            if (Rad_Ready())
             {
                 Brd_Led_Toggle(BRD_LED1);
                 Rdv_Turn_Off();
@@ -88,14 +90,16 @@ int main(void)
         if (Pma_Batt_Volt_Meas_Ready())
             Pma_Process();
 
-        Rdv_Process();
-
 //        Rfc_Process();
 //
 //        if (Rfc_Ready())
 //            Ptc_Process();
 //        else if (Rfc_Error())
 //            Ptc_Handle_Error();
+
+        Rdv_Process();
+
+        Rad_Process();
 
         // DEBUG
         // Print state of FSM
