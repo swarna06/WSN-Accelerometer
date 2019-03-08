@@ -29,14 +29,17 @@
 #define Rad_Get_Radio_Time()            Rdv_Get_RAT_Time()
 
 // RAT time conversion
-#define RAD_RAT_NSEC_PER_TICK           250
-#define RAD_RAT_USEC_PER_TICK           (RAD_RAT_NSEC_PER_TICK * 1000)
-#define RAD_RAT_MSEC_PER_TICK           (RAD_RAT_USEC_PER_TICK * 1000)
+enum
+{
+    RAD_RAT_NSEC_PER_TICK = 250,
+    RAD_RAT_USEC_PER_TICK = RAD_RAT_NSEC_PER_TICK * 1000,
+    RAD_RAT_MSEC_PER_TICK = RAD_RAT_USEC_PER_TICK * 1000,
 
-#define RAD_RAT_TICKS_PER_USEC          (1000 / RAD_RAT_NSEC_PER_TICK)
-#define RAD_RAT_TICKS_PER_MSEC          (RAD_RAT_TICKS_PER_USEC * 1000)
+    RAD_RAT_TICKS_PER_USEC = 1000 / RAD_RAT_NSEC_PER_TICK,
+    RAD_RAT_TICKS_PER_MSEC = RAD_RAT_TICKS_PER_USEC * 1000,
 
-#define RAD_RAT_TICKS_PER_RTC_TICK      (122)
+    RAD_RAT_TICKS_PER_RTC_TICK = 122, // 30.5175 usec / 0.25 usec = 122.07 (~122)
+};
 
 #define Rad_RAT_Ticks_To_Nanosec(t)     ((t)*RAD_RAT_NSEC_PER_TICK)
 #define Rad_RAT_Ticks_To_Microsec(t)    ((t)/RAD_RAT_TICKS_PER_USEC)
