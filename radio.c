@@ -84,12 +84,12 @@ inline uint8_t Rad_Get_FSM_State()
     return rac.state;
 }
 
-bool Rad_Turn_On()
+bool Rad_Turn_On_Radio()
 {
     if (rac.state != RAD_S_IDLE || rac.flags & RAD_F_RFC_CONFIGURED) // busy or already on ?
         return false;
 
-    if (Rdv_Turn_On() == true) // success ?
+    if (Rdv_Turn_On_RFC() == true) // success ?
     {
         rac.state = RAD_S_WAIT_RFC_BOOT;
         return true;
@@ -98,7 +98,7 @@ bool Rad_Turn_On()
         return false;
 }
 
-bool Rad_Turn_Off()
+bool Rad_Turn_Off_Radio()
 {
     if (rac.state != RAD_S_IDLE || !(rac.flags & RAD_F_RFC_CONFIGURED)) // busy or already off ?
         return false;
@@ -112,7 +112,7 @@ bool Rad_Turn_Off()
         return false;
 }
 
-bool Rad_Is_On()
+bool Rad_Radio_Is_On()
 {
     if (rac.flags & RAD_F_RFC_CONFIGURED)
         return true;
@@ -186,7 +186,7 @@ static void Rad_S_Wait_RFC_Sync_Stop_RAT()
 {
     if (Rdv_Ready() == true) // radio operation finished ?
     {
-        Rdv_Turn_Off();
+        Rdv_Turn_Off_RFC();
         rac.flags &= ~RAD_F_RFC_CONFIGURED;
         // Store rat0 value in SYNC_START_RAT for synchronization
         // with RTC next time the RFC is initialized.

@@ -87,11 +87,11 @@ inline rfd_state_t Rdv_Get_FSM_State()
     return rdc.state;
 }
 
-bool Rdv_Turn_On()
+bool Rdv_Turn_On_RFC()
 {
     if (rdc.state != RDV_S_IDLE) return false;
 
-    if (Rdv_Is_On() == false)
+    if (Rdv_RFC_Is_On() == false)
     {
         PRCMPowerDomainOn(PRCM_DOMAIN_RFCORE);
         Tm_Start_Timeout(TM_RF_DRIVER_TOUT_ID, RDV_TOUT_POWER_ON_MSEC);
@@ -102,12 +102,12 @@ bool Rdv_Turn_On()
         return false;
 }
 
-bool Rdv_Turn_Off()
+bool Rdv_Turn_Off_RFC()
 {
     if (rdc.error.code == RDV_ERR_NONE && rdc.state != RDV_S_IDLE)
         return false;
 
-    if (Rdv_Is_On() == true)
+    if (Rdv_RFC_Is_On() == true)
     {
         PRCMPowerDomainOff(PRCM_DOMAIN_RFCORE);
 
@@ -122,7 +122,7 @@ bool Rdv_Turn_Off()
         return false;
 }
 
-inline bool Rdv_Is_On()
+inline bool Rdv_RFC_Is_On()
 {
     return (PRCMPowerDomainStatus(PRCM_DOMAIN_RFCORE) == PRCM_DOMAIN_POWER_ON);
 }
@@ -197,7 +197,7 @@ static void Rdv_S_Idle()
 static void Rdv_S_Wait_Power_On()
 {
     // Wait until RFC power domain is turned on
-    if (Rdv_Is_On())
+    if (Rdv_RFC_Is_On())
     {
         // Enable clock domain
         PRCMDomainEnable(PRCM_DOMAIN_RFCORE);
@@ -384,7 +384,7 @@ static void Rdv_Handle_Error(uint8_t err_code)
     Rdv_Abort_Cmd_Execution(); // abort execution of current command (if any is running)
 
     rdc.error.code = err_code; // error code must be set before calling Rdv_Turn_Off()
-    Rdv_Turn_Off();
+    Rdv_Turn_Off_RFC();
 
     // Log error
     Log_Line("RFC err:");

@@ -12,6 +12,7 @@
 #include <stdbool.h>
 
 #include <driverlib/rfc.h>
+#include <inc/hw_rfc_rat.h>
 
 // ********************************
 // Timing
@@ -26,6 +27,9 @@ enum
     RDV_TOUT_CPE_ACK_MSEC = RDV_TOUT_DEFAULT_MSEC,
     RDV_TOUT_RADIO_OP_MSEC = RDV_TOUT_DEFAULT_MSEC,
 };
+
+// Get radio timer (RAT) counter value
+#define Rdv_Get_RAT_Time()              HWREG(RFC_RAT_BASE + RFC_RAT_O_RATCNT)
 
 // ********************************
 // RF Core interface
@@ -154,11 +158,11 @@ void Rdv_Process();
 
 rfd_state_t Rdv_Get_FSM_State();
 
-bool Rdv_Turn_On();
+bool Rdv_Turn_On_RFC();
 
-bool Rdv_Turn_Off();
+bool Rdv_Turn_Off_RFC();
 
-bool Rdv_Is_On();
+bool Rdv_RFC_Is_On();
 
 bool Rdv_Start_Direct_Cmd(volatile uint16_t command);
 

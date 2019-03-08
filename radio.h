@@ -12,10 +12,35 @@
 #include <stdbool.h>
 
 #include <driverlib/rfc.h>
+#include <inc/hw_rfc_rat.h>
+
+#include "rfc_driver.h"
 
 // ********************************
 // RF core API
 // ********************************
+
+
+// ********************************
+// Timing
+// ********************************
+
+// Get time of radio domain
+#define Rad_Get_Radio_Time()            Rdv_Get_RAT_Time()
+
+// RAT time conversion
+#define RAD_RAT_NSEC_PER_TICK           250
+#define RAD_RAT_USEC_PER_TICK           (RAD_RAT_NSEC_PER_TICK * 1000)
+#define RAD_RAT_MSEC_PER_TICK           (RAD_RAT_USEC_PER_TICK * 1000)
+
+#define RAD_RAT_TICKS_PER_USEC          (1000 / RAD_RAT_NSEC_PER_TICK)
+#define RAD_RAT_TICKS_PER_MSEC          (RAD_RAT_TICKS_PER_USEC * 1000)
+
+#define RAD_RAT_TICKS_PER_RTC_TICK      (122)
+
+#define Rad_RAT_Ticks_To_Nanosec(t)     ((t)*RAD_RAT_NSEC_PER_TICK)
+#define Rad_RAT_Ticks_To_Microsec(t)    ((t)/RAD_RAT_TICKS_PER_USEC)
+
 
 // ********************************
 // Transmission and reception
@@ -85,13 +110,11 @@ void Rad_Process();
 
 uint8_t Rad_Get_FSM_State();
 
-bool Rad_Turn_On();
+bool Rad_Turn_On_Radio();
 
-bool Rad_Turn_Off();
+bool Rad_Turn_Off_Radio();
 
-bool Rad_Is_On();
-
-uint32_t Rad_Get_Time();
+bool Rad_Radio_Is_On();
 
 bool Rad_Set_Data_Rate();
 

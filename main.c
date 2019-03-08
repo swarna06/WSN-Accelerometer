@@ -33,7 +33,7 @@
 #include "profiling.h"
 #include "configuration.h"
 
-#include "printf.h"
+#include "misc.h"
 
 // Global profiling variables
 volatile uint32_t pfl_tic, pfl_toc, pfl_wcet = 0;
@@ -66,7 +66,8 @@ int main(void)
     #endif // #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
 
     Tm_Start_Period(TM_PER_HEARTBEAT_ID, 1000);
-    Rad_Turn_On();
+    Rad_Turn_On_Radio();
+    uint32_t old_radio_time = 0;
 
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
@@ -75,15 +76,20 @@ int main(void)
         {
             Brd_Led_Toggle(BRD_LED0);
 
-            if (Rad_Is_On())
+            if (Rad_Radio_Is_On())
             {
                 Brd_Led_On(BRD_LED1);
-                Rad_Turn_Off();
+                uint32_t radio_time = Rad_Get_Radio_Time();
+                Rad_Turn_Off_Radio();
+                assertion(radio_time >= old_radio_time);
+                Log_Val_Uint32("curr_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
+                Log_Val_Uint32("delta_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time - old_radio_time));
+                old_radio_time = radio_time;
             }
             else
             {
                 Brd_Led_Off(BRD_LED1);
-                Rad_Turn_On();
+                Rad_Turn_On_Radio();
             }
         }
 
