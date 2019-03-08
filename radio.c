@@ -23,6 +23,7 @@ static void Rad_S_Idle();
 
 static void Rad_S_Wait_RFC_Boot();
 static void Rad_S_Wait_RFC_Config_Sequence();
+static void Rad_S_Wait_RFC_Sync_Stop_RAT();
 
 static void Rad_S_Wait_Err_Cleared();
 
@@ -44,6 +45,7 @@ static void (*rad_state_proc_ptr[RAD_STATE_NUM])() =
 
      [RAD_S_WAIT_RFC_BOOT] = Rad_S_Wait_RFC_Boot,
      [RAD_S_WAIT_RFC_CONFIG_SEQUENCE] = Rad_S_Wait_RFC_Config_Sequence,
+     [RAD_S_WAIT_RFC_SYNC_STOP_RAT] = Rad_S_Wait_RFC_Sync_Stop_RAT,
 
      [RAD_S_WAIT_ERR_CLEARED] = Rad_S_Wait_Err_Cleared
 };
@@ -77,7 +79,7 @@ void Rad_Process()
     rad_state_proc_ptr[rac.state](); // execute state procedure
 }
 
-uint8_t Rad_Get_FSM_State()
+inline uint8_t Rad_Get_FSM_State()
 {
     return rac.state;
 }
@@ -92,6 +94,28 @@ bool Rad_Turn_On()
         rac.state = RAD_S_WAIT_RFC_BOOT;
         return true;
     }
+    else
+        return false;
+}
+
+bool Rad_Turn_Off()
+{
+    if (rac.state != RAD_S_IDLE || !(rac.flags & RAD_F_RFC_CONFIGURED)) // busy or already off ?
+        return false;
+
+    if (Rdv_Start_Radio_Op((rfc_radioOp_t*)cmd_sync_stop_rat_p, 0) == true) // success ? xxx timeout
+    {
+        rac.state = RAD_S_WAIT_RFC_SYNC_STOP_RAT;
+        return true;
+    }
+    else
+        return false;
+}
+
+bool Rad_Is_On()
+{
+    if (rac.flags & RAD_F_RFC_CONFIGURED)
+        return true;
     else
         return false;
 }
@@ -156,6 +180,27 @@ static void Rad_S_Wait_RFC_Config_Sequence()
         Rad_Handle_Error(RAD_ERR_START_UP_FAILED);
         rac.state = RAD_S_WAIT_ERR_CLEARED;
     }
+}
+
+static void Rad_S_Wait_RFC_Sync_Stop_RAT()
+{
+    if (Rdv_Ready() == true) // radio operation finished ?
+    {
+        Rdv_Turn_Off();
+        rac.flags &= ~RAD_F_RFC_CONFIGURED;
+        // Store rat0 value in SYNC_START_RAT for synchronization
+        // with RTC next time the RFC is initialized.
+        cmd_sync_start_rat_p->rat0 = cmd_sync_stop_rat_p->rat0;
+        rac.state = RAD_S_IDLE;
+    }
+    else if (Rdv_Error_Occurred() == true)
+    {
+        Rdv_Get_Err_Code(); // ignore value; must be called to resume
+        // execution of the RF core driver
+        Rad_Handle_Error(RAD_ERR_SHUTDOWN_FAILED);
+        rac.state = RAD_S_WAIT_ERR_CLEARED;
+    }
+
 }
 
 static void Rad_S_Wait_Err_Cleared()

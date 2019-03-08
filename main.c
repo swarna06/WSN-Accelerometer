@@ -75,10 +75,15 @@ int main(void)
         {
             Brd_Led_Toggle(BRD_LED0);
 
-            if (Rad_Ready())
+            if (Rad_Is_On())
             {
-                Brd_Led_Toggle(BRD_LED1);
-                Rdv_Turn_Off();
+                Brd_Led_On(BRD_LED1);
+                Rad_Turn_Off();
+            }
+            else
+            {
+                Brd_Led_Off(BRD_LED1);
+                Rad_Turn_On();
             }
         }
 
