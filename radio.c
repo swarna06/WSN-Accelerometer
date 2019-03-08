@@ -166,6 +166,56 @@ bool Rad_Set_Data_Rate(rad_data_rate_t data_rate)
     return true;
 }
 
+bool Rad_Set_Tx_Power(rad_tx_pow_t tx_power)
+{
+    if (rac.state != RAD_S_IDLE)
+        return false;
+
+    cmd_ble5_adv_aux_p->txPower = tx_power;
+    return true;
+}
+
+bool Rad_Set_Freq_Channel(uint8_t channel_num)
+{
+    if (rac.state != RAD_S_IDLE)
+        return false;
+
+    assertion(channel_num < 40);
+
+    // Calculate channel offset (BLE channels are not consecutive)
+    uint8_t ch_offset = 0;
+    if (channel_num == 37)
+        ch_offset = 0;
+    else if (channel_num == 38)
+        ch_offset = 12;
+    else if (channel_num == 39)
+        ch_offset = 39;
+    else if (channel_num <= 10) // 0 <= ch_num <= 10
+        ch_offset = channel_num + 1;
+    else if ((channel_num >= 11) && (channel_num <= 36))
+        ch_offset = channel_num + 2;
+
+    // Calculate field values (defined in the data sheet)
+    ch_offset = ch_offset * 2;
+    uint16_t freq = RAD_BLE5_BASE_FREQ + ch_offset;
+    uint8_t ch = RAD_BLE5_BASE_CH + ch_offset;
+    uint8_t whitening = RAD_BLE5_BASE_WHITE_INIT + channel_num;
+
+    // Set frequency of synthesizer
+    cmd_fs_p->frequency = freq;
+
+    // Set channel TX and RX commands
+    cmd_ble5_adv_aux_p->channel = ch;
+    cmd_ble5_adv_aux_p->whitening.init = whitening & 0x7F;
+    cmd_ble5_adv_aux_p->whitening.bOverride = 1;
+
+    cmd_ble5_scanner_p->channel = ch;
+    cmd_ble5_scanner_p->whitening.init = whitening & 0x7F;
+    cmd_ble5_scanner_p->whitening.bOverride = 1;
+
+    return true;
+}
+
 bool Rad_Ready()
 {
     if (rac.state == RAD_S_IDLE && rac.flags & RAD_F_RFC_CONFIGURED)

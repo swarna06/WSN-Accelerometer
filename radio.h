@@ -63,7 +63,7 @@ enum
     RAD_BLE5_PHY_CODING_500KBPS = 1,
 };
 
-// BLE5 frequency channel base values
+// BLE5 frequency channel base values (taken from SmartRF)
 enum
 {
     RAD_BLE5_BASE_FREQ = 2402, // frequency channel 37 (channel offset = 0)
@@ -86,7 +86,7 @@ typedef enum
 } rad_data_rate_t;
 
 // Transmission power codes (taken from SmartRF)
-enum
+typedef enum
 {
     RAD_TX_POW_PLUS_5dBm = 0x9330,
     RAD_TX_POW_PLUS_4dBm = 0x9324,
@@ -102,10 +102,10 @@ enum
     RAD_TX_POW_MINUS_18dBm = 0x0CC9,
     RAD_TX_POW_MINUS_21dBm = 0x0CC7,
     RAD_TX_POW_NUM = 13 // !!! TODO: keep this value updated
-};
+} rad_tx_pow_t;
 
 // Max channel ID
-#define RAD_MAX_FREQ_CH     39
+#define RAD_FREQ_CH_NUM         40
 
 // Packet transmission parameters
 typedef struct
@@ -181,9 +181,9 @@ bool Rad_Radio_Is_On();
 
 bool Rad_Set_Data_Rate(rad_data_rate_t data_rate);
 
-bool Rad_Set_Tx_Power();
+bool Rad_Set_Tx_Power(rad_tx_pow_t tx_power);
 
-bool Rad_Set_Freq_Channel();
+bool Rad_Set_Freq_Channel(uint8_t channel_num);
 
 bool Rad_Transmit_Packet(rad_tx_param_t *tx_param);
 
