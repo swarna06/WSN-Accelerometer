@@ -79,12 +79,15 @@ int main(void)
             if (Rad_Radio_Is_On())
             {
                 Brd_Led_On(BRD_LED1);
+
                 uint32_t radio_time = Rad_Get_Radio_Time();
                 Rad_Turn_Off_Radio();
-                assertion(radio_time >= old_radio_time);
-                Log_Val_Uint32("curr_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
-                Log_Val_Uint32("delta_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time - old_radio_time));
+
+                uint32_t delta = Pfl_Delta_Time32(old_radio_time, radio_time);
                 old_radio_time = radio_time;
+
+                Log_Val_Uint32("curr_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
+                Log_Val_Uint32("delta_time(us):", Rad_RAT_Ticks_To_Microsec(delta));
             }
             else
             {
