@@ -43,16 +43,77 @@ enum
     RAD_RAT_TICKS_PER_RTC_TICK = 122, // 30.5175 usec / 0.25 usec = 122.07 (~122)
 };
 
+// ********************************
+// BLE 5
+// ********************************
+
+// BLE5 PHY modes
+enum
+{
+    RAD_BLE5_PHY_MAIN_MODE_1MBPS = 0,
+    RAD_BLE5_PHY_MAIN_MODE_2MBPS = 1,
+    RAD_BLE5_PHY_MAIN_MODE_CODED = 2,
+};
+
+// BLE5 channel coding
+enum
+{
+    RAD_BLE5_PHY_CODING_NONE = 0,
+    RAD_BLE5_PHY_CODING_125KBPS = 0,
+    RAD_BLE5_PHY_CODING_500KBPS = 1,
+};
+
+// BLE5 frequency channel base values
+enum
+{
+    RAD_BLE5_BASE_FREQ = 2402, // frequency channel 37 (channel offset = 0)
+    RAD_BLE5_BASE_CH = 0x66, // id channel 37 (channel offset = 0)
+    RAD_BLE5_BASE_WHITE_INIT = 0x40, // whitening initial value for channel 0
+};
 
 // ********************************
 // Transmission and reception
 // ********************************
 
+// Data rates
+typedef enum
+{
+    RAD_DATA_RATE_2MBPS = 0,
+    RAD_DATA_RATE_1MBPS,
+    RAD_DATA_RATE_500KBPS,
+    RAD_DATA_RATE_125KBPS,
+    RFC_DATA_RATES_NUM
+} rad_data_rate_t;
+
+// Transmission power codes (taken from SmartRF)
+enum
+{
+    RAD_TX_POW_PLUS_5dBm = 0x9330,
+    RAD_TX_POW_PLUS_4dBm = 0x9324,
+    RAD_TX_POW_PLUS_3dBm = 0x5A1C,
+    RAD_TX_POW_PLUS_2dBm = 0x4E18,
+    RAD_TX_POW_PLUS_1dBm = 0x4214,
+    RAD_TX_POW_0dBm = 0x3161,
+    RAD_TX_POW_MINUS_3dBm = 0x2558,
+    RAD_TX_POW_MINUS_6dBm = 0x1D52,
+    RAD_TX_POW_MINUS_9dBm = 0x194E,
+    RAD_TX_POW_MINUS_12dBm = 0x144B,
+    RAD_TX_POW_MINUS_15dBm = 0x0CCB,
+    RAD_TX_POW_MINUS_18dBm = 0x0CC9,
+    RAD_TX_POW_MINUS_21dBm = 0x0CC7,
+    RAD_TX_POW_NUM = 13 // !!! TODO: keep this value updated
+};
+
+// Max channel ID
+#define RAD_MAX_FREQ_CH     39
+
+// Packet transmission parameters
 typedef struct
 {
 
 } rad_tx_param_t;
 
+// Packet reception parameters
 typedef struct
 {
 
@@ -118,7 +179,7 @@ bool Rad_Turn_Off_Radio();
 
 bool Rad_Radio_Is_On();
 
-bool Rad_Set_Data_Rate();
+bool Rad_Set_Data_Rate(rad_data_rate_t data_rate);
 
 bool Rad_Set_Tx_Power();
 

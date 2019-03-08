@@ -56,6 +56,9 @@ static volatile rfc_CMD_FS_t* cmd_fs_p = &RF_cmdFs;
 static volatile rfc_CMD_SYNC_START_RAT_t* cmd_sync_start_rat_p = &RF_cmdSyncStartRat;
 static volatile rfc_CMD_SYNC_STOP_RAT_t* cmd_sync_stop_rat_p = &RF_cmdSyncStopRat;
 
+static volatile rfc_CMD_BLE5_ADV_AUX_t* cmd_ble5_adv_aux_p = &RF_cmdBle5AdvAux;
+static volatile rfc_CMD_BLE5_SCANNER_t* cmd_ble5_scanner_p = &RF_cmdBle5Scanner;
+
 // Other static variables
 static volatile rfc_radioOp_t* rad_config_cmd_chain_p = (rfc_radioOp_t*)&RF_cmdBle5RadioSetup;
 
@@ -120,6 +123,49 @@ bool Rad_Radio_Is_On()
         return false;
 }
 
+bool Rad_Set_Data_Rate(rad_data_rate_t data_rate)
+{
+    if (rac.state != RAD_S_IDLE)
+        return false;
+
+    /*
+     * Main mode and coding values according to data sheet
+     *
+     * Main modes => 0: 1 Mbps, 1: 2 Mbps, 2: Coded
+     * Coding => 0: S = 8 (125 kbps), 1: S = 2 (500 kbps)
+     */
+
+    assertion(data_rate < RFC_DATA_RATES_NUM);
+
+    uint8_t main_mode = RAD_BLE5_PHY_MAIN_MODE_2MBPS; // default mode 2 Mbps
+    uint8_t coding = RAD_BLE5_PHY_CODING_NONE; // default: no coding
+
+    if (data_rate == RAD_DATA_RATE_1MBPS)
+        main_mode = RAD_BLE5_PHY_MAIN_MODE_1MBPS;
+    else if  (data_rate == RAD_DATA_RATE_500KBPS)
+    {
+        main_mode = RAD_BLE5_PHY_MAIN_MODE_CODED;
+        coding = RAD_BLE5_PHY_CODING_500KBPS;
+    }
+    else if  (data_rate == RAD_DATA_RATE_125KBPS)
+    {
+        main_mode = RAD_BLE5_PHY_MAIN_MODE_CODED;
+        coding = RAD_BLE5_PHY_CODING_125KBPS;
+    }
+
+    // Set channel TX and RX commands
+    cmd_ble5_radio_setup_p->defaultPhy.mainMode = main_mode; // TODO necessary ?
+    cmd_ble5_radio_setup_p->defaultPhy.coding = coding; // TODO necessary ?
+
+    cmd_ble5_adv_aux_p->phyMode.mainMode = main_mode;
+    cmd_ble5_adv_aux_p->phyMode.coding = coding;
+
+    cmd_ble5_scanner_p->phyMode.mainMode = main_mode;
+    cmd_ble5_scanner_p->phyMode.coding = coding;
+
+    return true;
+}
+
 bool Rad_Ready()
 {
     if (rac.state == RAD_S_IDLE && rac.flags & RAD_F_RFC_CONFIGURED)
@@ -173,10 +219,8 @@ static void Rad_S_Wait_RFC_Config_Sequence()
         rac.flags |= RAD_F_RFC_CONFIGURED;
         rac.state = RAD_S_IDLE;
     }
-    else if (Cpe_Error_Occurred() == true)
+    else if (Cpe_Get_Err_Code() != CPE_ERR_NONE)
     {
-        Cpe_Get_Err_Code(); // ignore value; must be called to resume
-                            // execution of the RF core driver
         Rad_Handle_Error(RAD_ERR_START_UP_FAILED);
         rac.state = RAD_S_WAIT_ERR_CLEARED;
     }
@@ -193,10 +237,8 @@ static void Rad_S_Wait_RFC_Sync_Stop_RAT()
         cmd_sync_start_rat_p->rat0 = cmd_sync_stop_rat_p->rat0;
         rac.state = RAD_S_IDLE;
     }
-    else if (Cpe_Error_Occurred() == true)
+    else if (Cpe_Get_Err_Code() != CPE_ERR_NONE)
     {
-        Cpe_Get_Err_Code(); // ignore value; must be called to resume
-        // execution of the RF core driver
         Rad_Handle_Error(RAD_ERR_SHUTDOWN_FAILED);
         rac.state = RAD_S_WAIT_ERR_CLEARED;
     }
