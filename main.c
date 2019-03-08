@@ -80,8 +80,14 @@ int main(void)
             {
                 Brd_Led_On(BRD_LED1);
 
+                rad_tx_param_t tx_param;
+                tx_param.delayed_start = false;
+                tx_param.payload_p = NULL;
+                tx_param.payload_len = 0;
+                Rad_Transmit_Packet(&tx_param);
+
                 uint32_t radio_time = Rad_Get_Radio_Time();
-                Rad_Turn_Off_Radio();
+//                Rad_Turn_Off_Radio();
 
                 uint32_t delta = Pfl_Delta_Time32(old_radio_time, radio_time);
                 old_radio_time = radio_time;

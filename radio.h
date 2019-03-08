@@ -107,16 +107,39 @@ typedef enum
 // Max channel ID
 #define RAD_FREQ_CH_NUM         40
 
+// Max packet payload length
+#define RAD_MAX_PAYLOAD_LEN     254
+
+// Default radio configuration
+#define RAD_DEFAULT_DATA_RATE   RAD_DATA_RATE_1MBPS
+#define RAD_DEFAULT_TX_POW      RAD_TX_POW_0dBm
+#define RAD_DEFAULT_FREQ_CH     17
+
+// Reception error codes
+typedef enum
+{
+    RAD_RX_ERR_NONE = 0,
+} rad_rx_err_t;
+
 // Packet transmission parameters
 typedef struct
 {
-
+    size_t payload_len;
+    uint8_t* payload_p;
+    bool delayed_start;
+    uint32_t start_time;
 } rad_tx_param_t;
 
 // Packet reception parameters
 typedef struct
 {
+    size_t dest_buf_len;
+    uint8_t *dest_buf;
 
+    size_t payload_len;
+    uint32_t timestamp;
+    int8_t rssi_dBm;
+    rad_rx_err_t error;
 } rad_rx_param_t;
 
 // ********************************
@@ -128,6 +151,7 @@ enum
     RAD_ERR_NONE = 0,
     RAD_ERR_START_UP_FAILED,
     RAD_ERR_SHUTDOWN_FAILED,
+    RAD_ERR_RADIO_OP_FAILED,
 };
 
 
@@ -143,6 +167,8 @@ typedef enum
     RAD_S_WAIT_RFC_BOOT,
     RAD_S_WAIT_RFC_CONFIG_SEQUENCE,
     RAD_S_WAIT_RFC_SYNC_STOP_RAT,
+
+    RAD_S_WAIT_PACKET_TX,
 
     RAD_S_WAIT_ERR_CLEARED,
 

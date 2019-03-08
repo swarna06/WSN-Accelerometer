@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include <driverlib/rfc.h>
 
@@ -24,6 +25,8 @@ static void Rad_S_Idle();
 static void Rad_S_Wait_RFC_Boot();
 static void Rad_S_Wait_RFC_Config_Sequence();
 static void Rad_S_Wait_RFC_Sync_Stop_RAT();
+
+static void Rad_S_Wait_Packet_Tx();
 
 static void Rad_S_Wait_Err_Cleared();
 
@@ -47,6 +50,8 @@ static void (*rad_state_proc_ptr[RAD_STATE_NUM])() =
      [RAD_S_WAIT_RFC_CONFIG_SEQUENCE] = Rad_S_Wait_RFC_Config_Sequence,
      [RAD_S_WAIT_RFC_SYNC_STOP_RAT] = Rad_S_Wait_RFC_Sync_Stop_RAT,
 
+     [RAD_S_WAIT_PACKET_TX] = Rad_S_Wait_Packet_Tx,
+
      [RAD_S_WAIT_ERR_CLEARED] = Rad_S_Wait_Err_Cleared
 };
 
@@ -55,12 +60,13 @@ static volatile rfc_CMD_BLE5_RADIO_SETUP_t* cmd_ble5_radio_setup_p = &RF_cmdBle5
 static volatile rfc_CMD_FS_t* cmd_fs_p = &RF_cmdFs;
 static volatile rfc_CMD_SYNC_START_RAT_t* cmd_sync_start_rat_p = &RF_cmdSyncStartRat;
 static volatile rfc_CMD_SYNC_STOP_RAT_t* cmd_sync_stop_rat_p = &RF_cmdSyncStopRat;
+static volatile rfc_radioOp_t* rad_config_cmd_chain_p = (rfc_radioOp_t*)&RF_cmdBle5RadioSetup;
 
 static volatile rfc_CMD_BLE5_ADV_AUX_t* cmd_ble5_adv_aux_p = &RF_cmdBle5AdvAux;
 static volatile rfc_CMD_BLE5_SCANNER_t* cmd_ble5_scanner_p = &RF_cmdBle5Scanner;
 
-// Other static variables
-static volatile rfc_radioOp_t* rad_config_cmd_chain_p = (rfc_radioOp_t*)&RF_cmdBle5RadioSetup;
+// Buffers, data entries and queues used by the RF core
+static volatile rfc_ble5ExtAdvEntry_t ble5_ext_adv_entry;
 
 // ********************************
 // Non-static (public) functions
@@ -73,6 +79,11 @@ void Rad_Init()
     rac.err_code = 0;
 
     Rad_Init_CPE_Structs();
+
+    // Set default radio configuration
+    Rad_Set_Data_Rate(RAD_DEFAULT_DATA_RATE);
+    Rad_Set_Tx_Power(RAD_DEFAULT_TX_POW);
+    Rad_Set_Freq_Channel(RAD_DEFAULT_FREQ_CH);
 }
 
 void Rad_Process()
@@ -216,6 +227,36 @@ bool Rad_Set_Freq_Channel(uint8_t channel_num)
     return true;
 }
 
+bool Rad_Transmit_Packet(rad_tx_param_t *tx_param)
+{
+    assertion(tx_param != NULL);
+    assertion(tx_param->payload_len <= RAD_MAX_PAYLOAD_LEN);
+
+    if (rac.state != RAD_S_IDLE || Cpe_Ready() == false) // busy ?
+        return false;
+
+    // Set trigger type and start time
+    if (tx_param->delayed_start == true)
+    {
+        cmd_ble5_adv_aux_p->startTrigger.triggerType = TRIG_ABSTIME;
+        cmd_ble5_adv_aux_p->startTime = tx_param->start_time;
+    }
+    else
+        cmd_ble5_adv_aux_p->startTrigger.triggerType = TRIG_NOW;
+
+    // Set payload length and pointer
+    if (tx_param->payload_p == NULL)
+        tx_param->payload_len = 0;
+    rfc_ble5ExtAdvEntry_t* adv_entry_p = (rfc_ble5ExtAdvEntry_t*)cmd_ble5_adv_aux_p->pParams->pAdvPkt;
+    adv_entry_p->advDataLen = tx_param->payload_len;
+    adv_entry_p->pAdvData = tx_param->payload_p;
+
+    // Start radio operation
+    Cpe_Start_Radio_Op((rfc_radioOp_t*)cmd_ble5_adv_aux_p, 0); // xxx timeout
+    rac.state = RAD_S_WAIT_PACKET_TX;
+    return true;
+}
+
 bool Rad_Ready()
 {
     if (rac.state == RAD_S_IDLE && rac.flags & RAD_F_RFC_CONFIGURED)
@@ -295,6 +336,17 @@ static void Rad_S_Wait_RFC_Sync_Stop_RAT()
 
 }
 
+static void Rad_S_Wait_Packet_Tx()
+{
+    if (Cpe_Ready() == true) // radio operation finished ?
+        rac.state = RAD_S_IDLE;
+    else if (Cpe_Get_Err_Code() != CPE_ERR_NONE)
+    {
+        Rad_Handle_Error(RAD_ERR_RADIO_OP_FAILED);
+        rac.state = RAD_S_WAIT_ERR_CLEARED;
+    }
+}
+
 static void Rad_S_Wait_Err_Cleared()
 {
     // Wait until error code is cleared
@@ -321,6 +373,10 @@ static void Rad_Init_CPE_Structs()
 
     // Initialization of structures related to RAT-RTC synchronization
     cmd_sync_stop_rat_p->condition.rule = COND_NEVER;
+
+    // Initialization of structures related to transmission and reception
+    memset((void*)&ble5_ext_adv_entry, 0, sizeof(rfc_ble5ExtAdvEntry_t));
+    cmd_ble5_adv_aux_p->pParams->pAdvPkt = (uint8_t*)&ble5_ext_adv_entry;
 }
 
 static void Rad_Handle_Error(uint8_t err_code)
