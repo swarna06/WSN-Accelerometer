@@ -30,6 +30,8 @@
 #define Rad_RAT_Ticks_To_Nanosec(t)     ((t)*RAD_RAT_NSEC_PER_TICK)
 #define Rad_RAT_Ticks_To_Microsec(t)    ((t)/RAD_RAT_TICKS_PER_USEC)
 
+#define Rad_Microsec_To_RAT_Ticks(t)    ((t)*RAD_RAT_TICKS_PER_USEC)
+
 // RAT time conversion
 enum
 {
@@ -105,40 +107,54 @@ typedef enum
 } rad_tx_pow_t;
 
 // Max channel ID
-#define RAD_FREQ_CH_NUM         40
+#define RAD_FREQ_CH_NUM                 40
 
 // Max packet payload length
-#define RAD_MAX_PAYLOAD_LEN     254
+#define RAD_MAX_PAYLOAD_LEN             254
+
+// Reception buffer
+#define RAD_RX_BUF_LEN                  512 // xxx
+#define RAD_RX_BUF_PAYLOAD_LEN_IDX      1
+#define RAD_RX_BUF_PAYLOAD_OFFSET       3
 
 // Default radio configuration
-#define RAD_DEFAULT_DATA_RATE   RAD_DATA_RATE_1MBPS
-#define RAD_DEFAULT_TX_POW      RAD_TX_POW_0dBm
-#define RAD_DEFAULT_FREQ_CH     17
+#define RAD_DEFAULT_DATA_RATE           RAD_DATA_RATE_1MBPS
+#define RAD_DEFAULT_TX_POW              RAD_TX_POW_0dBm
+#define RAD_DEFAULT_FREQ_CH             17
 
 // Reception error codes
 typedef enum
 {
     RAD_RX_ERR_NONE = 0,
+    RAD_RX_ERR_CRC,
+    RAD_RX_ERR_TIMEOUT,
+    RAD_RX_ERR_OTHER,
 } rad_rx_err_t;
 
 // Packet transmission parameters
 typedef struct
 {
-    size_t payload_len;
-    uint8_t* payload_p;
     bool delayed_start;
     uint32_t start_time;
+
+    size_t payload_len;
+    uint8_t* payload_p;
 } rad_tx_param_t;
 
 // Packet reception parameters
 typedef struct
 {
+    bool delayed_start;
+    uint32_t start_time;
+    uint32_t timeout_usec;
+
     size_t dest_buf_len;
     uint8_t *dest_buf;
 
     size_t payload_len;
     uint32_t timestamp;
     int8_t rssi_dBm;
+
     rad_rx_err_t error;
 } rad_rx_param_t;
 
@@ -169,6 +185,7 @@ typedef enum
     RAD_S_WAIT_RFC_SYNC_STOP_RAT,
 
     RAD_S_WAIT_PACKET_TX,
+    RAD_S_WAIT_PACKET_RX,
 
     RAD_S_WAIT_ERR_CLEARED,
 
@@ -185,6 +202,8 @@ typedef struct
 {
     rad_state_t state;
     rad_flags_t flags;
+
+    rad_rx_param_t* rx_param_p;
 
     uint8_t err_code;
 } rad_control_t;
@@ -211,9 +230,9 @@ bool Rad_Set_Tx_Power(rad_tx_pow_t tx_power);
 
 bool Rad_Set_Freq_Channel(uint8_t channel_num);
 
-bool Rad_Transmit_Packet(rad_tx_param_t *tx_param);
+bool Rad_Transmit_Packet(rad_tx_param_t* tx_param);
 
-bool Rad_Receive_Packet(rad_rx_param_t *rx_result);
+bool Rad_Receive_Packet(rad_rx_param_t* rx_param);
 
 bool Rad_Ready();
 

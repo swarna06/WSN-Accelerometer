@@ -345,8 +345,8 @@ static bool Cpe_Send_To_CPE(volatile rfc_command_t* command)
     {
         // Clear interrupt flags and start command execution
         Cpe_Clear_CPE_Int_Flags(CPE_M_CPE_COMMAND_DONE |
-                                    CPE_M_CPE_TX_INT_FLAGS |
-                                    CPE_M_CPE_RX_INT_FLAGS);
+                                CPE_M_CPE_TX_INT_FLAGS |
+                                CPE_M_CPE_RX_INT_FLAGS);
         Cpe_Clear_CPE_Ack();
         Cpe_Set_CMD_Reg(command);
         return true;

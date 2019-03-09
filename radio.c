@@ -10,6 +10,8 @@
 #include <string.h>
 
 #include <driverlib/rfc.h>
+#include <driverlib/rf_data_entry.h>
+#include <driverlib/rf_ble_mailbox.h>
 
 #include "radio.h"
 #include "cp_engine.h"
@@ -27,11 +29,16 @@ static void Rad_S_Wait_RFC_Config_Sequence();
 static void Rad_S_Wait_RFC_Sync_Stop_RAT();
 
 static void Rad_S_Wait_Packet_Tx();
+static void Rad_S_Wait_Packet_Rx();
 
 static void Rad_S_Wait_Err_Cleared();
 
 // Other static functions
 static void Rad_Init_CPE_Structs();
+static void Rad_Set_Radio_Op_Start_Time(rfc_radioOp_t* radio_op_p,
+                                        bool delayed_start,
+                                        uint32_t start_time);
+static size_t Rad_Get_Rx_Payload_Len();
 static void Rad_Handle_Error(uint8_t err_code);
 
 // ********************************
@@ -51,6 +58,7 @@ static void (*rad_state_proc_ptr[RAD_STATE_NUM])() =
      [RAD_S_WAIT_RFC_SYNC_STOP_RAT] = Rad_S_Wait_RFC_Sync_Stop_RAT,
 
      [RAD_S_WAIT_PACKET_TX] = Rad_S_Wait_Packet_Tx,
+     [RAD_S_WAIT_PACKET_RX] = Rad_S_Wait_Packet_Rx,
 
      [RAD_S_WAIT_ERR_CLEARED] = Rad_S_Wait_Err_Cleared
 };
@@ -67,6 +75,11 @@ static volatile rfc_CMD_BLE5_SCANNER_t* cmd_ble5_scanner_p = &RF_cmdBle5Scanner;
 
 // Buffers, data entries and queues used by the RF core
 static volatile rfc_ble5ExtAdvEntry_t ble5_ext_adv_entry;
+static volatile uint8_t data_entry_buf[RAD_RX_BUF_LEN];
+static const volatile uint8_t* rx_payload_p = &data_entry_buf[RAD_RX_BUF_PAYLOAD_OFFSET];
+static volatile rfc_dataEntryPointer_t data_entry_ptr;
+static volatile dataQueue_t data_queue;
+static volatile rfc_ble5ScanInitOutput_t ble5_scan_init_output;
 
 // ********************************
 // Non-static (public) functions
@@ -227,33 +240,57 @@ bool Rad_Set_Freq_Channel(uint8_t channel_num)
     return true;
 }
 
-bool Rad_Transmit_Packet(rad_tx_param_t *tx_param)
+bool Rad_Transmit_Packet(rad_tx_param_t* tx_param_p)
 {
-    assertion(tx_param != NULL);
-    assertion(tx_param->payload_len <= RAD_MAX_PAYLOAD_LEN);
+    assertion(tx_param_p != NULL);
+    assertion(tx_param_p->payload_len <= RAD_MAX_PAYLOAD_LEN);
 
     if (rac.state != RAD_S_IDLE || Cpe_Ready() == false) // busy ?
         return false;
 
     // Set trigger type and start time
-    if (tx_param->delayed_start == true)
-    {
-        cmd_ble5_adv_aux_p->startTrigger.triggerType = TRIG_ABSTIME;
-        cmd_ble5_adv_aux_p->startTime = tx_param->start_time;
-    }
-    else
-        cmd_ble5_adv_aux_p->startTrigger.triggerType = TRIG_NOW;
+    Rad_Set_Radio_Op_Start_Time((rfc_radioOp_t*)cmd_ble5_adv_aux_p,
+                                tx_param_p->delayed_start,
+                                tx_param_p->start_time);
 
     // Set payload length and pointer
-    if (tx_param->payload_p == NULL)
-        tx_param->payload_len = 0;
+    if (tx_param_p->payload_p == NULL)
+        tx_param_p->payload_len = 0;
     rfc_ble5ExtAdvEntry_t* adv_entry_p = (rfc_ble5ExtAdvEntry_t*)cmd_ble5_adv_aux_p->pParams->pAdvPkt;
-    adv_entry_p->advDataLen = tx_param->payload_len;
-    adv_entry_p->pAdvData = tx_param->payload_p;
+    adv_entry_p->advDataLen = tx_param_p->payload_len;
+    adv_entry_p->pAdvData = tx_param_p->payload_p;
 
     // Start radio operation
     Cpe_Start_Radio_Op((rfc_radioOp_t*)cmd_ble5_adv_aux_p, 0); // xxx timeout
     rac.state = RAD_S_WAIT_PACKET_TX;
+    return true;
+}
+
+bool Rad_Receive_Packet(rad_rx_param_t* rx_param_p)
+{
+    assertion(rx_param_p != NULL);
+
+    if (rac.state != RAD_S_IDLE || Cpe_Ready() == false) // busy ?
+        return false;
+
+    rac.rx_param_p = rx_param_p;
+
+    // Set trigger type and start time
+    Rad_Set_Radio_Op_Start_Time((rfc_radioOp_t*)cmd_ble5_scanner_p,
+                                rx_param_p->delayed_start,
+                                rx_param_p->start_time);
+
+    // Reset data entry and queue
+    data_entry_ptr.status = DATA_ENTRY_PENDING;
+    data_entry_ptr.pData = (uint8_t*)data_entry_buf;
+    data_queue.pCurrEntry = (uint8_t*)&data_entry_ptr;
+
+    // Set command end time (relative to the start time)
+    cmd_ble5_scanner_p->pParams->timeoutTime = Rad_Microsec_To_RAT_Ticks(rx_param_p->timeout_usec);
+
+    // Start radio operation
+    Cpe_Start_Radio_Op((rfc_radioOp_t*)cmd_ble5_scanner_p, 0); // xxx timeout
+    rac.state = RAD_S_WAIT_PACKET_RX;
     return true;
 }
 
@@ -347,6 +384,59 @@ static void Rad_S_Wait_Packet_Tx()
     }
 }
 
+static void Rad_S_Wait_Packet_Rx()
+{
+    if (Cpe_Ready() == true) // radio operation finished ?
+    {
+        // Check if an error occurred during reception
+        rac.rx_param_p->error = RAD_RX_ERR_NONE;
+        if (cmd_ble5_scanner_p->status != BLE_DONE_OK)
+        {
+            if (cmd_ble5_scanner_p->status == DONE_RXERR)
+                rac.rx_param_p->error = RAD_RX_ERR_CRC;
+            else if (cmd_ble5_scanner_p->status == BLE_DONE_RXTIMEOUT)
+                rac.rx_param_p->error = RAD_RX_ERR_TIMEOUT;
+            else
+                rac.rx_param_p->error = RAD_RX_ERR_OTHER;
+        }
+
+        // Copy results if there were no errors
+        if (rac.rx_param_p->error == RAD_RX_ERR_NONE)
+        {
+            // Copy payload if buffer was provided
+            if (rac.rx_param_p->dest_buf != NULL && rac.rx_param_p->dest_buf_len > 0)
+            {
+                rac.rx_param_p->payload_len = Rad_Get_Rx_Payload_Len();
+                // Check if payload length is greater than buffer capacity
+                size_t length = rac.rx_param_p->payload_len;
+                if (rac.rx_param_p->payload_len > rac.rx_param_p->dest_buf_len)
+                    length = rac.rx_param_p->dest_buf_len;
+
+                // Copy payload into destination buffer
+                memcpy(rac.rx_param_p->dest_buf, (void*)rx_payload_p, length);
+            }
+
+            // Set reception information
+            rac.rx_param_p->timestamp = ble5_scan_init_output.timeStamp;
+            rac.rx_param_p->rssi_dBm = ble5_scan_init_output.lastRssi;
+        }
+        else
+        {
+            // Clear fields to indicate that they are invalid
+            rac.rx_param_p->payload_len = 0;
+            rac.rx_param_p->timestamp = 0;
+            rac.rx_param_p->rssi_dBm = 0;
+        }
+
+        rac.state = RAD_S_IDLE;
+    }
+    else if (Cpe_Get_Err_Code() != CPE_ERR_NONE)
+    {
+        Rad_Handle_Error(RAD_ERR_RADIO_OP_FAILED);
+        rac.state = RAD_S_WAIT_ERR_CLEARED;
+    }
+}
+
 static void Rad_S_Wait_Err_Cleared()
 {
     // Wait until error code is cleared
@@ -375,8 +465,42 @@ static void Rad_Init_CPE_Structs()
     cmd_sync_stop_rat_p->condition.rule = COND_NEVER;
 
     // Initialization of structures related to transmission and reception
+    // CMD_BLE5_ADV_AUX
     memset((void*)&ble5_ext_adv_entry, 0, sizeof(rfc_ble5ExtAdvEntry_t));
     cmd_ble5_adv_aux_p->pParams->pAdvPkt = (uint8_t*)&ble5_ext_adv_entry;
+
+    // CMD_BLE5_SCANNER
+    memset((void*)&data_entry_ptr, 0, sizeof(rfc_dataEntryPointer_t));
+    data_entry_ptr.config.type = DATA_ENTRY_TYPE_PTR;
+    data_entry_ptr.length = sizeof(data_entry_buf);
+    data_entry_ptr.pData = (uint8_t*)data_entry_buf;
+
+    data_queue.pCurrEntry = (uint8_t*)&data_entry_ptr;
+    data_queue.pLastEntry = NULL;
+
+    memset((void*)&ble5_scan_init_output, 0, sizeof(ble5_scan_init_output));
+
+    cmd_ble5_scanner_p->pParams->pRxQ = (dataQueue_t*)&data_queue;
+    cmd_ble5_scanner_p->pParams->timeoutTrigger.triggerType = TRIG_REL_START;
+    cmd_ble5_scanner_p->pOutput = (rfc_ble5ScanInitOutput_t*)&ble5_scan_init_output;
+}
+
+static inline void Rad_Set_Radio_Op_Start_Time(rfc_radioOp_t* radio_op_p,
+                                               bool delayed_start,
+                                               uint32_t start_time)
+{
+    if (delayed_start == true)
+    {
+        radio_op_p->startTrigger.triggerType = TRIG_ABSTIME;
+        radio_op_p->startTime = start_time;
+    }
+    else
+        radio_op_p->startTrigger.triggerType = TRIG_NOW;
+}
+
+static inline size_t Rad_Get_Rx_Payload_Len()
+{
+    return (data_entry_buf[RAD_RX_BUF_PAYLOAD_LEN_IDX] - 1);
 }
 
 static void Rad_Handle_Error(uint8_t err_code)
