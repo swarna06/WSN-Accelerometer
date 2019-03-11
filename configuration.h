@@ -14,7 +14,7 @@
 
 // Network parameters
 #define CFG_DEFAULT_DEV_ID              0
-#define CFG_SENSOR_NODE_NUM             1
+#define CFG_SENSOR_NODE_NUM             2
 #if (CFG_DEFAULT_DEV_ID > CFG_SENSOR_NODE_NUM)
 #error Device id is greater than total number of sensors
 #endif // #if (CFG_DEFAULT_DEV_ID > CFG_SENSOR_NODE_NUM)
