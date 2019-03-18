@@ -67,7 +67,18 @@ int main(void)
 
     Tm_Start_Period(TM_PER_HEARTBEAT_ID, 1000);
     Rad_Turn_On_Radio();
-    uint32_t old_radio_time = 0;
+
+    uint32_t secondary_ble_addr_l = HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0);
+    uint8_t dev_id = (uint8_t)secondary_ble_addr_l;
+    Log_Val_Uint32("dev_id:", dev_id);
+
+    bool receiving = false;
+    rad_rx_param_t rx_param;
+    rad_tx_param_t tx_param;
+    uint8_t buf[512];
+    uint8_t buf_offset = 0;
+    for (size_t n = 0; n < sizeof(buf); n++)
+        buf[n] = (uint8_t)n;
 
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
@@ -78,27 +89,47 @@ int main(void)
 
             if (Rad_Radio_Is_On())
             {
-                Brd_Led_On(BRD_LED1);
+                Brd_Led_Toggle(BRD_LED1);
 
-                rad_tx_param_t tx_param;
-                tx_param.delayed_start = false;
-                tx_param.payload_p = NULL;
-                tx_param.payload_len = 0;
-                Rad_Transmit_Packet(&tx_param);
+                if (dev_id == 0) // sink ?
+                {
+                    tx_param.delayed_start = false;
+                    tx_param.payload_p = buf + (buf_offset++);
+                    tx_param.payload_len = 16;
+                    Rad_Transmit_Packet(&tx_param);
+                }
+                else if (receiving == false)
+                {
+                    rx_param.delayed_start = false;
+                    rx_param.dest_buf = buf;
+                    rx_param.dest_buf_len = sizeof(buf);
+                    rx_param.start_time = 0;
+                    rx_param.timeout_usec = 0;
+                    Rad_Receive_Packet(&rx_param);
 
-                uint32_t radio_time = Rad_Get_Radio_Time();
-//                Rad_Turn_Off_Radio();
-
-                uint32_t delta = Pfl_Delta_Time32(old_radio_time, radio_time);
-                old_radio_time = radio_time;
-
-                Log_Val_Uint32("curr_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
-                Log_Val_Uint32("delta_time(us):", Rad_RAT_Ticks_To_Microsec(delta));
+                    receiving = true;
+                }
             }
-            else
+        }
+
+        if (dev_id != 0 && receiving == true)
+        {
+            if (Rad_Ready())
             {
-                Brd_Led_Off(BRD_LED1);
-                Rad_Turn_On_Radio();
+                if (rx_param.error == RAD_RX_ERR_NONE)
+                {
+                    Log_Val_Uint32("payload_len:", rx_param.payload_len);
+                    for (size_t n = 0; n < rx_param.payload_len; n++)
+                    {
+                        Log_Value_Int(rx_param.dest_buf[n]);
+                        Log_String_Literal(", ");
+                    }
+                    Log_Line(""); // new line
+                }
+                else
+                    Log_Val_Uint32("rx_err:", rx_param.error);
+
+                receiving = false;
             }
         }
 
