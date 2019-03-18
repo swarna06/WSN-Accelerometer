@@ -88,6 +88,11 @@ static volatile rfc_ble5ScanInitOutput_t ble5_scan_init_output;
 
 // Immediate commands
 static rfc_CMD_SET_RAT_CMP_t cmd_set_rat_cmp = {.commandNo = CMD_SET_RAT_CMP, .ratCh = RAD_RAT_CH};
+static rfc_CMD_SET_RAT_OUTPUT_t cmd_set_rat_output = {.commandNo = CMD_SET_RAT_OUTPUT,
+                                                      .config.ratCh = RAD_RAT_CH,
+                                                      .config.outputSel = RAD_RAT_CH_GPO,
+                                                      .config.outputMode = RAD_RAT_CH_GPO_MODE,};
+
 
 // ********************************
 // Non-static (public) functions
@@ -339,6 +344,17 @@ bool Rad_Set_RAT_Cmp_Val(uint32_t compare_val, void (*isr)())
     }
 
     Cpe_Start_Immediate_Cmd((rfc_command_t*)&cmd_set_rat_cmp);
+    rac.state = RAD_S_WAIT_IMMED_CMD_EXEC;
+
+    return true;
+}
+
+bool Rad_Set_RAT_Output()
+{
+    if (rac.state != RAD_S_IDLE)
+        return false;
+
+    Cpe_Start_Immediate_Cmd((rfc_command_t*)&cmd_set_rat_output);
     rac.state = RAD_S_WAIT_IMMED_CMD_EXEC;
 
     return true;

@@ -46,7 +46,10 @@ enum
 };
 
 // General purpose RAT channel
-#define RAD_RAT_CH          5
+#define RAD_RAT_CH              5
+#define RAD_RAT_CH_GPO          3       // RAT_GPO3
+//#define RAD_RAT_CH_GPO_MODE     0b00    // Pulse
+#define RAD_RAT_CH_GPO_MODE     0b11    // Toggle
 
 // ********************************
 // BLE 5
@@ -247,5 +250,7 @@ bool Rad_Error_Occurred();
 uint8_t Rad_Get_Err_Code();
 
 bool Rad_Set_RAT_Cmp_Val(uint32_t compare_val, void (*isr)());
+
+bool Rad_Set_RAT_Output();
 
 #endif /* RADIO_H_ */

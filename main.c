@@ -83,6 +83,9 @@ int main(void)
     Log_Val_Uint32("dev_id:", dev_id);
 
     bool wait_rat_event = false;
+    bool rat_output_conf = false;
+
+    IOCPortConfigureSet(BRD_LED1, IOC_PORT_RFC_GPO0, IOC_STD_OUTPUT);
 
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
@@ -95,22 +98,30 @@ int main(void)
             {
                 if (dev_id == 0) // sink ?
                 {
-                    uint32_t radio_time = Rad_Get_Radio_Time();
+                    if (rat_output_conf == true)
+                    {
+                        uint32_t radio_time = Rad_Get_Radio_Time();
 
-                    Log_Val_Uint32("curr_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
+                        Log_Val_Uint32("curr_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
 
-                    Rad_Set_RAT_Cmp_Val(radio_time + 100000, rat_isr);
-                    wait_rat_event = true;
+                        Rad_Set_RAT_Cmp_Val(radio_time + 100000, NULL);
+                        wait_rat_event = true;
+                    }
+                    else
+                    {
+                        Rad_Set_RAT_Output();
+                        rat_output_conf = true;
+                    }
                 }
             }
         }
 
         if (wait_rat_event == true && HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) & RFC_DBELL_RFHWIFG_RATCH5)
         {
-//            HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~RFC_DBELL_RFHWIFG_RATCH5;
-//
-//            uint32_t radio_time = Rad_Get_Radio_Time();
-//            Log_Val_Uint32("event_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
+            HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~RFC_DBELL_RFHWIFG_RATCH5;
+
+            uint32_t radio_time = Rad_Get_Radio_Time();
+            Log_Val_Uint32("event_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
 
             wait_rat_event = false;
         }
