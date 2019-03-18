@@ -31,6 +31,8 @@ static void Rad_S_Wait_RFC_Sync_Stop_RAT();
 static void Rad_S_Wait_Packet_Tx();
 static void Rad_S_Wait_Packet_Rx();
 
+static void Rad_S_Wait_Immed_Cmd_Execution();
+
 static void Rad_S_Wait_Err_Cleared();
 
 // Other static functions
@@ -60,6 +62,8 @@ static void (*rad_state_proc_ptr[RAD_STATE_NUM])() =
      [RAD_S_WAIT_PACKET_TX] = Rad_S_Wait_Packet_Tx,
      [RAD_S_WAIT_PACKET_RX] = Rad_S_Wait_Packet_Rx,
 
+     [RAD_S_WAIT_IMMED_CMD_EXEC] = Rad_S_Wait_Immed_Cmd_Execution,
+
      [RAD_S_WAIT_ERR_CLEARED] = Rad_S_Wait_Err_Cleared
 };
 
@@ -80,6 +84,9 @@ static const volatile uint8_t* rx_payload_p = &data_entry_buf[RAD_RX_BUF_PAYLOAD
 static volatile rfc_dataEntryPointer_t data_entry_ptr;
 static volatile dataQueue_t data_queue;
 static volatile rfc_ble5ScanInitOutput_t ble5_scan_init_output;
+
+// Immediate commands
+static rfc_CMD_SET_RAT_CMP_t cmd_set_rat_cmp = {.commandNo = CMD_SET_RAT_CMP, .ratCh = RAD_RAT_CH};
 
 // ********************************
 // Non-static (public) functions
@@ -314,6 +321,19 @@ uint8_t Rad_Get_Err_Code()
     return err_code;
 }
 
+bool Rad_Set_RAT_Cmp_Val(uint32_t compare_val, void (*isr)())
+{
+    if (rac.state != RAD_S_IDLE)
+        return false;
+
+    if (isr != NULL) (void)0;
+    cmd_set_rat_cmp.compareTime = compare_val;
+
+    Cpe_Start_Immediate_Cmd((rfc_command_t*)&cmd_set_rat_cmp);
+    rac.state = RAD_S_WAIT_IMMED_CMD_EXEC;
+
+    return true;
+}
 
 // ********************************
 // FSM procedures (static)
@@ -437,6 +457,17 @@ static void Rad_S_Wait_Packet_Rx()
     }
 }
 
+static void Rad_S_Wait_Immed_Cmd_Execution()
+{
+    if (Cpe_Ready() == true) // radio operation finished ?
+        rac.state = RAD_S_IDLE;
+    else if (Cpe_Get_Err_Code() != CPE_ERR_NONE)
+    {
+        Rad_Handle_Error(RAD_ERR_IMMED_CMD_FAILED);
+        rac.state = RAD_S_WAIT_ERR_CLEARED;
+    }
+}
+
 static void Rad_S_Wait_Err_Cleared()
 {
     // Wait until error code is cleared
@@ -507,4 +538,3 @@ static void Rad_Handle_Error(uint8_t err_code)
 {
     rac.err_code = err_code;
 }
-

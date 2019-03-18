@@ -72,13 +72,7 @@ int main(void)
     uint8_t dev_id = (uint8_t)secondary_ble_addr_l;
     Log_Val_Uint32("dev_id:", dev_id);
 
-    bool receiving = false;
-    rad_rx_param_t rx_param;
-    rad_tx_param_t tx_param;
-    uint8_t buf[512];
-    uint8_t buf_offset = 0;
-    for (size_t n = 0; n < sizeof(buf); n++)
-        buf[n] = (uint8_t)n;
+    bool wait_rat_event = false;
 
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
@@ -93,44 +87,24 @@ int main(void)
 
                 if (dev_id == 0) // sink ?
                 {
-                    tx_param.delayed_start = false;
-                    tx_param.payload_p = buf + (buf_offset++);
-                    tx_param.payload_len = 16;
-                    Rad_Transmit_Packet(&tx_param);
-                }
-                else if (receiving == false)
-                {
-                    rx_param.delayed_start = false;
-                    rx_param.dest_buf = buf;
-                    rx_param.dest_buf_len = sizeof(buf);
-                    rx_param.start_time = 0;
-                    rx_param.timeout_usec = 0;
-                    Rad_Receive_Packet(&rx_param);
+                    uint32_t radio_time = Rad_Get_Radio_Time();
 
-                    receiving = true;
+                    Log_Val_Uint32("curr_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
+
+                    Rad_Set_RAT_Cmp_Val(radio_time + 1000, NULL);
+                    wait_rat_event = true;
                 }
             }
         }
 
-        if (dev_id != 0 && receiving == true)
+        if (wait_rat_event == true && HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) & RFC_DBELL_RFHWIFG_RATCH5)
         {
-            if (Rad_Ready())
-            {
-                if (rx_param.error == RAD_RX_ERR_NONE)
-                {
-                    Log_Val_Uint32("payload_len:", rx_param.payload_len);
-                    for (size_t n = 0; n < rx_param.payload_len; n++)
-                    {
-                        Log_Value_Int(rx_param.dest_buf[n]);
-                        Log_String_Literal(", ");
-                    }
-                    Log_Line(""); // new line
-                }
-                else
-                    Log_Val_Uint32("rx_err:", rx_param.error);
+            HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~RFC_DBELL_RFHWIFG_RATCH5;
 
-                receiving = false;
-            }
+            uint32_t radio_time = Rad_Get_Radio_Time();
+            Log_Val_Uint32("event_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
+
+            wait_rat_event = false;
         }
 
         if (Tm_Sys_Tick())

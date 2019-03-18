@@ -45,6 +45,9 @@ enum
     RAD_RAT_TICKS_PER_RTC_TICK = 122, // 30.5175 usec / 0.25 usec = 122.07 (~122)
 };
 
+// General purpose RAT channel
+#define RAD_RAT_CH          5
+
 // ********************************
 // BLE 5
 // ********************************
@@ -168,6 +171,7 @@ enum
     RAD_ERR_START_UP_FAILED,
     RAD_ERR_SHUTDOWN_FAILED,
     RAD_ERR_RADIO_OP_FAILED,
+    RAD_ERR_IMMED_CMD_FAILED,
 };
 
 
@@ -186,6 +190,8 @@ typedef enum
 
     RAD_S_WAIT_PACKET_TX,
     RAD_S_WAIT_PACKET_RX,
+
+    RAD_S_WAIT_IMMED_CMD_EXEC,
 
     RAD_S_WAIT_ERR_CLEARED,
 
@@ -239,5 +245,7 @@ bool Rad_Ready();
 bool Rad_Error_Occurred();
 
 uint8_t Rad_Get_Err_Code();
+
+bool Rad_Set_RAT_Cmp_Val(uint32_t compare_val, void (*isr)());
 
 #endif /* RADIO_H_ */
