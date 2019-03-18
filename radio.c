@@ -12,6 +12,7 @@
 #include <driverlib/rfc.h>
 #include <driverlib/rf_data_entry.h>
 #include <driverlib/rf_ble_mailbox.h>
+#include <driverlib/interrupt.h>
 
 #include "radio.h"
 #include "cp_engine.h"
@@ -326,8 +327,16 @@ bool Rad_Set_RAT_Cmp_Val(uint32_t compare_val, void (*isr)())
     if (rac.state != RAD_S_IDLE)
         return false;
 
-    if (isr != NULL) (void)0;
     cmd_set_rat_cmp.compareTime = compare_val;
+
+    if (isr != NULL)
+    {
+        IntRegister(INT_RFC_HW_COMB, isr);
+        IntPendClear(INT_RFC_HW_COMB);
+        IntEnable(INT_RFC_HW_COMB);
+
+        HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIEN) |= RFC_DBELL_RFHWIEN_RATCH5;
+    }
 
     Cpe_Start_Immediate_Cmd((rfc_command_t*)&cmd_set_rat_cmp);
     rac.state = RAD_S_WAIT_IMMED_CMD_EXEC;

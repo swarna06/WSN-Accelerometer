@@ -38,6 +38,16 @@
 // Global profiling variables
 volatile uint32_t pfl_tic, pfl_toc, pfl_wcet = 0;
 
+void rat_isr()
+{
+    Brd_Led_Toggle(BRD_LED1);
+
+    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~RFC_DBELL_RFHWIFG_RATCH5;
+
+    uint32_t radio_time = Rad_Get_Radio_Time();
+    Log_Val_Uint32("event_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
+}
+
 void GPIO_Init();
 
 int main(void)
@@ -83,15 +93,13 @@ int main(void)
 
             if (Rad_Radio_Is_On())
             {
-                Brd_Led_Toggle(BRD_LED1);
-
                 if (dev_id == 0) // sink ?
                 {
                     uint32_t radio_time = Rad_Get_Radio_Time();
 
                     Log_Val_Uint32("curr_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
 
-                    Rad_Set_RAT_Cmp_Val(radio_time + 1000, NULL);
+                    Rad_Set_RAT_Cmp_Val(radio_time + 100000, rat_isr);
                     wait_rat_event = true;
                 }
             }
@@ -99,10 +107,10 @@ int main(void)
 
         if (wait_rat_event == true && HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) & RFC_DBELL_RFHWIFG_RATCH5)
         {
-            HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~RFC_DBELL_RFHWIFG_RATCH5;
-
-            uint32_t radio_time = Rad_Get_Radio_Time();
-            Log_Val_Uint32("event_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
+//            HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~RFC_DBELL_RFHWIFG_RATCH5;
+//
+//            uint32_t radio_time = Rad_Get_Radio_Time();
+//            Log_Val_Uint32("event_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
 
             wait_rat_event = false;
         }
