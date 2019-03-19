@@ -105,23 +105,6 @@ int main(void)
             {
                 ready_to_go = true;
             }
-
-//            if (dev_id == 0) // sink ?
-//            {
-//                if (rat_output_conf == true)
-//                {
-//                    uint32_t radio_time = Rad_Get_Radio_Time();
-//
-//                    Log_Val_Uint32("curr_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
-//
-//                    Rad_Set_RAT_Cmp_Val(radio_time + 100000, NULL);
-//                }
-//                else
-//                {
-//                    Rad_Set_RAT_Output();
-//                    rat_output_conf = true;
-//                }
-//            }
         }
 
         if (state == 0 && Rad_Ready() && ready_to_go == true)
@@ -160,11 +143,6 @@ int main(void)
             ready_to_go = false;
             state = 1;
         }
-//        else if (state == 2 && Rad_Ready())
-//        {
-//            Rad_Set_RAT_Cmp_Val(tx_time, NULL);
-//            state = 1;
-//        }
 
         if (Tm_Sys_Tick())
             Tm_Process();
