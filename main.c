@@ -75,17 +75,24 @@ int main(void)
     IOCIOPortPullSet(BRD_GPIO_IN1, IOC_IOPULL_UP);
     #endif // #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
 
-    Tm_Start_Period(TM_PER_HEARTBEAT_ID, 1000);
+    Tm_Start_Period(TM_PER_HEARTBEAT_ID, 200);
     Rad_Turn_On_Radio();
 
     uint32_t secondary_ble_addr_l = HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0);
     uint8_t dev_id = (uint8_t)secondary_ble_addr_l;
     Log_Val_Uint32("dev_id:", dev_id);
 
-    bool wait_rat_event = false;
-    bool rat_output_conf = false;
+    bool ready_to_go = false;
 
-    IOCPortConfigureSet(BRD_LED1, IOC_PORT_RFC_GPO0, IOC_STD_OUTPUT);
+    uint8_t state = 0;
+    uint32_t tx_time = 0;
+
+    rad_tx_param_t tx_param;
+    tx_param.payload_p = NULL;
+
+    Rad_Enable_Radio_Event_Output();
+
+    uint8_t buf[256];
 
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
@@ -96,35 +103,68 @@ int main(void)
 
             if (Rad_Radio_Is_On())
             {
-                if (dev_id == 0) // sink ?
-                {
-                    if (rat_output_conf == true)
-                    {
-                        uint32_t radio_time = Rad_Get_Radio_Time();
-
-                        Log_Val_Uint32("curr_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
-
-                        Rad_Set_RAT_Cmp_Val(radio_time + 100000, NULL);
-                        wait_rat_event = true;
-                    }
-                    else
-                    {
-                        Rad_Set_RAT_Output();
-                        rat_output_conf = true;
-                    }
-                }
+                ready_to_go = true;
             }
+
+//            if (dev_id == 0) // sink ?
+//            {
+//                if (rat_output_conf == true)
+//                {
+//                    uint32_t radio_time = Rad_Get_Radio_Time();
+//
+//                    Log_Val_Uint32("curr_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
+//
+//                    Rad_Set_RAT_Cmp_Val(radio_time + 100000, NULL);
+//                }
+//                else
+//                {
+//                    Rad_Set_RAT_Output();
+//                    rat_output_conf = true;
+//                }
+//            }
         }
 
-        if (wait_rat_event == true && HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) & RFC_DBELL_RFHWIFG_RATCH5)
+        if (state == 0 && Rad_Ready() && ready_to_go == true)
         {
-            HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~RFC_DBELL_RFHWIFG_RATCH5;
-
-            uint32_t radio_time = Rad_Get_Radio_Time();
-            Log_Val_Uint32("event_time(us):", Rad_RAT_Ticks_To_Microsec(radio_time));
-
-            wait_rat_event = false;
+            Rad_Set_RAT_Output();
+            state = 1;
         }
+        else if (state == 1 && Rad_Ready() && ready_to_go == true)
+        {
+            tx_time = Rad_Get_Radio_Time() + 100000;
+            Rad_Set_RAT_Cmp_Val(tx_time, NULL);
+
+            state = 2;
+        }
+        else if (state == 2 && Rad_Ready() && ready_to_go == true)
+        {
+            tx_param.delayed_start = true;
+
+            if (tx_param.payload_p == NULL)
+            {
+                tx_param.payload_len = 254;
+                tx_param.payload_p = buf;
+            }
+            else
+            {
+                tx_param.payload_len = 0;
+                tx_param.payload_p = NULL;
+            }
+
+            tx_param.start_time = tx_time;
+
+            Rad_Transmit_Packet(&tx_param);
+
+            Rad_Set_Data_Rate(RAD_DATA_RATE_125KBPS);
+
+            ready_to_go = false;
+            state = 1;
+        }
+//        else if (state == 2 && Rad_Ready())
+//        {
+//            Rad_Set_RAT_Cmp_Val(tx_time, NULL);
+//            state = 1;
+//        }
 
         if (Tm_Sys_Tick())
             Tm_Process();

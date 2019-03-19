@@ -13,11 +13,13 @@
 #include <driverlib/rf_data_entry.h>
 #include <driverlib/rf_ble_mailbox.h>
 #include <driverlib/interrupt.h>
+#include <driverlib/ioc.h>
 
 #include "radio.h"
 #include "cp_engine.h"
 #include "misc.h"
 #include "smartrf_settings.h"
+#include "board.h"
 
 // ********************************
 // Static (private) function declarations
@@ -358,6 +360,15 @@ bool Rad_Set_RAT_Output()
     rac.state = RAD_S_WAIT_IMMED_CMD_EXEC;
 
     return true;
+}
+
+void Rad_Enable_Radio_Event_Output()
+{
+    // Physical pin assignment to RF core internal events (GPO0 to GPO3)
+    // Mapping of RF core internal signals to RFC GPOn is done in smartrf_settings.c
+    IOCPortConfigureSet(BRD_RFC_RATCH_PIN, IOC_PORT_RFC_GPO0, IOC_STD_OUTPUT);
+    IOCPortConfigureSet(BRD_RFC_RXOUT_PIN, IOC_PORT_RFC_GPO2, IOC_STD_OUTPUT);
+    IOCPortConfigureSet(BRD_RFC_TXOUT_PIN, IOC_PORT_RFC_GPO1, IOC_STD_OUTPUT);
 }
 
 // ********************************

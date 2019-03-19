@@ -35,6 +35,7 @@
     #define BRD_LF_OSC_PIN          21
     #define BRD_RFC_TXOUT_PIN       22
     #define BRD_RFC_RXOUT_PIN       23
+    #define BRD_RFC_RATCH_PIN       30
     #define BRD_RTC_OUT_PIN         BRD_LED1
 
     // LEDs are active high

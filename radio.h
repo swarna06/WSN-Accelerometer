@@ -253,4 +253,6 @@ bool Rad_Set_RAT_Cmp_Val(uint32_t compare_val, void (*isr)());
 
 bool Rad_Set_RAT_Output();
 
+void Rad_Enable_Radio_Event_Output();
+
 #endif /* RADIO_H_ */
