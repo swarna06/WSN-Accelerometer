@@ -13,7 +13,7 @@
 #define CFG_SETTING_ENABLED             1
 
 // Network parameters
-#define CFG_DEFAULT_DEV_ID              0
+#define CFG_DEFAULT_DEV_ID              1
 #define CFG_SENSOR_NODE_NUM             3
 #if (CFG_DEFAULT_DEV_ID > CFG_SENSOR_NODE_NUM)
 #error Device id is greater than total number of sensors
@@ -23,7 +23,7 @@
 #endif // #if (CFG_DEFAULT_DEV_ID > CFG_SENSOR_NODE_NUM)
 
 // Debug settings
-#define CFG_DEBUG_DUMMY_SLEEP           CFG_SETTING_DISABLED
+#define CFG_DEBUG_DUMMY_SLEEP           CFG_SETTING_ENABLED
 #define CFG_DEBUG_SLEEP_OUT             CFG_SETTING_ENABLED
 #define CFG_DEBUG_START_OF_FRAME_OUT    CFG_SETTING_ENABLED
 #define CFG_DEBUG_LF_OSC_OUT            CFG_SETTING_DISABLED

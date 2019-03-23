@@ -31,6 +31,7 @@ enum
 
     STS_S_WAIT_FIRST_PKT,
 
+    STS_S_WAIT_PKT_RX,
 
     STS_S_WAIT_RADIO_OFF,
 
@@ -48,7 +49,8 @@ typedef struct
     uint32_t wakeup_time;
 
     rad_tx_param_t tx_param;
-    uint8_t tx_buf[RAD_MAX_PAYLOAD_LEN];
+    rad_rx_param_t rx_param;
+    uint8_t txrx_buf[RAD_MAX_PAYLOAD_LEN];
 
     uint8_t flags;
     uint8_t state;

@@ -18,6 +18,7 @@
 #include "board.h"
 #include "configuration.h"
 #include "log.h"
+#include "profiling.h"
 
 bool proceed = false;
 
@@ -61,8 +62,14 @@ void Sts_Init()
     }
 
     stc.tx_param.delayed_start = true;
-    stc.tx_param.payload_p = stc.tx_buf;
+    stc.tx_param.payload_p = stc.txrx_buf;
     stc.tx_param.payload_len = 0;
+
+    stc.rx_param.delayed_start = false;
+    stc.rx_param.dest_buf = stc.txrx_buf;
+    stc.rx_param.dest_buf_len = RAD_MAX_PAYLOAD_LEN;
+    stc.rx_param.start_time = 0;
+    stc.rx_param.timeout_usec = 0;
 
     #ifdef CFG_DEBUG_START_OF_FRAME_OUT
     // Configure an RTC CH in compare mode and enable interrupt
@@ -125,6 +132,10 @@ static void Sts_Sink_Process()
 
             Rad_Set_RAT_Output();
             stc.state = STS_S_WAIT_SET_RAT_OUTPUT;
+        }
+        else if (Rad_Get_Err_Code())
+        {
+            assertion("Radio error!");
         }
 
         break;
@@ -214,9 +225,52 @@ static void Sts_Sensor_Process()
 
         if (Rad_Radio_Is_On() == true)
         {
-
+            Rad_Receive_Packet(&stc.rx_param);
+            stc.state = STS_S_WAIT_PKT_RX;
+        }
+        else if (Rad_Get_Err_Code())
+        {
+            assertion("Radio error!");
         }
 
+        break;
+
+    case STS_S_WAIT_PKT_RX:
+
+        if (Rad_Ready() == true)
+        {
+            if (stc.rx_param.error == RAD_RX_ERR_NONE)
+            {
+                static uint32_t last_timestamp = 0;
+                uint32_t curr_timestamp = stc.rx_param.timestamp;
+                uint32_t rxdelta = Pfl_Delta_Time32(last_timestamp, curr_timestamp);
+
+                Log_Val_Uint32("rxdelta:", rxdelta/4);
+                last_timestamp = curr_timestamp;
+            }
+            else
+            {
+                Log_Line("nok");
+                Log_Val_Uint32("rx_err:", stc.rx_param.error);
+                stc.state = STS_S_DUMMY;
+                break;
+            }
+
+            stc.state = STS_S_WAIT_RADIO_STARTUP;
+        }
+        else if (Rad_Get_Err_Code())
+        {
+            assertion("Radio error!");
+        }
+
+        break;
+
+    case STS_S_DUMMY:
+
+        break;
+
+    default:
+        assertion(!"Invalid state");
         break;
     }
 }
