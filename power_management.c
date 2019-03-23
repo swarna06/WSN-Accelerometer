@@ -292,7 +292,7 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
 
 void Pma_MCU_Wakeup()
 {
-    Rfc_Wakeup();
+//    Rfc_Wakeup();
     Sep_Wakeup();
 }
 

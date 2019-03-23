@@ -368,7 +368,7 @@ void Rad_Enable_Radio_Event_Output()
     // Mapping of RF core internal signals to RFC GPOn is done in smartrf_settings.c
     IOCPortConfigureSet(BRD_RFC_RATCH_PIN, IOC_PORT_RFC_GPO0, IOC_STD_OUTPUT);
     IOCPortConfigureSet(BRD_RFC_RXOUT_PIN, IOC_PORT_RFC_GPO2, IOC_STD_OUTPUT);
-    IOCPortConfigureSet(BRD_RFC_TXOUT_PIN, IOC_PORT_RFC_GPO1, IOC_STD_OUTPUT);
+    IOCPortConfigureSet(BRD_RFC_TXOUT_PIN, IOC_PORT_RFC_GPO3, IOC_STD_OUTPUT);
 }
 
 // ********************************
