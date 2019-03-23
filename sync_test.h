@@ -15,6 +15,8 @@
 #define STS_SYNC_PERIOD_RTC     ((1<<16)/16) // 1 second
 #define STS_WAKEUP_DELAY        (TM_RTC_TICKS_PER_MSEC * 2) // 2 milliseconds
 
+#define STS_RADIO_OP_DELAY      (762 + 5) // 191.4 usec / 0.25 usec (+ 5 trimming)
+
 enum
 {
     STS_S_WAIT_WAKEUP_TIME = 0,

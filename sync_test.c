@@ -136,6 +136,9 @@ static void Sts_Sink_Process()
 
         if (Rad_Ready() == true)
         {
+            stc.tx_param.start_time -= STS_RADIO_OP_DELAY;
+//            stc.tx_param.payload_len = RAD_MAX_PAYLOAD_LEN;
+            stc.tx_param.payload_len = 0;
             Rad_Transmit_Packet(&stc.tx_param);
             stc.state = STS_S_WAIT_PKT_TX;
         }
