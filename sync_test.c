@@ -34,24 +34,35 @@ void Sts_RTC_Isr();
 
 void Sts_Init()
 {
+    Rad_Enable_Radio_Event_Output();
+    Rad_Set_Data_Rate(RAD_DATA_RATE_125KBPS);
+
     // Get device ID
     uint32_t secondary_ble_addr_l = HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0);
     stc.dev_id = (uint8_t)secondary_ble_addr_l;
 
     if (stc.dev_id == 0)
+    {
+        stc.sync_time = Tm_Get_RTC_Time() + STS_SYNC_PERIOD_RTC;
+        stc.wakeup_time = stc.sync_time - STS_WAKEUP_DELAY;
+
         Sts_Process = Sts_Sink_Process;
+        stc.state = STS_S_WAIT_WAKEUP_TIME;
+    }
     else
+    {
+        stc.sync_time = 0;
+        stc.wakeup_time = 0;
+
         Sts_Process = Sts_Sensor_Process;
 
-    stc.sync_time = Tm_Get_RTC_Time() + STS_SYNC_PERIOD_RTC;
-    stc.wakeup_time = stc.sync_time - STS_WAKEUP_DELAY;
-    stc.state = STS_S_WAIT_WAKEUP_TIME;
+        Rad_Turn_On_Radio();
+        stc.state = STS_S_WAIT_RADIO_STARTUP;
+    }
 
     stc.tx_param.delayed_start = true;
     stc.tx_param.payload_p = stc.tx_buf;
     stc.tx_param.payload_len = 0;
-
-    Rad_Enable_Radio_Event_Output();
 
     #ifdef CFG_DEBUG_START_OF_FRAME_OUT
     // Configure an RTC CH in compare mode and enable interrupt
@@ -153,6 +164,20 @@ static void Sts_Sink_Process()
 
         if (Rad_Ready() == true)
         {
+            Rad_Turn_Off_Radio();
+            stc.state = STS_S_WAIT_RADIO_OFF;
+        }
+        else if (Rad_Get_Err_Code())
+        {
+            assertion("Radio error!");
+        }
+
+        break;
+
+    case STS_S_WAIT_RADIO_OFF:
+
+        if (Rad_Radio_Is_On() == false)
+        {
             stc.state = STS_S_DUMMY;
         }
         else if (Rad_Get_Err_Code())
@@ -183,7 +208,17 @@ static void Sts_Sink_Process()
 
 static void Sts_Sensor_Process()
 {
+    switch (stc.state)
+    {
+    case STS_S_WAIT_RADIO_STARTUP:
 
+        if (Rad_Radio_Is_On() == true)
+        {
+
+        }
+
+        break;
+    }
 }
 
 static inline uint32_t Sts_Get_RTC_Time()

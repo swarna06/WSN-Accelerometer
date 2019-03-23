@@ -29,6 +29,11 @@ enum
 
     STS_S_WAIT_PKT_TX,
 
+    STS_S_WAIT_FIRST_PKT,
+
+
+    STS_S_WAIT_RADIO_OFF,
+
     STS_S_DUMMY,
 
     STS_COMMON_STATES_NUM
