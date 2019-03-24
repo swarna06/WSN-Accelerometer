@@ -12,8 +12,12 @@
 
 #include "radio.h"
 
-#define STS_SYNC_PERIOD_RTC     ((1<<16)/16) // 1 second
+#define STS_SYNC_PER_DIV        16
+
+#define STS_SYNC_PERIOD_RTC     ((1<<16)/STS_SYNC_PER_DIV) // 1 second
 #define STS_WAKEUP_DELAY        (TM_RTC_TICKS_PER_MSEC * 2) // 2 milliseconds
+
+#define STS_SYNC_PERIOD_RAT     ((4000000)/STS_SYNC_PER_DIV) // 1 second
 
 #define STS_RADIO_OP_DELAY      (762 + 5) // 191.4 usec / 0.25 usec (+ 5 trimming)
 
@@ -29,7 +33,7 @@ enum
 
     STS_S_WAIT_PKT_TX,
 
-    STS_S_WAIT_FIRST_PKT,
+    STS_S_WAIT_1ST_PKT,
 
     STS_S_WAIT_PKT_RX,
 
@@ -40,13 +44,19 @@ enum
     STS_COMMON_STATES_NUM
 };
 
+enum
+{
+    STS_F_1ST_PKT_RXED = 0x01,
+};
+
 
 typedef struct
 {
     uint8_t dev_id;
 
-    uint32_t sync_time;
-    uint32_t wakeup_time;
+    uint32_t rtc_sync_time;
+    uint32_t rtc_wakeup_time;
+    uint32_t rat_sync_time;
 
     rad_tx_param_t tx_param;
     rad_rx_param_t rx_param;
@@ -59,5 +69,7 @@ typedef struct
 void Sts_Init();
 
 void (*Sts_Process)();
+
+uint8_t Sts_Get_FSM_State();
 
 #endif /* SYNC_TEST_H_ */

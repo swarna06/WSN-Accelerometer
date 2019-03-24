@@ -28,6 +28,8 @@ static void Sts_Sink_Process();
 static void Sts_Sensor_Process();
 
 static uint32_t Sts_Get_RTC_Time();
+static bool Sts_Get_RAT_Int_Flag();
+static void Sts_Clear_RAT_Int_Flag();
 
 #ifdef CFG_DEBUG_START_OF_FRAME_OUT
 void Sts_RTC_Isr();
@@ -42,18 +44,20 @@ void Sts_Init()
     uint32_t secondary_ble_addr_l = HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0);
     stc.dev_id = (uint8_t)secondary_ble_addr_l;
 
+    stc.flags = 0;
+
     if (stc.dev_id == 0)
     {
-        stc.sync_time = Tm_Get_RTC_Time() + STS_SYNC_PERIOD_RTC;
-        stc.wakeup_time = stc.sync_time - STS_WAKEUP_DELAY;
+        stc.rtc_sync_time = Sts_Get_RTC_Time() + STS_SYNC_PERIOD_RTC;
+        stc.rtc_wakeup_time = stc.rtc_sync_time - STS_WAKEUP_DELAY;
 
         Sts_Process = Sts_Sink_Process;
         stc.state = STS_S_WAIT_WAKEUP_TIME;
     }
     else
     {
-        stc.sync_time = 0;
-        stc.wakeup_time = 0;
+        stc.rtc_sync_time = 0;
+        stc.rtc_wakeup_time = 0;
 
         Sts_Process = Sts_Sensor_Process;
 
@@ -86,16 +90,21 @@ void Sts_Init()
     #endif // #ifdef PTC_START_OF_FRAME_OUT
 }
 
+inline uint8_t Sts_Get_FSM_State()
+{
+    return stc.state;
+}
+
 static void Sts_Sink_Process()
 {
     switch (stc.state)
     {
     case STS_S_WAIT_WAKEUP_TIME:
 
-        Pma_MCU_Sleep(stc.wakeup_time);
+        Pma_MCU_Sleep(stc.rtc_wakeup_time);
 
         // Set interrupt compare value to match the synchronization instant
-        AONRTCCompareValueSet(AON_RTC_CH1, stc.sync_time);
+        AONRTCCompareValueSet(AON_RTC_CH1, stc.rtc_sync_time);
 
         // Set PHY mode and turn on the radio
         Rad_Set_Data_Rate(RAD_DATA_RATE_125KBPS);
@@ -117,7 +126,9 @@ static void Sts_Sink_Process()
             uint32_t rat_curr_time = Rad_Get_Radio_Time();
 
             uint32_t rtc_curr_time = Sts_Get_RTC_Time();
-            uint32_t rtc_delta = stc.sync_time - rtc_curr_time;
+            uint32_t rtc_delta = stc.rtc_sync_time - rtc_curr_time;
+
+            // TODO could RAT simply be increased without considering RTC time ?
 
             // Calculate start time
             volatile uint32_t rat_delta, tmp;
@@ -202,8 +213,8 @@ static void Sts_Sink_Process()
 
         if (proceed == true)
         {
-            stc.sync_time += STS_SYNC_PERIOD_RTC;
-            stc.wakeup_time = stc.sync_time - STS_WAKEUP_DELAY;
+            stc.rtc_sync_time += STS_SYNC_PERIOD_RTC;
+            stc.rtc_wakeup_time = stc.rtc_sync_time - STS_WAKEUP_DELAY;
 
             stc.state = STS_S_WAIT_WAKEUP_TIME;
         }
@@ -225,6 +236,94 @@ static void Sts_Sensor_Process()
 
         if (Rad_Radio_Is_On() == true)
         {
+            if (stc.flags & STS_F_1ST_PKT_RXED)
+            {
+                Rad_Set_RAT_Output();
+                stc.state = STS_S_WAIT_SET_RAT_OUTPUT;
+            }
+            else
+            {
+                Rad_Receive_Packet(&stc.rx_param);
+                stc.state = STS_S_WAIT_1ST_PKT;
+            }
+        }
+        else if (Rad_Get_Err_Code())
+        {
+            assertion("Radio error!");
+        }
+
+        break;
+
+    case STS_S_WAIT_1ST_PKT:
+
+        if (Rad_Ready() == true)
+        {
+            if (stc.rx_param.error == RAD_RX_ERR_NONE)
+            {
+                Tm_Synch_With_RTC();
+                uint32_t rat_curr_time = Rad_Get_Radio_Time();
+                uint32_t rtc_curr_time = Sts_Get_RTC_Time();
+
+                uint32_t rat_delta = Pfl_Delta_Time32(stc.rx_param.timestamp, rat_curr_time);
+                volatile uint32_t rtc_delta, tmp;
+                tmp = rat_delta * 256;
+                rtc_delta = tmp / 15625;
+                if ((tmp % 15625) > (15625/2))
+                    rtc_delta++;
+
+                stc.rtc_sync_time = (rtc_curr_time - rtc_delta) + STS_SYNC_PERIOD_RTC;
+                stc.rtc_wakeup_time = stc.rtc_sync_time - STS_WAKEUP_DELAY;
+
+                stc.rat_sync_time = stc.rx_param.timestamp + STS_SYNC_PERIOD_RAT;
+
+                stc.flags |= STS_F_1ST_PKT_RXED;
+                stc.state = STS_S_WAIT_WAKEUP_TIME;
+            }
+            else
+            {
+                // Print error and restart reception
+                Log_Val_Uint32("rx_err:", stc.rx_param.error);
+                Rad_Receive_Packet(&stc.rx_param);
+            }
+        }
+        else if (Rad_Get_Err_Code())
+        {
+            assertion("Radio error!");
+        }
+
+        break;
+
+    case STS_S_WAIT_WAKEUP_TIME:
+
+        Pma_MCU_Sleep(stc.rtc_wakeup_time);
+
+        // Set PHY mode and turn on the radio
+        Rad_Set_Data_Rate(RAD_DATA_RATE_125KBPS);
+        Rad_Turn_On_Radio();
+
+        stc.state = STS_S_WAIT_RADIO_STARTUP;
+
+        break;
+
+    case STS_S_WAIT_SET_RAT_OUTPUT:
+
+        if (Rad_Ready() == true)
+        {
+            Sts_Clear_RAT_Int_Flag();
+            Rad_Set_RAT_Cmp_Val(stc.rat_sync_time, NULL);
+            stc.state = STS_S_WAIT_SET_RAT_CMP_VAL;
+        }
+        else if (Rad_Get_Err_Code())
+        {
+            assertion("Radio error!");
+        }
+
+        break;
+
+    case STS_S_WAIT_SET_RAT_CMP_VAL:
+
+        if (Rad_Ready() == true)
+        {
             Rad_Receive_Packet(&stc.rx_param);
             stc.state = STS_S_WAIT_PKT_RX;
         }
@@ -241,22 +340,48 @@ static void Sts_Sensor_Process()
         {
             if (stc.rx_param.error == RAD_RX_ERR_NONE)
             {
-                static uint32_t last_timestamp = 0;
-                uint32_t curr_timestamp = stc.rx_param.timestamp;
-                uint32_t rxdelta = Pfl_Delta_Time32(last_timestamp, curr_timestamp);
+                Tm_Synch_With_RTC();
+                uint32_t rat_curr_time = Rad_Get_Radio_Time();
+                uint32_t rtc_curr_time = Sts_Get_RTC_Time();
 
-                Log_Val_Uint32("rxdelta:", rxdelta/4);
-                last_timestamp = curr_timestamp;
+                uint32_t rat_delta = Pfl_Delta_Time32(stc.rx_param.timestamp, rat_curr_time);
+                volatile uint32_t rtc_delta, tmp;
+                tmp = rat_delta * 256;
+                rtc_delta = tmp / 15625;
+                if ((tmp % 15625) > (15625/2))
+                    rtc_delta++;
+
+                stc.rtc_sync_time = (rtc_curr_time - rtc_delta) + STS_SYNC_PERIOD_RTC;
+                stc.rtc_wakeup_time = stc.rtc_sync_time - STS_WAKEUP_DELAY;
+
+                stc.rat_sync_time = stc.rx_param.timestamp + STS_SYNC_PERIOD_RAT;
             }
             else
             {
+                stc.rtc_sync_time += STS_SYNC_PERIOD_RTC;
+                stc.rtc_wakeup_time = stc.rtc_sync_time - STS_WAKEUP_DELAY;
+                stc.rat_sync_time += STS_SYNC_PERIOD_RAT;
+
                 Log_Line("nok");
                 Log_Val_Uint32("rx_err:", stc.rx_param.error);
-                stc.state = STS_S_DUMMY;
-                break;
             }
 
-            stc.state = STS_S_WAIT_RADIO_STARTUP;
+            Rad_Turn_Off_Radio();
+            stc.state = STS_S_WAIT_RADIO_OFF;
+//            stc.state = STS_S_DUMMY;
+        }
+        else if (Rad_Get_Err_Code())
+        {
+            assertion("Radio error!");
+        }
+
+        break;
+
+    case STS_S_WAIT_RADIO_OFF:
+
+        if (Rad_Radio_Is_On() == false)
+        {
+            stc.state = STS_S_WAIT_WAKEUP_TIME;
         }
         else if (Rad_Get_Err_Code())
         {
@@ -266,6 +391,11 @@ static void Sts_Sensor_Process()
         break;
 
     case STS_S_DUMMY:
+
+        if (Sts_Get_RAT_Int_Flag() == true) // ! do not call if radio is off
+        {
+            stc.state = STS_S_WAIT_WAKEUP_TIME;
+        }
 
         break;
 
@@ -279,6 +409,16 @@ static inline uint32_t Sts_Get_RTC_Time()
 {
     // The obtained value is 1 OSC cycle delayed
     return (Tm_Get_RTC_Time() - 2);
+}
+
+static inline bool Sts_Get_RAT_Int_Flag()
+{
+    return (HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) & RFC_DBELL_RFHWIFG_RATCH5);
+}
+
+static inline void Sts_Clear_RAT_Int_Flag()
+{
+    HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~RFC_DBELL_RFHWIFG_RATCH5;
 }
 
 

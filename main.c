@@ -104,7 +104,7 @@ int main(void)
         #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
         static uint8_t fsm_state = (uint8_t)-1; // holds last assigned value (static)
         uint8_t new_fsm_state;
-        if (fsm_state != (new_fsm_state = Cpe_Get_FSM_State()))
+        if (fsm_state != (new_fsm_state = Sts_Get_FSM_State()))
         {
             fsm_state = new_fsm_state;
             Log_Val_Hex32("s:", fsm_state);
