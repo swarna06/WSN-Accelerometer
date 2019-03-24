@@ -354,6 +354,8 @@ static void Sts_Sensor_Process()
                 stc.rtc_sync_time = (rtc_curr_time - rtc_delta) + STS_SYNC_PERIOD_RTC;
                 stc.rtc_wakeup_time = stc.rtc_sync_time - STS_WAKEUP_DELAY;
 
+                int32_t sync_err = stc.rx_param.timestamp - stc.rat_sync_time;
+                Log_Val_Int32("sync_err:", sync_err);
                 stc.rat_sync_time = stc.rx_param.timestamp + STS_SYNC_PERIOD_RAT;
             }
             else
