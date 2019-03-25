@@ -22,7 +22,8 @@
 
 #define STS_RADIO_OP_DELAY      (762 + 5) // 191.4 usec / 0.25 usec (+ 5 trimming)
 
-#define STS_SAMP_NUM            4
+// No moving average or low sample number provide better results
+#define STS_SAMP_NUM            1
 
 enum
 {
