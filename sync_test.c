@@ -83,6 +83,11 @@ void Sts_Init()
     stc.samp_idx = 0;
     for (size_t i = 0; i < STS_SAMP_NUM; i++)
         stc.sync_err_samples[i] = 0;
+    stc.samp_cnt = STS_SAMP_NUM * 2;
+
+    HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINC0) = 0;
+    HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINC1) = 0x80;
+    HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINCCTL) = 0x01;
 
     #ifdef CFG_DEBUG_START_OF_FRAME_OUT
     // Configure an RTC CH in compare mode and enable interrupt
@@ -457,41 +462,44 @@ static void Sts_Compensate_Drift(int32_t offset_ticks)
     for (size_t i = 0; i < STS_SAMP_NUM; i++)
         sum += stc.sync_err_samples[i];
 
-    Log_Val_Int32("sum:", sum);
-    bool negative = false;
-    if (sum < 0)
-    {
-        sum = sum * (-1); // this has to be done to avoid error in the rounding (modulo & negative)
-        negative = true;
-    }
-
-    uint32_t average = sum / STS_SAMP_NUM;
-    if (sum % STS_SAMP_NUM > STS_SAMP_NUM/2) // round to nearest
+    uint32_t sum_abs = sum >= 0 ? sum : (-1)*sum; // this has to be done to avoid error in the rounding (modulo & negative)
+    uint32_t average = sum_abs / STS_SAMP_NUM;
+    if (sum_abs % STS_SAMP_NUM > STS_SAMP_NUM/2) // round to nearest
         average++;
 
     // Calculate ppm offset and adjust clock rate
     uint32_t ppm = average/(RAD_RAT_TICKS_PER_USEC * STS_SYNC_PER_SEC);
-    assertion(ppm < sizeof(subsec_inc_offset));
+    if (ppm >= sizeof(subsec_inc_offset))
+    {
+        Log_Line("ppm >= sizeof(subsec_inc_offset)");
+        ppm = sizeof(subsec_inc_offset) - 1;
+    }
 
     uint32_t new_rate = HWREG(AON_RTC_BASE + AON_RTC_O_SUBSECINC);
-    if (negative == false)
+    if (sum >= 0)
         new_rate -= subsec_inc_offset[ppm];
     else
         new_rate += subsec_inc_offset[ppm];
 
-    uint16_t new_rate_0 = 0x0000FFFF & new_rate;
-    uint16_t new_rate_1 = (0x00FF0000 & new_rate) >> 16;
+    // Adjust if we have enough samples
+    if (stc.samp_cnt == 0)
+    {
+        uint16_t new_rate_0 = 0x0000FFFF & new_rate;
+        uint16_t new_rate_1 = (0x00FF0000 & new_rate) >> 16;
 
-    HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINC0) = new_rate_0;
-    HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINC1) = new_rate_1;
-    HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINCCTL) = 0x01;
+        HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINC0) = new_rate_0;
+        HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINC1) = new_rate_1;
+        HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINCCTL) = 0x01;
+    }
+    else
+        stc.samp_cnt--;
 
-    Log_Val_Int32("new:", offset_ticks);
-    Log_Val_Int32("ave:", average);
-
-    Log_Val_Int32("ppm:", ppm);
-    Log_Val_Int32("offs:", subsec_inc_offset[ppm]);
-    Log_Val_Int32("rate:", new_rate);
+    // Print result
+    Log_String_Literal(""); Log_Value_Int(offset_ticks);
+    Log_String_Literal(", "); Log_Value_Int(sum);
+    Log_String_Literal(", "); Log_Value_Uint(average);
+    Log_String_Literal(", "); Log_Value_Int(ppm);
+    Log_Line(""); // new line
 }
 
 

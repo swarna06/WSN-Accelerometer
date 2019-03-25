@@ -67,6 +67,7 @@ typedef struct
 
     int32_t sync_err_samples[STS_SAMP_NUM];
     size_t samp_idx;
+    size_t samp_cnt;
 
     uint8_t flags;
     uint8_t state;
