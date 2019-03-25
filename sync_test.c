@@ -119,7 +119,7 @@ static void Sts_Sink_Process()
         Pma_MCU_Sleep(stc.rtc_wakeup_time);
 
         // Set interrupt compare value to match the synchronization instant
-        AONRTCCompareValueSet(AON_RTC_CH1, stc.rtc_sync_time);
+//        AONRTCCompareValueSet(AON_RTC_CH1, stc.rtc_sync_time);
 
         // Set PHY mode and turn on the radio
         Rad_Set_Data_Rate(RAD_DATA_RATE_125KBPS);
@@ -136,28 +136,42 @@ static void Sts_Sink_Process()
 
         if (Rad_Radio_Is_On() == true)
         {
-            // Schedule beacon transmission
-            Tm_Synch_With_RTC();
-            uint32_t rat_curr_time = Rad_Get_Radio_Time();
+//            // Schedule beacon transmission
+//            Tm_Synch_With_RTC();
+//            uint32_t rat_curr_time = Rad_Get_Radio_Time();
+//
+//            uint32_t rtc_curr_time = Sts_Get_RTC_Time();
+//            uint32_t rtc_delta = stc.rtc_sync_time - rtc_curr_time;
+//
+//            // TODO could RAT simply be increased without considering RTC time ?
+//
+//            // Calculate start time
+//            volatile uint32_t rat_delta, tmp;
+//            tmp = rtc_delta * 15625;
+//            rat_delta = tmp / 256;
+//            if ((tmp % 256) > (256/2))
+//                rat_delta++;
+//
+//            stc.tx_param.start_time = rat_curr_time + rat_delta;
+//
+//            Log_Val_Uint32("delta:", rtc_delta);
 
-            uint32_t rtc_curr_time = Sts_Get_RTC_Time();
-            uint32_t rtc_delta = stc.rtc_sync_time - rtc_curr_time;
+            if (stc.flags & STS_F_MASTER_INITIALIZED)
+            {
+                Rad_Set_RAT_Output();
+                stc.state = STS_S_WAIT_SET_RAT_OUTPUT;
+            }
+            else
+            {
+                Tm_Synch_With_RTC();
+                stc.rat_sync_time = Rad_Get_Radio_Time();
+                stc.rtc_sync_time = Sts_Get_RTC_Time();
+                stc.rtc_wakeup_time = stc.rtc_sync_time - STS_WAKEUP_DELAY;
 
-            // TODO could RAT simply be increased without considering RTC time ?
-
-            // Calculate start time
-            volatile uint32_t rat_delta, tmp;
-            tmp = rtc_delta * 15625;
-            rat_delta = tmp / 256;
-            if ((tmp % 256) > (256/2))
-                rat_delta++;
-
-            stc.tx_param.start_time = rat_curr_time + rat_delta;
-
-            Log_Val_Uint32("delta:", rtc_delta);
-
-            Rad_Set_RAT_Output();
-            stc.state = STS_S_WAIT_SET_RAT_OUTPUT;
+                Rad_Turn_Off_Radio();
+                stc.flags |= STS_F_MASTER_INITIALIZED;
+                stc.state = STS_S_WAIT_RADIO_OFF;
+            }
         }
         else if (Rad_Get_Err_Code())
         {
@@ -170,7 +184,8 @@ static void Sts_Sink_Process()
 
         if (Rad_Ready() == true)
         {
-            Rad_Set_RAT_Cmp_Val(stc.tx_param.start_time, NULL);
+//            Rad_Set_RAT_Cmp_Val(stc.tx_param.start_time, NULL);
+            Rad_Set_RAT_Cmp_Val(stc.rat_sync_time, NULL);
             stc.state = STS_S_WAIT_SET_RAT_CMP_VAL;
         }
         else if (Rad_Get_Err_Code())
@@ -184,7 +199,8 @@ static void Sts_Sink_Process()
 
         if (Rad_Ready() == true)
         {
-            stc.tx_param.start_time -= STS_RADIO_OP_DELAY;
+//            stc.tx_param.start_time -= STS_RADIO_OP_DELAY;
+            stc.tx_param.start_time = stc.rat_sync_time - STS_RADIO_OP_DELAY;
 //            stc.tx_param.payload_len = RAD_MAX_PAYLOAD_LEN;
             stc.tx_param.payload_len = 0;
             Rad_Transmit_Packet(&stc.tx_param);
@@ -226,10 +242,14 @@ static void Sts_Sink_Process()
 
     case STS_S_DUMMY:
 
-        if (proceed == true)
+//        if (proceed == true)
         {
+            Brd_Led_Toggle(BRD_RTC_OUT_PIN);
+
             stc.rtc_sync_time += STS_SYNC_PERIOD_RTC;
             stc.rtc_wakeup_time = stc.rtc_sync_time - STS_WAKEUP_DELAY;
+
+            stc.rat_sync_time += STS_SYNC_PERIOD_RAT;
 
             stc.state = STS_S_WAIT_WAKEUP_TIME;
         }

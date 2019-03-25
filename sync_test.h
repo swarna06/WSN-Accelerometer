@@ -51,6 +51,7 @@ enum
 enum
 {
     STS_F_1ST_PKT_RXED = 0x01,
+    STS_F_MASTER_INITIALIZED = 0x02,
 };
 
 
