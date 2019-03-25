@@ -34,6 +34,7 @@ static void Sts_Sensor_Process();
 static uint32_t Sts_Get_RTC_Time();
 static bool Sts_Get_RAT_Int_Flag();
 static void Sts_Clear_RAT_Int_Flag();
+static int32_t Sts_Get_Weighted_Moving_Average();
 static void Sts_Compensate_Drift(int32_t offset_ticks);
 
 #ifdef CFG_DEBUG_START_OF_FRAME_OUT
@@ -83,7 +84,7 @@ void Sts_Init()
     stc.samp_idx = 0;
     for (size_t i = 0; i < STS_SAMP_NUM; i++)
         stc.sync_err_samples[i] = 0;
-    stc.samp_cnt = STS_SAMP_NUM * 2;
+    stc.samp_cnt = 0;
 
     HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINC0) = 0;
     HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINC1) = 0x80;
@@ -438,23 +439,54 @@ static inline void Sts_Clear_RAT_Int_Flag()
     HWREG(RFC_DBELL_BASE + RFC_DBELL_O_RFHWIFG) = ~RFC_DBELL_RFHWIFG_RATCH5;
 }
 
+static int32_t Sts_Get_Weighted_Moving_Average()
+{
+    const uint32_t w0 = 4, w1 = 3, w2 = 2, w3 = 1;
+    const uint32_t total_weight = w0 + w1 + w2 + w3;
+
+    size_t n = stc.samp_idx;
+    size_t count = 0;
+    uint32_t weight[STS_SAMP_NUM] = {w0, w1, w2, w3};
+    int32_t sum = 0;
+    do
+    {
+        Log_Val_Uint32("w", weight[count]);
+        Log_Val_Uint32("n", n);
+        sum += weight[count] * stc.sync_err_samples[n];
+        count++;
+        n = n > 0 ? n - 1 : STS_SAMP_NUM - 1;
+    } while (count < STS_SAMP_NUM);
+
+    int32_t tmp = sum >= 0 ? sum : (-1)*sum;
+    int32_t average = tmp / total_weight;
+    if (tmp % total_weight > total_weight / 2)
+        average++;
+
+    average = sum >= 0 ? average : (-1)*average;
+    return average;
+}
+
 static void Sts_Compensate_Drift(int32_t offset_ticks)
 {
     // Add new sample, update index and calculate average
     stc.sync_err_samples[stc.samp_idx] = offset_ticks;
+
+    int32_t sum = Sts_Get_Weighted_Moving_Average();
+    uint32_t average = sum >= 0 ? sum : (-1)*sum;
+
     if (stc.samp_idx < STS_SAMP_NUM - 1)
         stc.samp_idx++;
     else
         stc.samp_idx = 0;
 
-    int32_t sum = 0;
-    for (size_t i = 0; i < STS_SAMP_NUM; i++)
-        sum += stc.sync_err_samples[i];
+//    int32_t sum = 0;
+//    for (size_t i = 0; i < STS_SAMP_NUM; i++)
+//        sum += stc.sync_err_samples[i];
 
-    uint32_t sum_abs = sum >= 0 ? sum : (-1)*sum; // this has to be done to avoid error in the rounding (modulo & negative)
-    uint32_t average = sum_abs / STS_SAMP_NUM;
-    if (sum_abs % STS_SAMP_NUM > STS_SAMP_NUM/2) // round to nearest
-        average++;
+//    uint32_t sum_abs = sum >= 0 ? sum : (-1)*sum; // this has to be done to avoid error in the rounding (modulo & negative)
+//    uint32_t average = sum_abs / STS_SAMP_NUM;
+//    if (sum_abs % STS_SAMP_NUM > STS_SAMP_NUM/2) // round to nearest
+//        average++;
 
     // Calculate ppm offset and adjust clock rate
     uint32_t ppm = average/(RAD_RAT_TICKS_PER_USEC * STS_SYNC_PER_SEC);
@@ -465,6 +497,7 @@ static void Sts_Compensate_Drift(int32_t offset_ticks)
     }
 
     uint32_t new_rate = HWREG(AON_RTC_BASE + AON_RTC_O_SUBSECINC);
+//    uint32_t new_rate = 0x800000;
     if (sum >= 0)
         new_rate -= subsec_inc_offset[ppm];
     else
