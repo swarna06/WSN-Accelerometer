@@ -369,20 +369,9 @@ static void Sts_Sensor_Process()
                 stc.rtc_wakeup_time = stc.rtc_sync_time - STS_WAKEUP_DELAY;
 
                 int32_t sync_err_ticks = stc.rx_param.timestamp - stc.rat_sync_time;
-//                Log_Val_Int32("sync_err:", sync_err_ticks);
                 stc.rat_sync_time = stc.rx_param.timestamp + STS_SYNC_PERIOD_RAT;
 
                 Sts_Compensate_Drift(sync_err_ticks);
-
-//                // Adjust offset
-//                uint32_t new_rate = 8388583; // -3 ppm
-////                uint32_t new_rate = 8388633; // +3 ppm
-//                uint16_t new_rate_0 = 0x0000FFFF & new_rate;
-//                uint16_t new_rate_1 = (0x00FF0000 & new_rate) >> 16;
-//
-//                HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINC0) = new_rate_0;
-//                HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINC1) = new_rate_1;
-//                HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINCCTL) = 0x01;
             }
             else
             {
