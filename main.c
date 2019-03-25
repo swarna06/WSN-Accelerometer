@@ -65,7 +65,7 @@ int main(void)
     IOCIOPortPullSet(BRD_GPIO_IN0, IOC_IOPULL_UP);
     IOCIOPortPullSet(BRD_GPIO_IN1, IOC_IOPULL_UP);
     #endif // #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
-
+    Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
     {
@@ -83,6 +83,9 @@ int main(void)
             Ptc_Process();
         else if (Rfc_Error())
             Ptc_Handle_Error();
+
+        if(Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
+            GPIO_toggleDio(7);
 
         // DEBUG
         // Print state of FSM

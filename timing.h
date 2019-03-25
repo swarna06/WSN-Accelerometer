@@ -25,9 +25,11 @@
 
 // List of periods, values in milliseconds
 #define TM_PER_HEARTBEAT_ID     0
-#define TM_PER_HEARTBEAT_VAL    1000
+#define TM_PER_HEARTBEAT_VAL    10
 
 #define TM_PER_PTC_ID           1
+
+
 
 // List of timeouts, values in milliseconds
 #define TM_TOUT_TEST_ID         0

@@ -32,7 +32,7 @@
 #include "protocol.h"
 
 static pma_control_t pmc;
-int16_t abuf[5];
+int32_t abuf[5];
 
 void Pma_RTC_Isr()
 {
@@ -201,7 +201,7 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
         if((uint8_t )(HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0))!=0)  // poll sensor data and accumulate buffer(pointer) if it is a sensor node
         {
                                     Sen_Read_Acc_Test(abuf);
-
+                                    Brd_Led_Toggle(BRD_LED0);
                                    /* Log_Value_Int(abuf[0]);Log_String_Literal(",");
                                       Log_Value_Int(abuf[1]);Log_String_Literal(",");
                                       Log_Value_Int(abuf[2]);Log_String_Literal(",");

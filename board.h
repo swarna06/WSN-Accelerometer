@@ -13,8 +13,8 @@
 #define BRD_LAUNCHPAD               1
 #define BRD_SENSOR_NODE_V1          2
 
-//#define BRD_BOARD                   BRD_LAUNCHPAD
-#define BRD_BOARD                   BRD_SENSOR_NODE_V1
+#define BRD_BOARD                   BRD_LAUNCHPAD
+//#define BRD_BOARD                   BRD_SENSOR_NODE_V1
 
 #define Brd_Led_Toggle(l)           GPIO_toggleDio(l)
 

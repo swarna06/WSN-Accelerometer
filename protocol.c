@@ -881,7 +881,7 @@ static void Ptc_Set_Default_Radio_Config()
 // Test functions
 // ********************************
 
-void Ptc_Get_Acc(int16_t* abuf)
+void Ptc_Get_Acc(int32_t* abuf)
 {
     ptc.accbuf = abuf;
    /*Log_Value_Int(ptc.accbuf[0]);Log_String_Literal(",");
@@ -912,7 +912,7 @@ static void Ptc_Process_Acc_Pkt()
 {
     if (ptc.rx_result.err_flags == 0) // success ?
         {
-            int16_t* pp = ptc.rx_result.buf;
+            int32_t* pp = ptc.rx_result.buf;
             Log_Value_Int(ptc.start_of_next_frame);Log_String_Literal(",");
             for(int i=0; i< 5; i++)
             {

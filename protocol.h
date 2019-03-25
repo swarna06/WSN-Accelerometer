@@ -182,7 +182,7 @@ typedef struct
     uint8_t tx_buf[PTC_RXTX_BUF_LEN];
     uint8_t rx_buf[PTC_RXTX_BUF_LEN];
 
-    int16_t* accbuf;
+    int32_t* accbuf;
     ptc_test_t* test;
 } ptc_control_t;
 
@@ -194,6 +194,6 @@ uint8_t Ptc_Get_FSM_State();
 
 void Ptc_Handle_Error();
 
-void Ptc_Get_Acc(int16_t* abuf);
+void Ptc_Get_Acc(int32_t* abuf);
 
 #endif /* PROTOCOL_H_ */

@@ -12,7 +12,7 @@
 
 void Sen_Init();
 
-void Sen_Read_Acc_Test(int16_t* abuf);
+void Sen_Read_Acc_Test(int32_t* abuf);
 
 
 
