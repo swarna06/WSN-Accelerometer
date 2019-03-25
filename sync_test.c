@@ -118,17 +118,11 @@ static void Sts_Sink_Process()
 
         Pma_MCU_Sleep(stc.rtc_wakeup_time);
 
-        // Set interrupt compare value to match the synchronization instant
-//        AONRTCCompareValueSet(AON_RTC_CH1, stc.rtc_sync_time);
-
         // Set PHY mode and turn on the radio
         Rad_Set_Data_Rate(RAD_DATA_RATE_125KBPS);
         Rad_Turn_On_Radio();
 
         stc.state = STS_S_WAIT_RADIO_STARTUP;
-
-        proceed = false;
-//        stc.state = STS_S_DUMMY;
 
         break;
 
@@ -136,26 +130,6 @@ static void Sts_Sink_Process()
 
         if (Rad_Radio_Is_On() == true)
         {
-//            // Schedule beacon transmission
-//            Tm_Synch_With_RTC();
-//            uint32_t rat_curr_time = Rad_Get_Radio_Time();
-//
-//            uint32_t rtc_curr_time = Sts_Get_RTC_Time();
-//            uint32_t rtc_delta = stc.rtc_sync_time - rtc_curr_time;
-//
-//            // TODO could RAT simply be increased without considering RTC time ?
-//
-//            // Calculate start time
-//            volatile uint32_t rat_delta, tmp;
-//            tmp = rtc_delta * 15625;
-//            rat_delta = tmp / 256;
-//            if ((tmp % 256) > (256/2))
-//                rat_delta++;
-//
-//            stc.tx_param.start_time = rat_curr_time + rat_delta;
-//
-//            Log_Val_Uint32("delta:", rtc_delta);
-
             if (stc.flags & STS_F_MASTER_INITIALIZED)
             {
                 Rad_Set_RAT_Output();
@@ -184,7 +158,6 @@ static void Sts_Sink_Process()
 
         if (Rad_Ready() == true)
         {
-//            Rad_Set_RAT_Cmp_Val(stc.tx_param.start_time, NULL);
             Rad_Set_RAT_Cmp_Val(stc.rat_sync_time, NULL);
             stc.state = STS_S_WAIT_SET_RAT_CMP_VAL;
         }
@@ -199,7 +172,6 @@ static void Sts_Sink_Process()
 
         if (Rad_Ready() == true)
         {
-//            stc.tx_param.start_time -= STS_RADIO_OP_DELAY;
             stc.tx_param.start_time = stc.rat_sync_time - STS_RADIO_OP_DELAY;
 //            stc.tx_param.payload_len = RAD_MAX_PAYLOAD_LEN;
             stc.tx_param.payload_len = 0;
