@@ -152,7 +152,7 @@ typedef struct
 {
     bool delayed_start;
     uint32_t start_time;
-    uint32_t timeout_usec;
+    uint32_t timeout;
 
     size_t dest_buf_len;
     uint8_t *dest_buf;

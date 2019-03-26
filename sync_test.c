@@ -79,7 +79,9 @@ void Sts_Init()
     stc.rx_param.dest_buf = stc.txrx_buf;
     stc.rx_param.dest_buf_len = RAD_MAX_PAYLOAD_LEN;
     stc.rx_param.start_time = 0;
-    stc.rx_param.timeout_usec = 0;
+    stc.rx_param.timeout = 0;
+
+    stc.missed_pkt_cnt = 0;
 
     stc.samp_idx = 0;
     for (size_t i = 0; i < STS_SAMP_NUM; i++)
@@ -170,11 +172,19 @@ static void Sts_Sink_Process()
 
     case STS_S_WAIT_SET_RAT_CMP_VAL:
 
+        #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
+        if (!GPIO_readDio(BRD_GPIO_IN0))
+        {
+            while (Sts_Get_RAT_Int_Flag() == false) {};
+            Log_Line("Button pressed, no tx");
+            stc.state = STS_S_WAIT_PKT_TX;
+        } else
+        #endif // #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
         if (Rad_Ready() == true)
         {
             stc.tx_param.start_time = stc.rat_sync_time - STS_RADIO_OP_DELAY;
-//            stc.tx_param.payload_len = RAD_MAX_PAYLOAD_LEN;
-            stc.tx_param.payload_len = 0;
+            stc.tx_param.payload_len = RAD_MAX_PAYLOAD_LEN;
+//            stc.tx_param.payload_len = 0;
             Rad_Transmit_Packet(&stc.tx_param);
             stc.state = STS_S_WAIT_PKT_TX;
         }
@@ -331,6 +341,17 @@ static void Sts_Sensor_Process()
 
         if (Rad_Ready() == true)
         {
+            // Calculate reception start time and timeout, and start radio operation
+            stc.rx_param.delayed_start = true;
+
+            stc.rx_param.start_time = stc.rat_sync_time;
+            stc.rx_param.start_time -= (STS_GUART_TIME_RAT_TICKS + STS_RADIO_OP_DELAY);
+            stc.rx_param.start_time -= STS_RX_START_DELAY;
+
+            stc.rx_param.timeout = STS_PREAMBLE_TIME_RAT_TICKS;
+            stc.rx_param.timeout += 2*STS_GUART_TIME_RAT_TICKS;
+            stc.rx_param.timeout += STS_RADIO_OP_DELAY;
+
             Rad_Receive_Packet(&stc.rx_param);
             stc.state = STS_S_WAIT_PKT_RX;
         }
@@ -365,12 +386,15 @@ static void Sts_Sensor_Process()
                 stc.rat_sync_time = stc.rx_param.timestamp + STS_SYNC_PERIOD_RAT;
 
                 Sts_Compensate_Drift(sync_err_ticks);
+                stc.missed_pkt_cnt = 0;
             }
             else
             {
                 stc.rtc_sync_time += STS_SYNC_PERIOD_RTC;
                 stc.rtc_wakeup_time = stc.rtc_sync_time - STS_WAKEUP_DELAY;
                 stc.rat_sync_time += STS_SYNC_PERIOD_RAT;
+
+                stc.missed_pkt_cnt++;
 
                 Log_Line("nok");
                 Log_Val_Uint32("rx_err:", stc.rx_param.error);
@@ -473,7 +497,8 @@ static void Sts_Compensate_Drift(int32_t offset_ticks)
 #endif
 
     // Calculate ppm offset and adjust clock rate
-    uint32_t ppm = average/(RAD_RAT_TICKS_PER_USEC * STS_SYNC_PER_SEC);
+    uint32_t time_interval = RAD_RAT_TICKS_PER_USEC * STS_SYNC_PER_SEC * (1 + stc.missed_pkt_cnt);
+    uint32_t ppm = average/time_interval;
     if (ppm >= sizeof(subsec_inc_offset))
     {
         Log_Line("ppm >= sizeof(subsec_inc_offset)");
@@ -504,6 +529,7 @@ static void Sts_Compensate_Drift(int32_t offset_ticks)
     Log_String_Literal(""); Log_Value_Int(offset_ticks);
     Log_String_Literal(", "); Log_Value_Uint(average);
     Log_String_Literal(", "); Log_Value_Int(ppm);
+    Log_String_Literal(", "); Log_Value_Int(1 + stc.missed_pkt_cnt);
     Log_Line(""); // new line
 }
 

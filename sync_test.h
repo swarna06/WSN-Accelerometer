@@ -12,15 +12,22 @@
 
 #include "radio.h"
 
-#define STS_SYNC_PER_SEC        1
-#define STS_SYNC_PER_DIV        1
+#define STS_SYNC_PER_SEC                1
+#define STS_SYNC_PER_DIV                1
 
-#define STS_SYNC_PERIOD_RTC     (((1<<16)/STS_SYNC_PER_DIV)*STS_SYNC_PER_SEC) // 1 second
-#define STS_WAKEUP_DELAY        (TM_RTC_TICKS_PER_MSEC * 2) // 2 milliseconds
+#define STS_SYNC_PERIOD_RTC             (((1<<16)/STS_SYNC_PER_DIV)*STS_SYNC_PER_SEC) // 1 second
+#define STS_WAKEUP_DELAY                (TM_RTC_TICKS_PER_MSEC * 2) // 2 milliseconds
 
-#define STS_SYNC_PERIOD_RAT     (((4000000)/STS_SYNC_PER_DIV)*STS_SYNC_PER_SEC) // 1 second
+#define STS_SYNC_PERIOD_RAT             (((4000000)/STS_SYNC_PER_DIV)*STS_SYNC_PER_SEC) // 1 second
 
-#define STS_RADIO_OP_DELAY      (762 + 5) // 191.4 usec / 0.25 usec (+ 5 trimming)
+#define STS_RADIO_OP_DELAY              (762 + 5) // 191.4 usec / 0.25 usec (+ 5 trimming)
+
+#define STS_RX_START_DELAY              (RAD_RAT_TICKS_PER_USEC * 40) // 40 usec
+#define STS_GUARD_TIME_USEC             50 // max synchronization error
+#define STS_PREAMBLE_TIME_USEC          (80 + 256 + 16 + 24 + 3*8*8 + 24*8 + 3*8) // coded PHY
+#define STS_GUART_TIME_RAT_TICKS        (RAD_RAT_TICKS_PER_USEC * STS_GUARD_TIME_USEC)
+#define STS_PREAMBLE_TIME_RAT_TICKS     (RAD_RAT_TICKS_PER_USEC * STS_PREAMBLE_TIME_USEC)
+
 
 // No moving average or low sample number provide better results
 #define STS_SAMP_NUM            1
@@ -67,6 +74,7 @@ typedef struct
     rad_rx_param_t rx_param;
     uint8_t txrx_buf[RAD_MAX_PAYLOAD_LEN];
 
+    int32_t missed_pkt_cnt;
     int32_t sync_err_samples[STS_SAMP_NUM];
     size_t samp_idx;
     size_t samp_cnt;

@@ -301,7 +301,7 @@ bool Rad_Receive_Packet(rad_rx_param_t* rx_param_p)
     data_queue.pCurrEntry = (uint8_t*)&data_entry_ptr;
 
     // Set command end time (relative to the start time)
-    cmd_ble5_scanner_p->pParams->timeoutTime = Rad_Microsec_To_RAT_Ticks(rx_param_p->timeout_usec);
+    cmd_ble5_scanner_p->pParams->timeoutTime = rx_param_p->timeout;
 
     // Start radio operation
     Cpe_Start_Radio_Op((rfc_radioOp_t*)cmd_ble5_scanner_p, 0); // xxx timeout
@@ -368,7 +368,7 @@ void Rad_Enable_Radio_Event_Output()
     // Mapping of RF core internal signals to RFC GPOn is done in smartrf_settings.c
     IOCPortConfigureSet(BRD_RFC_RATCH_PIN, IOC_PORT_RFC_GPO0, IOC_STD_OUTPUT);
     IOCPortConfigureSet(BRD_RFC_RXOUT_PIN, IOC_PORT_RFC_GPO2, IOC_STD_OUTPUT);
-    IOCPortConfigureSet(BRD_RFC_TXOUT_PIN, IOC_PORT_RFC_GPO1, IOC_STD_OUTPUT);
+    IOCPortConfigureSet(BRD_RFC_TXOUT_PIN, IOC_PORT_RFC_GPO3, IOC_STD_OUTPUT);
 }
 
 // ********************************
