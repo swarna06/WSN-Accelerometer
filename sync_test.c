@@ -44,7 +44,7 @@ void Sts_RTC_Isr();
 void Sts_Init()
 {
     Rad_Enable_Radio_Event_Output();
-    Rad_Set_Data_Rate(RAD_DATA_RATE_125KBPS);
+    Rad_Set_Data_Rate(STS_DATA_RATE);
 
     // Get device ID
     uint32_t secondary_ble_addr_l = HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0);
@@ -121,7 +121,7 @@ static void Sts_Sink_Process()
         Pma_MCU_Sleep(stc.rtc_wakeup_time);
 
         // Set PHY mode and turn on the radio
-        Rad_Set_Data_Rate(RAD_DATA_RATE_125KBPS);
+        Rad_Set_Data_Rate(STS_DATA_RATE);
         Rad_Turn_On_Radio();
 
         stc.state = STS_S_WAIT_RADIO_STARTUP;
@@ -187,6 +187,8 @@ static void Sts_Sink_Process()
 //            stc.tx_param.payload_len = 0;
             Rad_Transmit_Packet(&stc.tx_param);
             stc.state = STS_S_WAIT_PKT_TX;
+
+            Log_Line("tx");
         }
         else if (Rad_Get_Err_Code())
         {
@@ -316,7 +318,7 @@ static void Sts_Sensor_Process()
         Pma_MCU_Sleep(stc.rtc_wakeup_time);
 
         // Set PHY mode and turn on the radio
-        Rad_Set_Data_Rate(RAD_DATA_RATE_125KBPS);
+        Rad_Set_Data_Rate(STS_DATA_RATE);
         Rad_Turn_On_Radio();
 
         stc.state = STS_S_WAIT_RADIO_STARTUP;

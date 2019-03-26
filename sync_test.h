@@ -12,6 +12,8 @@
 
 #include "radio.h"
 
+#define STS_DATA_RATE                   RAD_DATA_RATE_125KBPS
+
 #define STS_SYNC_PER_SEC                1
 #define STS_SYNC_PER_DIV                1
 
