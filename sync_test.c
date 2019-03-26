@@ -294,7 +294,8 @@ static void Sts_Sensor_Process()
                 stc.rat_sync_time = stc.rx_param.timestamp + STS_SYNC_PERIOD_RAT;
 
                 stc.flags |= STS_F_1ST_PKT_RXED;
-                stc.state = STS_S_WAIT_WAKEUP_TIME;
+                Rad_Turn_Off_Radio();
+                stc.state = STS_S_WAIT_RADIO_OFF;
             }
             else
             {
