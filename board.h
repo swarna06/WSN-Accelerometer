@@ -55,6 +55,13 @@
     #define BRD_UART_TX             4
     #define BRD_UART_RX             5
 
+    #define BRD_SLEEP_PIN           BRD_LED0
+    #define BRD_LF_OSC_PIN          3
+    #define BRD_RFC_TXOUT_PIN       2
+    #define BRD_RFC_RXOUT_PIN       1
+    #define BRD_RFC_RATCH_PIN       0
+    #define BRD_RTC_OUT_PIN         BRD_LED1
+
     // LEDs are active low
     #define Brd_Led_On(l)           GPIO_clearDio(l)
     #define Brd_Led_Off(l)          GPIO_setDio(l)
