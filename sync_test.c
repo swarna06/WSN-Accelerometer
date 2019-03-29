@@ -19,6 +19,7 @@
 #include "configuration.h"
 #include "log.h"
 #include "profiling.h"
+#include "fixedptc.h"
 
 bool proceed = false;
 
@@ -35,7 +36,8 @@ static uint32_t Sts_Get_RTC_Time();
 static bool Sts_Get_RAT_Int_Flag();
 static void Sts_Clear_RAT_Int_Flag();
 static int32_t Sts_Get_Weighted_Moving_Average(int32_t* samples, size_t idx);
-static void Sts_Compensate_Drift(int32_t offset_ticks);
+void Sts_Compensate_Drift(int32_t offset_ticks);
+void Sts_Compensate_Drift2(int32_t offset_ticks);
 
 #ifdef CFG_DEBUG_START_OF_FRAME_OUT
 void Sts_RTC_Isr();
@@ -388,7 +390,8 @@ static void Sts_Sensor_Process()
                 int32_t sync_err_ticks = stc.rx_param.timestamp - stc.rat_sync_time;
                 stc.rat_sync_time = stc.rx_param.timestamp + STS_SYNC_PERIOD_RAT;
 
-                Sts_Compensate_Drift(sync_err_ticks);
+//                Sts_Compensate_Drift(sync_err_ticks);
+                Sts_Compensate_Drift2(sync_err_ticks);
                 stc.missed_pkt_cnt = 0;
             }
             else
@@ -484,7 +487,7 @@ static int32_t Sts_Get_Weighted_Moving_Average(int32_t* samples, size_t idx)
     return average;
 }
 
-static void Sts_Compensate_Drift(int32_t offset_ticks)
+void Sts_Compensate_Drift(int32_t offset_ticks)
 {
     // Add new sample, calculate average, and update index
     stc.sync_err_samples[stc.samp_idx] = offset_ticks;
@@ -534,6 +537,72 @@ static void Sts_Compensate_Drift(int32_t offset_ticks)
     Log_String_Literal(", "); Log_Value_Int(ppm);
     Log_String_Literal(", "); Log_Value_Int(1 + stc.missed_pkt_cnt);
     Log_Line(""); // new line
+}
+
+void Sts_Compensate_Drift2(int32_t offset_ticks)
+{
+    const fixedptu PPM_PER_TICK = fixedpt_rconst(0.250);
+    const fixedptu INC_PER_PPM = fixedpt_rconst(8.3885);
+
+    volatile uint32_t ticks_abs = offset_ticks >= 0 ? offset_ticks : (-1)*offset_ticks;
+    if (ticks_abs > (1 << 13)) // max range exceeded ?
+    {
+        Log_Line("ticks_abs > (1 << 13)");
+        return;
+    }
+
+    uint32_t interval = STS_SYNC_PER_SEC * (1 + stc.missed_pkt_cnt);
+    ticks_abs = ticks_abs/interval; // TODO increase precision
+
+    // Convert number of ticks to fixed point format
+    volatile fixedptu ticks_fix = fixedpt_fromint(ticks_abs);
+
+    // Divide by time interval since last beacon
+//    volatile uint32_t interval = STS_SYNC_PER_SEC * (1 + stc.missed_pkt_cnt);
+//    volatile fixedptu interval_fix = fixedpt_fromint(interval);
+//    ticks_fix = fixedpt_xmul(ticks_fix, interval_fix);
+
+    // Calculate corresponding SUBSECINC
+    volatile fixedptu inc_fix = 0;
+    inc_fix = fixedpt_xmul(ticks_fix, PPM_PER_TICK);
+    inc_fix = fixedpt_xmul(inc_fix, INC_PER_PPM);
+
+    volatile fixedptu inc_fracpart_fix = fixedpt_fracpart(inc_fix);
+    volatile uint32_t inc = fixedpt_toint(inc_fix);
+    if (inc_fracpart_fix > FIXEDPT_ONE_HALF)
+        inc++;
+
+    // Calculate delta and update SUBSECINC register
+    uint32_t new_rate = HWREG(AON_RTC_BASE + AON_RTC_O_SUBSECINC);
+    if (offset_ticks >= 0)
+        new_rate -= inc;
+    else
+        new_rate += inc;
+
+    uint16_t new_rate_0 = 0x0000FFFF & new_rate;
+    uint16_t new_rate_1 = (0x00FF0000 & new_rate) >> 16;
+
+    HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINC0) = new_rate_0;
+    HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINC1) = new_rate_1;
+    HWREG(AUX_WUC_BASE + AUX_WUC_O_RTCSUBSECINCCTL) = 0x01;
+
+    // Print result
+    Log_String_Literal(""); Log_Value_Int(offset_ticks);
+    Log_String_Literal(", "); Log_Value_Int(inc);
+    Log_String_Literal(", "); Log_Value_Int(1 + stc.missed_pkt_cnt);
+    Log_Line(""); // new line
+
+//    while (1)
+//    {
+//        Log_Process();
+//    }
+
+//    Log_Val_Uint32("offset_ticks:", offset_ticks);
+//    Log_Val_Uint32("PPM_PER_TICK:", PPM_PER_TICK);
+//    Log_Val_Uint32("PPM_PER_INC:", PPM_PER_INC);
+//    Log_Val_Uint32("ticks_fix:", ticks_fix);
+//    Log_Val_Uint32("interval:", interval);
+//    Log_Val_Uint32("interval_fix:", interval_fix);
 }
 
 
