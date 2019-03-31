@@ -32,7 +32,7 @@ extern volatile uint32_t pfl_wcet;
 
 // Macro functions for profiling
 #define Pfl_Get_Current_Time()                  (HWREG(PFL_TIMER_BASE + GPT_O_TAR))  // get counter value
-#define Pfl_Delta_Time32(start, end)            (end > start ? end - start : (((uint32_t)-1) - start) + end) // note: ((uint32_t)-1) = 0xFFFFFFFF
+#define Pfl_Delta_Time32(start, end)            (end >= start ? end - start : (((uint32_t)-1) - start) + end) // note: ((uint32_t)-1) = 0xFFFFFFFF
 #define Pfl_Update_WCET(wcet, exec_time)        if (wcet < exec_time) wcet = exec_time; // worst-case execution time
 #define Pfl_Update_BCET(bcet, exec_time)        if (bcet > exec_time) bcet = exec_time; // best-case execution time
 #define Pfl_Update_AET(avg, ns, N)              if (N < (uint32_t)-1) { N++; avg -= avg/N; avg += ns/N; }; // average execution time
