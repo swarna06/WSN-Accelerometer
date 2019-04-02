@@ -43,8 +43,9 @@ void GPIO_Init();
 
 int main(void)
 {
+    int32_t abuf[4];
     // Modules' initialization
-    Pma_Init();
+    //Pma_Init();
     GPIO_Init();
     Tm_Init();
 
@@ -52,8 +53,8 @@ int main(void)
     Log_Init();
     Pfl_Init();
 
-    Rfc_Init();
-    Ptc_Init();
+    //Rfc_Init();
+    //Ptc_Init();
 
     Spi_Init();
     Sen_Init();
@@ -66,6 +67,7 @@ int main(void)
     IOCIOPortPullSet(BRD_GPIO_IN1, IOC_IOPULL_UP);
     #endif // #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
     Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
+    Tm_Start_Timeout(TM_TOUT_TEST_ID,TM_TOUT_TEST_VAL);
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
     {
@@ -74,19 +76,25 @@ int main(void)
 
         Log_Process();
 
-        if (Pma_Batt_Volt_Meas_Ready())
-            Pma_Process();
+      //  if (Pma_Batt_Volt_Meas_Ready())
+       //     Pma_Process();
 
-        Rfc_Process();
+       // Rfc_Process();
 
-        if (Rfc_Ready())
-            Ptc_Process();
-        else if (Rfc_Error())
-            Ptc_Handle_Error();
+      //  if (Rfc_Ready())
+       //     Ptc_Process();
+       // else if (Rfc_Error())
+       //     Ptc_Handle_Error();
 
         if(Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
-            GPIO_toggleDio(7);
+        {
+            GPIO_toggleDio(BRD_LED0);
+            Sen_Read_Acc_Test(abuf);
+          /*  Log_Value_Int(abuf[1]);Log_String_Literal(",");
+            Log_Value_Int(abuf[2]);Log_String_Literal(",");
+            Log_Value_Int(abuf[3]);Log_Line(" ");*/
 
+        }
         // DEBUG
         // Print state of FSM
         #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
