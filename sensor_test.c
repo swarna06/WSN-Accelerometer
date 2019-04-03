@@ -115,7 +115,7 @@ void Sen_Init()
     const uint8_t ADDR_EXTSYNC = 0x2B;
 
     Sen_Single_Byte_Write(ADDR_RESET, RESET_CODE); // reset sensor
-    Sen_Single_Byte_Write(ADDR_FILTER, 0x05); // set ODR 1000Hz
+    Sen_Single_Byte_Write(ADDR_FILTER, 0x02); // set ODR 1000Hz
     Sen_Single_Byte_Write(ADDR_POWER_CTL, 0x00); // start measurement
     Sen_Single_Byte_Write(ADDR_RANGE, 0x01);  //Set Range +/-2g
     Sen_Single_Byte_Write(ADDR_EXTSYNC, 0x00); //Set full external synchronization 00000101
@@ -135,6 +135,7 @@ void Sen_Read_Acc_Test(int32_t* abuf)
         int32_t  ydata = 0, zdata = 0;
         uint8_t power_ctl = 0;
 
+    //-----------REGISTER ACCESS-------------------------
         addr = 0x00; // DEVID_AD
         Sen_Single_Byte_Read(addr, &devid_ad);
 
@@ -159,19 +160,20 @@ void Sen_Read_Acc_Test(int32_t* abuf)
         addr = 0x2D; // POWER_CTL
         Sen_Single_Byte_Read(addr, &power_ctl);
 
-        addr = 0x11; // FIFO ACCESS
+   //---------------FIFO ACCESS---------------------------------
+   /*     addr = 0x11; // FIFO ACCESS
         //Spi_Assert_CS(SEN_SPI_CS_PIN);
         if (status & 1 == 1)
         {
         for(int j=0; j<9; j++)
         {
             Sen_Single_Byte_Read(addr, &fifo_data[j]);
-            /*Spi_Send(&addr, sizeof(addr));
+            Spi_Send(&addr, sizeof(addr));
             Spi_Flush_Fifo();
-            Spi_Receive(fifo_data[j], sizeof(*fifo_data)/9);*/
+            Spi_Receive(fifo_data[j], sizeof(*fifo_data)/9);
         }
         //Spi_Deassert_CS( SEN_SPI_CS_PIN);
-        }
+        }*/
 //--------------------------DATA ACCESS---------------------------------
 
         addr = 0x80|0x06; // TEMP2
@@ -181,53 +183,61 @@ void Sen_Read_Acc_Test(int32_t* abuf)
         Sen_Single_Byte_Read(addr + 0x80, (int8_t*)&temp1);
 
         temp = temp2<<8|temp1;
+        abuf[0]= (int)temp;
+        if (status & 1 == 1)
+          {
+                addr = 0x08; // XDATA3
+                Sen_Single_Byte_Read(addr , (int8_t*)&xdata3);
 
-        addr = 0x08; // XDATA3
-        Sen_Single_Byte_Read(addr , (int8_t*)&xdata3);
+                addr = 0x09; // XDATA2
+                Sen_Single_Byte_Read(addr, (int8_t*)&xdata2);
 
-        addr = 0x09; // XDATA2
-        Sen_Single_Byte_Read(addr, (int8_t*)&xdata2);
+                addr = 0x0A; // XDATA1
+                Sen_Single_Byte_Read(addr, (int8_t*)&xdata1);
 
-        addr = 0x0A; // XDATA1
-        Sen_Single_Byte_Read(addr, (int8_t*)&xdata1);
+                xdata =xdata3<<12|xdata2<<4|xdata1>>4;
+                if(xdata & (1 << 20 - 1))
+                    xdata = xdata - (1 << 20);
+              //  xdata = xdata3<<8|xdata2;
+                addr = 0x0B; // YDATA3
+                Sen_Single_Byte_Read(addr , (int8_t*)&ydata3);
 
-        xdata =xdata3<<12|xdata2<<4|xdata1>>4;
-        if(xdata & (1 << 20 - 1))
-            xdata = xdata - (1 << 20);
-      //  xdata = xdata3<<8|xdata2;
-        addr = 0x0B; // YDATA3
-        Sen_Single_Byte_Read(addr , (int8_t*)&ydata3);
+                addr = 0x0C; // YDATA2
+                Sen_Single_Byte_Read(addr, (int8_t*)&ydata2);
 
-        addr = 0x0C; // YDATA2
-        Sen_Single_Byte_Read(addr, (int8_t*)&ydata2);
+                addr = 0x0D; // YDATA1
+                Sen_Single_Byte_Read(addr, (int8_t*)&ydata1);
 
-        addr = 0x0D; // YDATA1
-        Sen_Single_Byte_Read(addr, (int8_t*)&ydata1);
+                ydata = (int)ydata3<<12|(int)ydata2<<4|(int)ydata1>>4;
+                if(ydata & (1 << 20 - 1))
+                    ydata = ydata - (1 << 20);
+               // ydata = ydata3<<8|ydata2;
 
-        ydata = (int)ydata3<<12|(int)ydata2<<4|(int)ydata1>>4;
-        if(ydata & (1 << 20 - 1))
-            ydata = ydata - (1 << 20);
-       // ydata = ydata3<<8|ydata2;
+                addr = 0x0E; // ZDATA3
+                Sen_Single_Byte_Read(addr , (int8_t*)&zdata3);
 
-        addr = 0x0E; // ZDATA3
-        Sen_Single_Byte_Read(addr , (int8_t*)&zdata3);
+                addr = 0x0F; // ZDATA2
+                Sen_Single_Byte_Read(addr, (int8_t*)&zdata2);
 
-        addr = 0x0F; // ZDATA2
-        Sen_Single_Byte_Read(addr, (int8_t*)&zdata2);
+                addr = 0x10; // ZDATA1
+                Sen_Single_Byte_Read(addr, (int8_t*)&zdata1);
 
-        addr = 0x10; // ZDATA1
-        Sen_Single_Byte_Read(addr, (int8_t*)&zdata1);
+                zdata = (int)zdata3<<12|(int)zdata2<<4|(int)zdata1>>4;
+                if(zdata & (1 << 20 - 1))
+                    zdata = zdata - (1 << 20);
+                //zdata = zdata3<<8|zdata2;
 
-        zdata = (int)zdata3<<12|(int)zdata2<<4|(int)zdata1>>4;
-        if(zdata & (1 << 20 - 1))
-            zdata = zdata - (1 << 20);
-        //zdata = zdata3<<8|zdata2;
-
-
-   //---------FIFO ACCESS--------------------
+                        abuf[1]= (int)xdata;
+                        abuf[2]= (int)ydata;
+                        abuf[3]= (int)zdata;
+           }
+        else
+            for(int y=1; y<4;y++)
+                abuf[y]=0;
+   //--------------FIFO ACCESS---------------------------------
         //combine fifo data bytes
 
-        for (int z = 0 ; z < 3; z++)
+   /*     for (int z = 0 ; z < 3; z++)
         {
            fifo_acc[z] = ((fifo_data[z*3]<<12) | (fifo_data[z*3 +1]<<4) | (fifo_data[z*3 +2]>>4) );
            if(fifo_acc[z] & (1 << 20 - 1))
@@ -237,12 +247,10 @@ void Sen_Read_Acc_Test(int32_t* abuf)
         Log_Value_Int(fifo_acc[0]);Log_String_Literal(",");
         Log_Value_Int(fifo_acc[1]);Log_String_Literal(",");
         Log_Value_Int(fifo_acc[2]);Log_String_Literal(",");
-        Log_Line(" ");
+        Log_Line(" ");*/
+//-----------------------------------------------------------------------
 
-        abuf[0]= (int)temp;
-        abuf[1]= (int)xdata;
-        abuf[2]= (int)ydata;
-        abuf[3]= (int)zdata;
+
         abuf[4]= (int)(HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0));
 
 

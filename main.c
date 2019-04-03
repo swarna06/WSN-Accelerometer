@@ -43,7 +43,7 @@ void GPIO_Init();
 
 int main(void)
 {
-    int32_t abuf[4];
+    int32_t abuf[4],d_rdy=0;
     // Modules' initialization
     //Pma_Init();
     GPIO_Init();
@@ -86,15 +86,27 @@ int main(void)
        // else if (Rfc_Error())
        //     Ptc_Handle_Error();
 
-        if(Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
+        //---------------Delay-------------
+
+         /*  TimerLoadSet(GPT0_BASE, TIMER_A, 1000*500*48);
+           TimerIntClear(GPT0_BASE, TIMER_TIMA_TIMEOUT);
+           TimerEnable(GPT0_BASE, TIMER_A);
+           while (!(TimerIntStatus(GPT0_BASE, false) & TIMER_TIMA_TIMEOUT));*/
+        if(!Tm_Timeout_Completed(TM_TOUT_TEST_ID))
         {
             GPIO_toggleDio(BRD_LED0);
             Sen_Read_Acc_Test(abuf);
-          /*  Log_Value_Int(abuf[1]);Log_String_Literal(",");
-            Log_Value_Int(abuf[2]);Log_String_Literal(",");
-            Log_Value_Int(abuf[3]);Log_Line(" ");*/
+            if(abuf[1]!=0)
+            {
+            d_rdy++;
+            Log_Value_Int(d_rdy);Log_String_Literal(",");
+           // Log_Value_Int(abuf[1]);Log_String_Literal(",");
+           // Log_Value_Int(abuf[2]);Log_String_Literal(",");
+            //Log_Value_Int(abuf[3]);
+            Log_Line(" ");
+            }
 
-        }
+       }
         // DEBUG
         // Print state of FSM
         #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
