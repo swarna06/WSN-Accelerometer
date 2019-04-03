@@ -128,10 +128,10 @@ void Sen_Read_Acc_Test(int32_t* abuf)
 //    while(1)
     {
         uint8_t addr;
-        uint8_t devid_ad = 0, devid_ms = 0,filter_odr=0,fifo_data = 0, partid = 0, revid = 0, status = 0,xdata1 =0,xdata2=0,xdata3=0,ydata1 =0,ydata2=0,ydata3=0,zdata1 =0,zdata2=0,zdata3=0;
+        uint8_t devid_ad = 0, devid_ms = 0,filter_odr=0,fifo_data[9] = {0}, partid = 0, revid = 0, status = 0,xdata1 =0,xdata2=0,xdata3=0,ydata1 =0,ydata2=0,ydata3=0,zdata1 =0,zdata2=0,zdata3=0;
         uint8_t fifo_entries = 0;
         int16_t temp1=0,temp2=0,temp = 0;
-        int32_t xdata = 0;
+        int32_t xdata = 0,fifo_acc[3] = {0};
         int32_t  ydata = 0, zdata = 0;
         uint8_t power_ctl = 0;
 
@@ -156,11 +156,22 @@ void Sen_Read_Acc_Test(int32_t* abuf)
         addr = 0x28; // FILTER SETTINGS
         Sen_Single_Byte_Read(addr, &filter_odr);
 
+        addr = 0x2D; // POWER_CTL
+        Sen_Single_Byte_Read(addr, &power_ctl);
+
         addr = 0x11; // FIFO ACCESS
-        Sen_Single_Byte_Read(addr, &fifo_data);
-
-
-
+        //Spi_Assert_CS(SEN_SPI_CS_PIN);
+        if (status & 1 == 1)
+        {
+        for(int j=0; j<9; j++)
+        {
+            Sen_Single_Byte_Read(addr, &fifo_data[j]);
+            /*Spi_Send(&addr, sizeof(addr));
+            Spi_Flush_Fifo();
+            Spi_Receive(fifo_data[j], sizeof(*fifo_data)/9);*/
+        }
+        //Spi_Deassert_CS( SEN_SPI_CS_PIN);
+        }
 //--------------------------DATA ACCESS---------------------------------
 
         addr = 0x80|0x06; // TEMP2
@@ -211,8 +222,23 @@ void Sen_Read_Acc_Test(int32_t* abuf)
         if(zdata & (1 << 20 - 1))
             zdata = zdata - (1 << 20);
         //zdata = zdata3<<8|zdata2;
-        addr = 0x2D; // POWER_CTL
-        Sen_Single_Byte_Read(addr, &power_ctl);
+
+
+   //---------FIFO ACCESS--------------------
+        //combine fifo data bytes
+
+        for (int z = 0 ; z < 3; z++)
+        {
+           fifo_acc[z] = ((fifo_data[z*3]<<12) | (fifo_data[z*3 +1]<<4) | (fifo_data[z*3 +2]>>4) );
+           if(fifo_acc[z] & (1 << 20 - 1))
+               fifo_acc[z] = fifo_acc[z] - (1 << 20);
+        }
+
+        Log_Value_Int(fifo_acc[0]);Log_String_Literal(",");
+        Log_Value_Int(fifo_acc[1]);Log_String_Literal(",");
+        Log_Value_Int(fifo_acc[2]);Log_String_Literal(",");
+        Log_Line(" ");
+
         abuf[0]= (int)temp;
         abuf[1]= (int)xdata;
         abuf[2]= (int)ydata;
@@ -228,5 +254,8 @@ void Sen_Read_Acc_Test(int32_t* abuf)
         Log_Value_Int(ydata);Log_String_Literal(",");
         Log_Value_Int(zdata);
         Log_Line(" ");*/
-    }
+
+
+     }
+
 }
