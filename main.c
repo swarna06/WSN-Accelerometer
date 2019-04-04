@@ -44,8 +44,11 @@ void GPIO_Init();
 int main(void)
 {
     int32_t abuf[4],d_rdy=0;
+    uint32_t exec_time, wcet = 0; //for profiling
+
     // Modules' initialization
     //Pma_Init();
+
     GPIO_Init();
     Tm_Init();
 
@@ -71,6 +74,7 @@ int main(void)
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
     {
+
         if (Tm_Sys_Tick())
             Tm_Process();
 
@@ -88,25 +92,29 @@ int main(void)
 
         //---------------Delay-------------
 
-         /*  TimerLoadSet(GPT0_BASE, TIMER_A, 1000*500*48);
+          /* TimerLoadSet(GPT0_BASE, TIMER_A, 500*48);
            TimerIntClear(GPT0_BASE, TIMER_TIMA_TIMEOUT);
            TimerEnable(GPT0_BASE, TIMER_A);
            while (!(TimerIntStatus(GPT0_BASE, false) & TIMER_TIMA_TIMEOUT));*/
         if(!Tm_Timeout_Completed(TM_TOUT_TEST_ID))
         {
             GPIO_toggleDio(BRD_LED0);
+            Pfl_Tic();
             Sen_Read_Acc_Test(abuf);
-            if(abuf[1]!=0)
-            {
-            d_rdy++;
-            Log_Value_Int(d_rdy);Log_String_Literal(",");
-           // Log_Value_Int(abuf[1]);Log_String_Literal(",");
-           // Log_Value_Int(abuf[2]);Log_String_Literal(",");
-            //Log_Value_Int(abuf[3]);
-            Log_Line(" ");
-            }
 
-       }
+           /* if(abuf[1]!=0)
+            {
+                d_rdy++;
+                Log_Value_Int(d_rdy);Log_Line(" ");
+            }*/
+            Pfl_Toc();
+            exec_time = Pfl_Get_Exec_Time_Microsec();
+            wcet = Pfl_Get_WCET();
+            Log_Value_Int(exec_time);Log_Line(" ");
+
+        }
+
+
         // DEBUG
         // Print state of FSM
         #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
@@ -119,6 +127,7 @@ int main(void)
         }
         #endif // #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
     }
+
 
     return 0;
 }

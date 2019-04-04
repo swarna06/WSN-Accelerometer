@@ -136,29 +136,10 @@ void Sen_Read_Acc_Test(int32_t* abuf)
         uint8_t power_ctl = 0;
 
     //-----------REGISTER ACCESS-------------------------
-        addr = 0x00; // DEVID_AD
-        Sen_Single_Byte_Read(addr, &devid_ad);
 
-        addr = 0x01; // DEVID_MST
-        Sen_Single_Byte_Read(addr, &devid_ms);
-
-        addr = 0x02; // PARTID
-        Sen_Single_Byte_Read(addr, &partid);
-
-        addr = 0x03; // REVID
-        Sen_Single_Byte_Read(addr, &revid);
 
         addr = 0x04; // Status
         Sen_Single_Byte_Read(addr, &status);
-
-        addr = 0x05; // FIFO_ENTRIES
-        Sen_Single_Byte_Read(addr, &fifo_entries);
-
-        addr = 0x28; // FILTER SETTINGS
-        Sen_Single_Byte_Read(addr, &filter_odr);
-
-        addr = 0x2D; // POWER_CTL
-        Sen_Single_Byte_Read(addr, &power_ctl);
 
    //---------------FIFO ACCESS---------------------------------
    /*     addr = 0x11; // FIFO ACCESS
@@ -186,7 +167,8 @@ void Sen_Read_Acc_Test(int32_t* abuf)
         abuf[0]= (int)temp;
         if (status & 1 == 1)
           {
-                addr = 0x08; // XDATA3
+                abuf[1]=1;
+             /*   addr = 0x08; // XDATA3
                 Sen_Single_Byte_Read(addr , (int8_t*)&xdata3);
 
                 addr = 0x09; // XDATA2
@@ -229,10 +211,10 @@ void Sen_Read_Acc_Test(int32_t* abuf)
 
                         abuf[1]= (int)xdata;
                         abuf[2]= (int)ydata;
-                        abuf[3]= (int)zdata;
+                        abuf[3]= (int)zdata;*/
            }
         else
-            for(int y=1; y<4;y++)
+            for(int y=0; y<4;y++)
                 abuf[y]=0;
    //--------------FIFO ACCESS---------------------------------
         //combine fifo data bytes
