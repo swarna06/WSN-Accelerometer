@@ -44,6 +44,7 @@ void GPIO_Init();
 int main(void)
 {
     int32_t abuf[4],d_rdy=0;
+    bool sync_given = false;
     uint32_t exec_time, wcet = 0; //for profiling
 
     // Modules' initialization
@@ -71,6 +72,9 @@ int main(void)
     #endif // #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
     Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
     Tm_Start_Timeout(TM_TOUT_TEST_ID,TM_TOUT_TEST_VAL);
+    Tm_Start_Timeout(TM_TOUT_SYNC_ID,TM_TOUT_SYNC_VAL);
+    //Configure sync pulse GPIO pin
+
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
     {
@@ -96,21 +100,30 @@ int main(void)
            TimerIntClear(GPT0_BASE, TIMER_TIMA_TIMEOUT);
            TimerEnable(GPT0_BASE, TIMER_A);
            while (!(TimerIntStatus(GPT0_BASE, false) & TIMER_TIMA_TIMEOUT));*/
+
+        if(Tm_Timeout_Completed(TM_TOUT_SYNC_ID))
+        {
+            if(!sync_given)
+                {
+                    GPIO_setDio(8);
+                    sync_given = true;
+                }
+        }
         if(!Tm_Timeout_Completed(TM_TOUT_TEST_ID))
         {
-            GPIO_toggleDio(BRD_LED0);
-            Pfl_Tic();
+
+           // Pfl_Tic();
             Sen_Read_Acc_Test(abuf);
 
-           /* if(abuf[1]!=0)
+            if(abuf[1]!=0)
             {
                 d_rdy++;
                 Log_Value_Int(d_rdy);Log_Line(" ");
-            }*/
-            Pfl_Toc();
-            exec_time = Pfl_Get_Exec_Time_Microsec();
-            wcet = Pfl_Get_WCET();
-            Log_Value_Int(exec_time);Log_Line(" ");
+            }
+           // Pfl_Toc();
+           // exec_time = Pfl_Get_Exec_Time_Microsec();
+           // wcet = Pfl_Get_WCET();
+           // Log_Value_Int(exec_time);Log_Line(" ");
 
         }
 
@@ -139,10 +152,12 @@ void GPIO_Init()
     // Configure pins as 'standard' output
     IOCPinTypeGpioOutput(BRD_LED0);
     IOCPinTypeGpioOutput(BRD_LED1);
+    IOCPinTypeGpioOutput(8);
 
     // Set initial values
     Brd_Led_Off(BRD_LED0);
     Brd_Led_Off(BRD_LED1);
+    GPIO_clearDio(8);
 }
 
 

@@ -28,7 +28,7 @@
 static void Sen_HW_Clock_Setup(uint32_t timer_base)
 {
     const uint32_t IOID = 10;   //DIO Pin on chip
-    const uint32_t TIMER_LOAD_VAL = 190;
+    const uint32_t TIMER_LOAD_VAL = 187;
 
     // Set configuration parameters according to the timer number
     uint32_t port_id = 0, subscriber = 0, event_source = 0, periph_timer = 0;
@@ -105,7 +105,7 @@ void Sen_Init()
     // Configure chip select (CS) pin
     Spi_Init_CS_Pin(SEN_SPI_CS_PIN);
     // Clock settings
-   // Sen_HW_Clock_Setup(GPT2_BASE);
+    Sen_HW_Clock_Setup(GPT2_BASE);
 
     const uint8_t ADDR_FILTER = 0x28;
     const uint8_t ADDR_POWER_CTL = 0x2D;
@@ -118,8 +118,8 @@ void Sen_Init()
     Sen_Single_Byte_Write(ADDR_FILTER, 0x02); // set ODR 1000Hz
     Sen_Single_Byte_Write(ADDR_POWER_CTL, 0x00); // start measurement
     Sen_Single_Byte_Write(ADDR_RANGE, 0x01);  //Set Range +/-2g
-    Sen_Single_Byte_Write(ADDR_EXTSYNC, 0x00); //Set full external synchronization 00000101
-   // Log_Line("Sen_Clk Setup:ok");
+    Sen_Single_Byte_Write(ADDR_EXTSYNC, 0x01); //Set full external synchronization 00000101
+    Log_Line("Sen_Clk Setup:ok");
 }
 
 

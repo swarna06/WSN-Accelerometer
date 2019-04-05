@@ -21,7 +21,7 @@
 
 // Total number of periods and timeouts
 #define TM_PER_NUM              2       // xxx do not forget to update !
-#define TM_TOUT_NUM             3       // xxx do not forget to update !
+#define TM_TOUT_NUM             4       // xxx do not forget to update !
 
 // List of periods, values in milliseconds
 #define TM_PER_HEARTBEAT_ID     0
@@ -33,7 +33,10 @@
 
 // List of timeouts, values in milliseconds
 #define TM_TOUT_TEST_ID         0
-#define TM_TOUT_TEST_VAL        100
+#define TM_TOUT_TEST_VAL        1000
+
+#define TM_TOUT_SYNC_ID         3
+#define TM_TOUT_SYNC_VAL        50
 
 #define TM_RFC_TOUT_ID          1
 
