@@ -36,7 +36,7 @@
 #define TM_TOUT_TEST_VAL        1000
 
 #define TM_TOUT_SYNC_ID         3
-#define TM_TOUT_SYNC_VAL        50
+#define TM_TOUT_SYNC_VAL        5
 
 #define TM_RFC_TOUT_ID          1
 

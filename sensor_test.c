@@ -28,7 +28,7 @@
 static void Sen_HW_Clock_Setup(uint32_t timer_base)
 {
     const uint32_t IOID = 10;   //DIO Pin on chip
-    const uint32_t TIMER_LOAD_VAL = 187;
+    const uint32_t TIMER_LOAD_VAL = 45;
 
     // Set configuration parameters according to the timer number
     uint32_t port_id = 0, subscriber = 0, event_source = 0, periph_timer = 0;
@@ -116,10 +116,10 @@ void Sen_Init()
 
     Sen_Single_Byte_Write(ADDR_RESET, RESET_CODE); // reset sensor
     Sen_Single_Byte_Write(ADDR_FILTER, 0x02); // set ODR 1000Hz
-    Sen_Single_Byte_Write(ADDR_POWER_CTL, 0x00); // start measurement
+    Sen_Single_Byte_Write(ADDR_POWER_CTL, 0x04); // start measurement
     Sen_Single_Byte_Write(ADDR_RANGE, 0x01);  //Set Range +/-2g
-    Sen_Single_Byte_Write(ADDR_EXTSYNC, 0x01); //Set full external synchronization 00000101
-    Log_Line("Sen_Clk Setup:ok");
+    Sen_Single_Byte_Write(ADDR_EXTSYNC, 0x05); //Set full external synchronization 00000101
+   // Log_Line("Sen_Clk Setup:ok");
 }
 
 
@@ -166,9 +166,9 @@ void Sen_Read_Acc_Test(int32_t* abuf)
         temp = temp2<<8|temp1;
         abuf[0]= (int)temp;
         if (status & 1 == 1)
-          {
-                abuf[1]=1;
-             /*   addr = 0x08; // XDATA3
+          {abuf[1]=1;
+
+                addr = 0x08; // XDATA3
                 Sen_Single_Byte_Read(addr , (int8_t*)&xdata3);
 
                 addr = 0x09; // XDATA2
@@ -181,7 +181,7 @@ void Sen_Read_Acc_Test(int32_t* abuf)
                 if(xdata & (1 << 20 - 1))
                     xdata = xdata - (1 << 20);
               //  xdata = xdata3<<8|xdata2;
-                addr = 0x0B; // YDATA3
+              /*  addr = 0x0B; // YDATA3
                 Sen_Single_Byte_Read(addr , (int8_t*)&ydata3);
 
                 addr = 0x0C; // YDATA2
@@ -236,7 +236,7 @@ void Sen_Read_Acc_Test(int32_t* abuf)
         abuf[4]= (int)(HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0));
 
 
-   /*     Log_Value_Hex(status);Log_String_Literal(",");
+   /*   Log_Value_Hex(status);Log_String_Literal(",");
         Log_Value_Hex(filter_odr);Log_String_Literal(",");
         Log_Value_Int(fifo_data);Log_String_Literal(",");
         Log_Value_Int(fifo_entries);Log_Line(" ");

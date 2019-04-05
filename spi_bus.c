@@ -53,7 +53,7 @@ void Spi_Init()
 
    /* myprintf("Sen_HW_Setup: Ok, DATA_RATE: %u, DATA_WIDTH: %u\r\n",
              SPI_DATA_RATE, SPI_DATA_WIDTH);*/
-    Log_Line("Sen HW Setup: OK");
+ //   Log_Line("Sen HW Setup: OK");
 }
 
 void Spi_Init_CS_Pin(uint8_t pin)

@@ -101,14 +101,7 @@ int main(void)
            TimerEnable(GPT0_BASE, TIMER_A);
            while (!(TimerIntStatus(GPT0_BASE, false) & TIMER_TIMA_TIMEOUT));*/
 
-        if(Tm_Timeout_Completed(TM_TOUT_SYNC_ID))
-        {
-            if(!sync_given)
-                {
-                    GPIO_setDio(8);
-                    sync_given = true;
-                }
-        }
+
         if(!Tm_Timeout_Completed(TM_TOUT_TEST_ID))
         {
 
@@ -118,7 +111,9 @@ int main(void)
             if(abuf[1]!=0)
             {
                 d_rdy++;
+              //  if(d_rdy>1000)
                 Log_Value_Int(d_rdy);Log_Line(" ");
+
             }
            // Pfl_Toc();
            // exec_time = Pfl_Get_Exec_Time_Microsec();
@@ -127,6 +122,14 @@ int main(void)
 
         }
 
+        if(Tm_Timeout_Completed(TM_TOUT_SYNC_ID))
+        {
+            if(!sync_given)
+                {
+                    GPIO_setDio(8);
+                    sync_given = true;
+                }
+        }
 
         // DEBUG
         // Print state of FSM
