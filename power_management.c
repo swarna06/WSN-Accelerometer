@@ -18,6 +18,7 @@
 #include <inc/hw_ccfg.h>
 
 #include <driverlib/aon_batmon.h>
+#include <sensor_read.h>
 
 #include "power_management.h"
 #include "timing.h"
@@ -27,7 +28,6 @@
 #include "board.h"
 #include "log.h"
 #include "misc.h"
-#include "sensor_test.h"
 #include "spi_bus.h"
 #include "protocol.h"
 
@@ -200,7 +200,7 @@ void Pma_MCU_Sleep(uint32_t rtc_wakeup_time)
     Ptc_Get_Acc(abuf);
         if((uint8_t )(HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0))!=0)  // poll sensor data and accumulate buffer(pointer) if it is a sensor node
         {
-                                    Sen_Read_Acc_Test(abuf);
+                                    Sen_Read_Acc(abuf);
                                     Brd_Led_Toggle(BRD_LED0);
                                    /* Log_Value_Int(abuf[0]);Log_String_Literal(",");
                                       Log_Value_Int(abuf[1]);Log_String_Literal(",");

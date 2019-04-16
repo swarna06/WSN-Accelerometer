@@ -20,6 +20,7 @@
 #include <inc/hw_fcfg1.h>
 #include <driverlib/trng.h>
 #include <inc/hw_rfc_dbell.h>
+#include <sensor_read.h>
 
 #include "board.h"
 #include "timing.h"
@@ -33,7 +34,6 @@
 #include "configuration.h"
 
 #include "printf.h"
-#include "sensor_test.h"
 #include "spi_bus.h"
 
 // Global profiling variables
@@ -45,6 +45,7 @@ int main(void)
 {
     int32_t abuf[4],d_rdy=0;
     bool sync_given = false;
+    bool delay_ovr = false;
     uint32_t exec_time, wcet = 0; //for profiling
 
     // Modules' initialization
@@ -70,10 +71,10 @@ int main(void)
     IOCIOPortPullSet(BRD_GPIO_IN0, IOC_IOPULL_UP);
     IOCIOPortPullSet(BRD_GPIO_IN1, IOC_IOPULL_UP);
     #endif // #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
+
     Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
     Tm_Start_Timeout(TM_TOUT_TEST_ID,TM_TOUT_TEST_VAL);
     Tm_Start_Timeout(TM_TOUT_SYNC_ID,TM_TOUT_SYNC_VAL);
-    //Configure sync pulse GPIO pin
 
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
@@ -94,32 +95,26 @@ int main(void)
        // else if (Rfc_Error())
        //     Ptc_Handle_Error();
 
-        //---------------Delay-------------
+        //---------------Delay---------------------------
 
           /* TimerLoadSet(GPT0_BASE, TIMER_A, 500*48);
            TimerIntClear(GPT0_BASE, TIMER_TIMA_TIMEOUT);
            TimerEnable(GPT0_BASE, TIMER_A);
            while (!(TimerIntStatus(GPT0_BASE, false) & TIMER_TIMA_TIMEOUT));*/
 
-
         if(!Tm_Timeout_Completed(TM_TOUT_TEST_ID))
         {
-
-           // Pfl_Tic();
-            Sen_Read_Acc_Test(abuf);
+          //  Pfl_Tic();
+            Sen_Read_Acc(abuf);
+          /*  Pfl_Toc();
+              exec_time = Pfl_Get_Exec_Time_Microsec();
+              Log_Value_Int(exec_time);Log_Line(" ");*/
 
             if(abuf[1]!=0)
             {
                 d_rdy++;
-              //  if(d_rdy>1000)
                 Log_Value_Int(d_rdy);Log_Line(" ");
-
             }
-           // Pfl_Toc();
-           // exec_time = Pfl_Get_Exec_Time_Microsec();
-           // wcet = Pfl_Get_WCET();
-           // Log_Value_Int(exec_time);Log_Line(" ");
-
         }
 
         if(Tm_Timeout_Completed(TM_TOUT_SYNC_ID))
@@ -142,6 +137,8 @@ int main(void)
             Log_Val_Hex32("s:", fsm_state);
         }
         #endif // #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
+
+
     }
 
 

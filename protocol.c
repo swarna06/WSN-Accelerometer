@@ -21,6 +21,7 @@
 #include <driverlib/event.h>
 #include <driverlib/interrupt.h>
 #include <driverlib/sys_ctrl.h>
+#include <sensor_read.h>
 
 #include "protocol.h"
 #include "rf_core.h"
@@ -33,7 +34,6 @@
 #include "misc.h"
 #include "board.h"
 
-#include "sensor_test.h"
 #include "spi_bus.h"
 
 // Module's control structure

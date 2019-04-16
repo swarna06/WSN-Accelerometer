@@ -5,15 +5,15 @@
  *      Author: alvaro
  */
 
-#ifndef SENSOR_TEST_H_
-#define SENSOR_TEST_H_
+#ifndef SENSOR_READ_H_
+#define SENSOR_READ_H_
 
 #define SEN_SPI_CS_PIN      BRD_SEN_CS
 
 void Sen_Init();
 
-void Sen_Read_Acc_Test(int32_t* abuf);
+void Sen_Read_Acc(int32_t* abuf);
 
 
 
-#endif /* SENSOR_TEST_H_ */
+#endif /* SENSOR_READ_H_ */

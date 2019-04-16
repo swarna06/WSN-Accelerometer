@@ -14,10 +14,10 @@
 #include <driverlib/aux_timer.h>
 #include <driverlib/aon_event.h>
 #include <inc/hw_ccfg.h>
+#include <sensor_read.h>
 
 //#include <stdio.h>
 
-#include "sensor_test.h"
 #include "spi_bus.h"
 #include "timing.h"
 #include "board.h"
@@ -28,7 +28,7 @@
 static void Sen_HW_Clock_Setup(uint32_t timer_base)
 {
     const uint32_t IOID = 10;   //DIO Pin on chip
-    const uint32_t TIMER_LOAD_VAL = 45;
+    const uint32_t TIMER_LOAD_VAL = 46; //46 = ~1.024 MHz
 
     // Set configuration parameters according to the timer number
     uint32_t port_id = 0, subscriber = 0, event_source = 0, periph_timer = 0;
@@ -78,7 +78,6 @@ static void Sen_HW_Clock_Setup(uint32_t timer_base)
     // 9. Set the GPTM Control Register (GPT:CTL) TnEN bit to enable the timer and begin generation of the output PWM signal.
     TimerEnable(timer_base, TIMER_A);
 
-
 }
 
 static void Sen_Single_Byte_Read(uint8_t addr, uint8_t *dest)
@@ -116,45 +115,23 @@ void Sen_Init()
 
     Sen_Single_Byte_Write(ADDR_RESET, RESET_CODE); // reset sensor
     Sen_Single_Byte_Write(ADDR_FILTER, 0x02); // set ODR 1000Hz
-    Sen_Single_Byte_Write(ADDR_POWER_CTL, 0x04); // start measurement
     Sen_Single_Byte_Write(ADDR_RANGE, 0x01);  //Set Range +/-2g
     Sen_Single_Byte_Write(ADDR_EXTSYNC, 0x05); //Set full external synchronization 00000101
-   // Log_Line("Sen_Clk Setup:ok");
+    Sen_Single_Byte_Write(ADDR_POWER_CTL, 0x04); // start measurement
 }
 
 
-void Sen_Read_Acc_Test(int32_t* abuf)
+void Sen_Read_Acc(int32_t* abuf)
 {
-//    while(1)
-    {
-        uint8_t addr;
-        uint8_t devid_ad = 0, devid_ms = 0,filter_odr=0,fifo_data[9] = {0}, partid = 0, revid = 0, status = 0,xdata1 =0,xdata2=0,xdata3=0,ydata1 =0,ydata2=0,ydata3=0,zdata1 =0,zdata2=0,zdata3=0;
-        uint8_t fifo_entries = 0;
+        uint8_t addr, status = 0,power_ctl = 0, xdata1 =0,xdata2=0,xdata3=0,ydata1 =0,ydata2=0,ydata3=0,zdata1 =0,zdata2=0,zdata3=0;
         int16_t temp1=0,temp2=0,temp = 0;
-        int32_t xdata = 0,fifo_acc[3] = {0};
-        int32_t  ydata = 0, zdata = 0;
-        uint8_t power_ctl = 0;
+        int32_t xdata = 0, ydata = 0, zdata = 0;
 
     //-----------REGISTER ACCESS-------------------------
-
 
         addr = 0x04; // Status
         Sen_Single_Byte_Read(addr, &status);
 
-   //---------------FIFO ACCESS---------------------------------
-   /*     addr = 0x11; // FIFO ACCESS
-        //Spi_Assert_CS(SEN_SPI_CS_PIN);
-        if (status & 1 == 1)
-        {
-        for(int j=0; j<9; j++)
-        {
-            Sen_Single_Byte_Read(addr, &fifo_data[j]);
-            Spi_Send(&addr, sizeof(addr));
-            Spi_Flush_Fifo();
-            Spi_Receive(fifo_data[j], sizeof(*fifo_data)/9);
-        }
-        //Spi_Deassert_CS( SEN_SPI_CS_PIN);
-        }*/
 //--------------------------DATA ACCESS---------------------------------
 
         addr = 0x80|0x06; // TEMP2
@@ -162,11 +139,12 @@ void Sen_Read_Acc_Test(int32_t* abuf)
 
         addr = 0x80|0x07; // TEMP1
         Sen_Single_Byte_Read(addr + 0x80, (int8_t*)&temp1);
-
         temp = temp2<<8|temp1;
-        abuf[0]= (int)temp;
+
         if (status & 1 == 1)
-          {abuf[1]=1;
+          {
+            for(int y=0; y<5;y++)
+               abuf[y]=1;
 
                 addr = 0x08; // XDATA3
                 Sen_Single_Byte_Read(addr , (int8_t*)&xdata3);
@@ -180,8 +158,8 @@ void Sen_Read_Acc_Test(int32_t* abuf)
                 xdata =xdata3<<12|xdata2<<4|xdata1>>4;
                 if(xdata & (1 << 20 - 1))
                     xdata = xdata - (1 << 20);
-              //  xdata = xdata3<<8|xdata2;
-              /*  addr = 0x0B; // YDATA3
+
+                addr = 0x0B; // YDATA3
                 Sen_Single_Byte_Read(addr , (int8_t*)&ydata3);
 
                 addr = 0x0C; // YDATA2
@@ -193,7 +171,6 @@ void Sen_Read_Acc_Test(int32_t* abuf)
                 ydata = (int)ydata3<<12|(int)ydata2<<4|(int)ydata1>>4;
                 if(ydata & (1 << 20 - 1))
                     ydata = ydata - (1 << 20);
-               // ydata = ydata3<<8|ydata2;
 
                 addr = 0x0E; // ZDATA3
                 Sen_Single_Byte_Read(addr , (int8_t*)&zdata3);
@@ -207,45 +184,12 @@ void Sen_Read_Acc_Test(int32_t* abuf)
                 zdata = (int)zdata3<<12|(int)zdata2<<4|(int)zdata1>>4;
                 if(zdata & (1 << 20 - 1))
                     zdata = zdata - (1 << 20);
-                //zdata = zdata3<<8|zdata2;
 
-                        abuf[1]= (int)xdata;
+                     /* abuf[1]= (int)xdata;
                         abuf[2]= (int)ydata;
-                        abuf[3]= (int)zdata;*/
+                        abuf[3]= (int)zdata; */
            }
         else
-            for(int y=0; y<4;y++)
+            for(int y=0; y<5;y++)
                 abuf[y]=0;
-   //--------------FIFO ACCESS---------------------------------
-        //combine fifo data bytes
-
-   /*     for (int z = 0 ; z < 3; z++)
-        {
-           fifo_acc[z] = ((fifo_data[z*3]<<12) | (fifo_data[z*3 +1]<<4) | (fifo_data[z*3 +2]>>4) );
-           if(fifo_acc[z] & (1 << 20 - 1))
-               fifo_acc[z] = fifo_acc[z] - (1 << 20);
-        }
-
-        Log_Value_Int(fifo_acc[0]);Log_String_Literal(",");
-        Log_Value_Int(fifo_acc[1]);Log_String_Literal(",");
-        Log_Value_Int(fifo_acc[2]);Log_String_Literal(",");
-        Log_Line(" ");*/
-//-----------------------------------------------------------------------
-
-
-        abuf[4]= (int)(HWREG(CCFG_BASE + CCFG_O_IEEE_BLE_0));
-
-
-   /*   Log_Value_Hex(status);Log_String_Literal(",");
-        Log_Value_Hex(filter_odr);Log_String_Literal(",");
-        Log_Value_Int(fifo_data);Log_String_Literal(",");
-        Log_Value_Int(fifo_entries);Log_Line(" ");
-        Log_Value_Int(xdata);Log_String_Literal(",");
-        Log_Value_Int(ydata);Log_String_Literal(",");
-        Log_Value_Int(zdata);
-        Log_Line(" ");*/
-
-
-     }
-
 }
