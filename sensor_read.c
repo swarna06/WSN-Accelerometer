@@ -123,22 +123,18 @@ void Sen_Init()
 
 void Sen_Read_Acc(int32_t* abuf)
 {
-        uint8_t addr, status = 0,power_ctl = 0, xdata1 =0,xdata2=0,xdata3=0,ydata1 =0,ydata2=0,ydata3=0,zdata1 =0,zdata2=0,zdata3=0;
+        uint8_t status = 0,power_ctl = 0, xdata1 =0,xdata2=0,xdata3=0,ydata1 =0,ydata2=0,ydata3=0,zdata1 =0,zdata2=0,zdata3=0;
         int16_t temp1=0,temp2=0,temp = 0;
         int32_t xdata = 0, ydata = 0, zdata = 0;
 
-    //-----------REGISTER ACCESS-------------------------
+//-------------------------REGISTER ACCESS-------------------------
 
-        addr = 0x04; // Status
-        Sen_Single_Byte_Read(addr, &status);
+        Sen_Single_Byte_Read(STATUS, &status);
 
 //--------------------------DATA ACCESS---------------------------------
 
-        addr = 0x80|0x06; // TEMP2
-        Sen_Single_Byte_Read(addr + 0x80, (int8_t*)&temp2);
-
-        addr = 0x80|0x07; // TEMP1
-        Sen_Single_Byte_Read(addr + 0x80, (int8_t*)&temp1);
+        Sen_Single_Byte_Read(0x80|TEMP2 + 0x80, (int8_t*)&temp2);
+        Sen_Single_Byte_Read(0x80|TEMP1 + 0x80, (int8_t*)&temp1);
         temp = temp2<<8|temp1;
 
         if (status & 1 == 1)
@@ -146,41 +142,23 @@ void Sen_Read_Acc(int32_t* abuf)
             for(int y=0; y<5;y++)
                abuf[y]=1;
 
-                addr = 0x08; // XDATA3
-                Sen_Single_Byte_Read(addr , (int8_t*)&xdata3);
-
-                addr = 0x09; // XDATA2
-                Sen_Single_Byte_Read(addr, (int8_t*)&xdata2);
-
-                addr = 0x0A; // XDATA1
-                Sen_Single_Byte_Read(addr, (int8_t*)&xdata1);
-
+                Sen_Single_Byte_Read(XDATA3 , (int8_t*)&xdata3);
+                Sen_Single_Byte_Read(XDATA2, (int8_t*)&xdata2);
+                Sen_Single_Byte_Read(XDATA1, (int8_t*)&xdata1);
                 xdata =xdata3<<12|xdata2<<4|xdata1>>4;
                 if(xdata & (1 << 20 - 1))
                     xdata = xdata - (1 << 20);
 
-                addr = 0x0B; // YDATA3
-                Sen_Single_Byte_Read(addr , (int8_t*)&ydata3);
-
-                addr = 0x0C; // YDATA2
-                Sen_Single_Byte_Read(addr, (int8_t*)&ydata2);
-
-                addr = 0x0D; // YDATA1
-                Sen_Single_Byte_Read(addr, (int8_t*)&ydata1);
-
+                Sen_Single_Byte_Read(YDATA3 , (int8_t*)&ydata3);
+                Sen_Single_Byte_Read(YDATA2, (int8_t*)&ydata2);
+                Sen_Single_Byte_Read(YDATA1, (int8_t*)&ydata1);
                 ydata = (int)ydata3<<12|(int)ydata2<<4|(int)ydata1>>4;
                 if(ydata & (1 << 20 - 1))
                     ydata = ydata - (1 << 20);
 
-                addr = 0x0E; // ZDATA3
-                Sen_Single_Byte_Read(addr , (int8_t*)&zdata3);
-
-                addr = 0x0F; // ZDATA2
-                Sen_Single_Byte_Read(addr, (int8_t*)&zdata2);
-
-                addr = 0x10; // ZDATA1
-                Sen_Single_Byte_Read(addr, (int8_t*)&zdata1);
-
+                Sen_Single_Byte_Read(ZDATA3 , (int8_t*)&zdata3);
+                Sen_Single_Byte_Read(ZDATA2, (int8_t*)&zdata2);
+                Sen_Single_Byte_Read(ZDATA1, (int8_t*)&zdata1);
                 zdata = (int)zdata3<<12|(int)zdata2<<4|(int)zdata1>>4;
                 if(zdata & (1 << 20 - 1))
                     zdata = zdata - (1 << 20);
