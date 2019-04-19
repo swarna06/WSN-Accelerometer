@@ -28,7 +28,7 @@
 static void Sen_HW_Clock_Setup(uint32_t timer_base)
 {
     const uint32_t IOID = 10;   //DIO Pin on chip
-    const uint32_t TIMER_LOAD_VAL = 46; //46 = ~1.024 MHz
+    const uint32_t TIMER_LOAD_VAL = 46; //46 = ~1.024 MHz    48MHz/46 = ~1.024MHz
 
     // Set configuration parameters according to the timer number
     uint32_t port_id = 0, subscriber = 0, event_source = 0, periph_timer = 0;
@@ -104,7 +104,7 @@ void Sen_Init()
     // Configure chip select (CS) pin
     Spi_Init_CS_Pin(SEN_SPI_CS_PIN);
     // Clock settings
-    Sen_HW_Clock_Setup(GPT2_BASE);
+   Sen_HW_Clock_Setup(GPT2_BASE);
 
     const uint8_t ADDR_FILTER = 0x28;
     const uint8_t ADDR_POWER_CTL = 0x2D;
@@ -117,21 +117,22 @@ void Sen_Init()
     Sen_Single_Byte_Write(ADDR_FILTER, 0x02); // set ODR 1000Hz
     Sen_Single_Byte_Write(ADDR_RANGE, 0x01);  //Set Range +/-2g
     Sen_Single_Byte_Write(ADDR_EXTSYNC, 0x05); //Set full external synchronization 00000101
-    Sen_Single_Byte_Write(ADDR_POWER_CTL, 0x04); // start measurement
+    Sen_Single_Byte_Write(ADDR_POWER_CTL, 0x00); // start measurement
 }
 
 
 void Sen_Read_Acc(int32_t* abuf)
 {
-        uint8_t status = 0,power_ctl = 0, xdata1 =0,xdata2=0,xdata3=0,ydata1 =0,ydata2=0,ydata3=0,zdata1 =0,zdata2=0,zdata3=0;
+        uint8_t status = 0,power_ctl = 0, xdata1 =0,xdata2=0,xdata3=0,ydata1 =0,ydata2=0,ydata3=0,zdata1 =0,zdata2=0,zdata3=0,fifo_data[10] = {0};
         int16_t temp1=0,temp2=0,temp = 0;
-        int32_t xdata = 0, ydata = 0, zdata = 0;
+        int32_t xdata = 0, ydata = 0, zdata = 0, fifo_acc[3]={0};
+        static int dry=0;
 
-//-------------------------REGISTER ACCESS-------------------------
+//*************************REGISTER ACCESS*******************************
 
         Sen_Single_Byte_Read(STATUS, &status);
 
-//--------------------------DATA ACCESS---------------------------------
+//**************************DATA ACCESS**********************************
 
         Sen_Single_Byte_Read(0x80|TEMP2 + 0x80, (int8_t*)&temp2);
         Sen_Single_Byte_Read(0x80|TEMP1 + 0x80, (int8_t*)&temp1);
@@ -139,35 +140,59 @@ void Sen_Read_Acc(int32_t* abuf)
 
         if (status & 1 == 1)
           {
-            for(int y=0; y<5;y++)
-               abuf[y]=1;
 
-                Sen_Single_Byte_Read(XDATA3 , (int8_t*)&xdata3);
+                Sen_Single_Byte_Read(XDATA3,(int8_t*)&xdata3);
                 Sen_Single_Byte_Read(XDATA2, (int8_t*)&xdata2);
                 Sen_Single_Byte_Read(XDATA1, (int8_t*)&xdata1);
-                xdata =xdata3<<12|xdata2<<4|xdata1>>4;
+                xdata =(int)xdata3<<12|(int)xdata2<<4|(int)xdata1>>4;
                 if(xdata & (1 << 20 - 1))
                     xdata = xdata - (1 << 20);
 
-                Sen_Single_Byte_Read(YDATA3 , (int8_t*)&ydata3);
+                Sen_Single_Byte_Read(YDATA3, (int8_t*)&ydata3);
                 Sen_Single_Byte_Read(YDATA2, (int8_t*)&ydata2);
                 Sen_Single_Byte_Read(YDATA1, (int8_t*)&ydata1);
                 ydata = (int)ydata3<<12|(int)ydata2<<4|(int)ydata1>>4;
                 if(ydata & (1 << 20 - 1))
                     ydata = ydata - (1 << 20);
 
-                Sen_Single_Byte_Read(ZDATA3 , (int8_t*)&zdata3);
+                Sen_Single_Byte_Read(ZDATA3, (int8_t*)&zdata3);
                 Sen_Single_Byte_Read(ZDATA2, (int8_t*)&zdata2);
                 Sen_Single_Byte_Read(ZDATA1, (int8_t*)&zdata1);
                 zdata = (int)zdata3<<12|(int)zdata2<<4|(int)zdata1>>4;
                 if(zdata & (1 << 20 - 1))
                     zdata = zdata - (1 << 20);
-
-                     /* abuf[1]= (int)xdata;
+                        abuf[0]= (int)temp;
+                        abuf[1]= (int)xdata;
                         abuf[2]= (int)ydata;
-                        abuf[3]= (int)zdata; */
+                        abuf[3]= (int)zdata;
+
            }
         else
-            for(int y=0; y<5;y++)
+            for(int y=0; y<4; y++)
                 abuf[y]=0;
+
+//--------------------FIFO ACCESS--------------------------
+   /*     if (status & 1 == 1)
+          {
+             for(int j=0; j<9; j++)
+                {
+                    Sen_Single_Byte_Read(FIFO_DATA, &fifo_data[j]);
+                }
+
+
+        for (int z = 0 ; z < 3; z++)
+                {
+                   fifo_acc[z] = (((int)fifo_data[z*3]<<12) | ((int)fifo_data[z*3 +1]<<4) | ((int)fifo_data[z*3 +2]>>4) );
+                   if(fifo_acc[z] & (1 << 20 - 1))
+                       fifo_acc[z] = fifo_acc[z] - (1 << 20);
+                }
+
+      Log_Value_Int(xdata);Log_String_Literal(",");
+      Log_Value_Int(ydata);Log_String_Literal(",");
+      Log_Value_Int(zdata);Log_String_Literal(",");
+      Log_Value_Int(fifo_acc[0]);Log_String_Literal(",");
+      Log_Value_Int(fifo_acc[1]);Log_String_Literal(",");
+      Log_Value_Int(fifo_acc[2]);
+      Log_Line(" ");
+        }*/
 }

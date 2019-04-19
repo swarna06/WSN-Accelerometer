@@ -38,7 +38,6 @@
 
 // Global profiling variables
 volatile uint32_t pfl_tic, pfl_toc, pfl_wcet = 0;
-
 void GPIO_Init();
 
 int main(void)
@@ -85,22 +84,15 @@ int main(void)
 
         Log_Process();
 
-      //  if (Pma_Batt_Volt_Meas_Ready())
-       //     Pma_Process();
+ /* if (Pma_Batt_Volt_Meas_Ready())
+          Pma_Process();
 
-       // Rfc_Process();
+    Rfc_Process();
 
-      //  if (Rfc_Ready())
-       //     Ptc_Process();
-       // else if (Rfc_Error())
-       //     Ptc_Handle_Error();
-
-        //---------------Delay---------------------------
-
-          /* TimerLoadSet(GPT0_BASE, TIMER_A, 500*48);
-           TimerIntClear(GPT0_BASE, TIMER_TIMA_TIMEOUT);
-           TimerEnable(GPT0_BASE, TIMER_A);
-           while (!(TimerIntStatus(GPT0_BASE, false) & TIMER_TIMA_TIMEOUT));*/
+    if (Rfc_Ready())
+          Ptc_Process()
+    else if (Rfc_Error())
+          Ptc_Handle_Error(); */
 
         if(!Tm_Timeout_Completed(TM_TOUT_TEST_ID))
         {
@@ -110,12 +102,22 @@ int main(void)
               exec_time = Pfl_Get_Exec_Time_Microsec();
               Log_Value_Int(exec_time);Log_Line(" ");*/
 
-            if(abuf[1]!=0)
+          if(abuf[1]!=0)
             {
                 d_rdy++;
-                Log_Value_Int(d_rdy);Log_Line(" ");
+               // Log_Value_Int(d_rdy);Log_Line(" ");
+                if(Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
+                   {
+                        Log_Value_Int(d_rdy);
+                       /* Log_String_Literal(",");
+                        Log_Value_Int(abuf[1]);Log_String_Literal(",");
+                        Log_Value_Int(abuf[2]);Log_String_Literal(",");
+                        Log_Value_Int(abuf[3]);*/
+                        Log_Line(" ");
+                        d_rdy=0;
+                    }
             }
-        }
+         }
 
         if(Tm_Timeout_Completed(TM_TOUT_SYNC_ID))
         {
