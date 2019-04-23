@@ -45,7 +45,7 @@ int main(void)
     int32_t abuf[4],d_rdy=0;
     bool sync_given = false;
     bool delay_ovr = false;
-    uint32_t exec_time,curtime, wcet = 0; //for profiling
+    uint32_t exec_time,curtime, wcet = 0,st=0,en=0; //for profiling
 
     // Modules' initialization
     //Pma_Init();
@@ -75,6 +75,8 @@ int main(void)
     Tm_Start_Timeout(TM_TOUT_TEST_ID,TM_TOUT_TEST_VAL);
     Tm_Start_Timeout(TM_TOUT_SYNC_ID,TM_TOUT_SYNC_VAL);
 
+    IOCIOIntSet(9,IOC_INT_ENABLE,IOC_FALLING_EDGE);
+
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
     {
@@ -97,7 +99,7 @@ int main(void)
 
 
           //  Pfl_Tic();
-            Sen_Read_Acc(abuf);
+          //  Sen_Read_Acc(abuf);
           /*  Pfl_Toc();
               exec_time = Pfl_Get_Exec_Time_Microsec();
               Log_Value_Int(exec_time);Log_Line(" ");*/
@@ -127,20 +129,47 @@ int main(void)
                         d_rdy=0;
                     }
             }*/
-           if(!GPIO_readDio(9))
+         /*  if(!GPIO_readDio(9))
                 {
                     d_rdy++;
                     if(d_rdy==1)
                     {
                         Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()));Log_Line("");
+                        Brd_Led_Toggle(BRD_LED0);
                     }
                     else if(d_rdy == 1000)
                     {
                         Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()));
+                        Brd_Led_Toggle(BRD_LED0);
                     }
-                }
+            st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
+            while(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st < 30)
+                ;
+                }*/
 
+          // if(Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
+            //   Brd_Led_Toggle(BRD_LED0);
 
+        if(IOCIntStatus(9))
+        {   Sen_Read_Acc(abuf);
+            d_rdy++;
+           // Log_Value_Int(d_rdy);Log_Line("");
+            if(d_rdy==1)
+            {
+                Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()));Log_Line("");
+                Brd_Led_Toggle(BRD_LED0);
+            }
+            else if(d_rdy == 1000)
+            {
+                Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()));
+                Brd_Led_Toggle(BRD_LED0);
+            }
+            //Delay of 100 us
+            st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
+            while(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st < 100)
+                ;
+
+        }
 
         if(Tm_Timeout_Completed(TM_TOUT_SYNC_ID))
         {
