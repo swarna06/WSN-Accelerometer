@@ -45,7 +45,7 @@ int main(void)
     int32_t abuf[4],d_rdy=0;
     bool sync_given = false;
     bool delay_ovr = false;
-    uint32_t exec_time, wcet = 0; //for profiling
+    uint32_t exec_time,curtime, wcet = 0; //for profiling
 
     // Modules' initialization
     //Pma_Init();
@@ -94,30 +94,53 @@ int main(void)
     else if (Rfc_Error())
           Ptc_Handle_Error(); */
 
-        if(!Tm_Timeout_Completed(TM_TOUT_TEST_ID))
-        {
+
+
           //  Pfl_Tic();
             Sen_Read_Acc(abuf);
           /*  Pfl_Toc();
               exec_time = Pfl_Get_Exec_Time_Microsec();
               Log_Value_Int(exec_time);Log_Line(" ");*/
 
-          if(abuf[1]!=0)
+         /* if(abuf[1]!=0)
             {
                 d_rdy++;
-               // Log_Value_Int(d_rdy);Log_Line(" ");
-                if(Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
+                if(d_rdy==1)
+                {
+                    Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()));
+                }
+                else if(d_rdy == 1000)
+                {
+                    Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()));
+                }
+            }
+            */
+              /*  Log_Value_Int(d_rdy);Log_Line(" ");
+               if(Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
                    {
                         Log_Value_Int(d_rdy);
                        /* Log_String_Literal(",");
                         Log_Value_Int(abuf[1]);Log_String_Literal(",");
                         Log_Value_Int(abuf[2]);Log_String_Literal(",");
-                        Log_Value_Int(abuf[3]);*/
+                        Log_Value_Int(abuf[3]);
                         Log_Line(" ");
                         d_rdy=0;
                     }
-            }
-         }
+            }*/
+           if(!GPIO_readDio(9))
+                {
+                    d_rdy++;
+                    if(d_rdy==1)
+                    {
+                        Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()));Log_Line("");
+                    }
+                    else if(d_rdy == 1000)
+                    {
+                        Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()));
+                    }
+                }
+
+
 
         if(Tm_Timeout_Completed(TM_TOUT_SYNC_ID))
         {
@@ -155,6 +178,7 @@ void GPIO_Init()
     IOCPinTypeGpioOutput(BRD_LED0);
     IOCPinTypeGpioOutput(BRD_LED1);
     IOCPinTypeGpioOutput(8);
+    IOCPinTypeGpioInput(9);
 
     // Set initial values
     Brd_Led_Off(BRD_LED0);

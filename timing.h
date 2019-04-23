@@ -33,7 +33,7 @@
 
 // List of timeouts, values in milliseconds
 #define TM_TOUT_TEST_ID         0
-#define TM_TOUT_TEST_VAL        11000
+#define TM_TOUT_TEST_VAL        100
 #define TM_TOUT_SYNC_ID         3
 #define TM_TOUT_SYNC_VAL        5
 
