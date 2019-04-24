@@ -36,8 +36,10 @@
 #include "printf.h"
 #include "spi_bus.h"
 
+
 // Global profiling variables
 volatile uint32_t pfl_tic, pfl_toc, pfl_wcet = 0;
+uint32_t str=0; //for profiling
 void GPIO_Init();
 
 int main(void)
@@ -45,7 +47,8 @@ int main(void)
     int32_t abuf[4],d_rdy=0;
     bool sync_given = false;
     bool delay_ovr = false;
-    uint32_t exec_time,curtime, wcet = 0,st=0,en=0; //for profiling
+    uint32_t exec_time,curtime, wcet = 0,st=0,en=0;
+
 
     // Modules' initialization
     //Pma_Init();
@@ -74,8 +77,9 @@ int main(void)
     Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
     Tm_Start_Timeout(TM_TOUT_TEST_ID,TM_TOUT_TEST_VAL);
     Tm_Start_Timeout(TM_TOUT_SYNC_ID,TM_TOUT_SYNC_VAL);
-
+    IOCIntEnable(9);
     IOCIOIntSet(9,IOC_INT_ENABLE,IOC_FALLING_EDGE);
+    str = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
 
     // Round-robin scheduling (circular execution, no priorities)
     while (1)
@@ -85,6 +89,7 @@ int main(void)
             Tm_Process();
 
         Log_Process();
+
 
  /* if (Pma_Batt_Volt_Meas_Ready())
           Pma_Process();
@@ -99,24 +104,10 @@ int main(void)
 
 
           //  Pfl_Tic();
-          //  Sen_Read_Acc(abuf);
           /*  Pfl_Toc();
               exec_time = Pfl_Get_Exec_Time_Microsec();
               Log_Value_Int(exec_time);Log_Line(" ");*/
 
-         /* if(abuf[1]!=0)
-            {
-                d_rdy++;
-                if(d_rdy==1)
-                {
-                    Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()));
-                }
-                else if(d_rdy == 1000)
-                {
-                    Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()));
-                }
-            }
-            */
               /*  Log_Value_Int(d_rdy);Log_Line(" ");
                if(Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
                    {
@@ -129,29 +120,44 @@ int main(void)
                         d_rdy=0;
                     }
             }*/
-         /*  if(!GPIO_readDio(9))
+  //*********************LEVEL TRIGGER***************************
+
+        if(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - str < 10000000)
+        {
+        if(!GPIO_readDio(9))
                 {
+                    Sen_Read_Acc(abuf);
                     d_rdy++;
-                    if(d_rdy==1)
+                    //time period of 1 sec
+               /*     st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
+                    if(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st < 1000000)
                     {
-                        Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()));Log_Line("");
+                        Log_Value_Int(d_rdy);Log_Line(" ");
+                        d_rdy=0;
+                    }*/
+                    //Log_Value_Int(abuf[1]);Log_String_Literal(",");
+                    //Log_Value_Int(abuf[2]);Log_Line("");
+                 /* if(d_rdy==1)
+                    {
+                        st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
                         Brd_Led_Toggle(BRD_LED0);
                     }
                     else if(d_rdy == 1000)
                     {
-                        Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()));
+                        Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st);
                         Brd_Led_Toggle(BRD_LED0);
-                    }
-            st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
-            while(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st < 30)
-                ;
-                }*/
+                    }*/
+            //st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
+            //while(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st < 100)
+              //  ;
+                }
+        }
 
-          // if(Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
-            //   Brd_Led_Toggle(BRD_LED0);
 
-        if(IOCIntStatus(9))
-        {   Sen_Read_Acc(abuf);
+  //*******************EDGE TRIGGER*****************************
+      /*  if(IOCIntStatus(9))
+        {
+            Sen_Read_Acc(abuf);
             d_rdy++;
            // Log_Value_Int(d_rdy);Log_Line("");
             if(d_rdy==1)
@@ -165,12 +171,13 @@ int main(void)
                 Brd_Led_Toggle(BRD_LED0);
             }
             //Delay of 100 us
-            st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
-            while(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st < 100)
-                ;
+            //st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
+            //while(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st < 100)
+              //  ;
 
-        }
+        }*/
 
+    #if (CFG_DEBUG_EXT_SYNC == CFG_SETTING_ENABLED)
         if(Tm_Timeout_Completed(TM_TOUT_SYNC_ID))
         {
             if(!sync_given)
@@ -179,7 +186,7 @@ int main(void)
                     sync_given = true;
                 }
         }
-
+    #endif // #if (CFG_DEBUG_EXT_SYNC == CFG_SETTING_ENABLED)
         // DEBUG
         // Print state of FSM
         #if (CFG_DEBUG_FSM_STATE == CFG_SETTING_ENABLED)
@@ -208,11 +215,13 @@ void GPIO_Init()
     IOCPinTypeGpioOutput(BRD_LED1);
     IOCPinTypeGpioOutput(8);
     IOCPinTypeGpioInput(9);
+    IOCIOPortPullSet(9, IOC_IOPULL_DOWN);
 
     // Set initial values
     Brd_Led_Off(BRD_LED0);
     Brd_Led_Off(BRD_LED1);
     GPIO_clearDio(8);
+
 }
 
 

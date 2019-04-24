@@ -56,7 +56,6 @@
 
 
 void Sen_Init();
-
 void Sen_Read_Acc(int32_t* abuf);
 
 

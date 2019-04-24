@@ -22,7 +22,7 @@
 #include "timing.h"
 #include "board.h"
 #include "log.h"
-
+#include "configuration.h"
 #include "printf.h"
 
 static void Sen_HW_Clock_Setup(uint32_t timer_base)
@@ -158,15 +158,17 @@ void Sen_Init()
 {
     // Configure chip select (CS) pin
     Spi_Init_CS_Pin(SEN_SPI_CS_PIN);
-    // Clock settings
-   Sen_HW_Clock_Setup(GPT2_BASE);
-
     const uint8_t RESET_CODE = 0x52;
-
     Sen_Single_Byte_Write(RESET, RESET_CODE); // reset sensor
+
+    #if (CFG_DEBUG_EXT_SYNC == CFG_SETTING_ENABLED)
+    Sen_Single_Byte_Write(SYNC, 0x05); //Set full external synchronization 00000101 with ext clk
+    Sen_HW_Clock_Setup(GPT2_BASE);     //External Clock generation 1.024MHz
+    #endif // #if (CFG_DEBUG_EXT_SYNC == CFG_SETTING_ENABLED)
+
+
     Sen_Single_Byte_Write(FILTER, 0x02); // set ODR 1000Hz
     Sen_Single_Byte_Write(RANGE, 0x01); //Set Range +/-2g
-    Sen_Single_Byte_Write(SYNC, 0x05); //Set full external synchronization 00000101
     Sen_Single_Byte_Write(INT_MAP, 0x01); // Map DATA_RDY interrupt enable on INT1 pin *** connect to DIO_9 pin of board
     Sen_Single_Byte_Write(POWER_CTL, 0x00); // start measurement
 }
@@ -216,6 +218,7 @@ void Sen_Read_Acc(int32_t* abuf)
                         abuf[1]= (int)xdata;
                         abuf[2]= (int)ydata;
                         abuf[3]= (int)zdata;
+                        //Log_Value_Int(ydata);Log_Line("");
 
            }
         else
