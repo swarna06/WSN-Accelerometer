@@ -34,7 +34,6 @@
 #define CFG_DEBUG_RFC_ERR_BUTTON        CFG_SETTING_DISABLED
 #define CFG_DEBUG_EXT_SYNC              CFG_SETTING_ENABLED  // EXT_SYNC=01
 
-
 // Reliability test configuration
 #define CFG_RELIAB_TEST_PHY_MODES       {RFC_PHY_MODE_125KBPS}
 

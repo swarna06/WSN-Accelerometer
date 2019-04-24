@@ -122,12 +122,13 @@ int main(void)
             }*/
   //*********************LEVEL TRIGGER***************************
 
-        if(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - str < 1000000)
+        if(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - str < 30000000)
         {
         if(!GPIO_readDio(9))
                 {
                     Sen_Read_Acc(abuf);
                     d_rdy++;
+
                    // Log_Value_Int(d_rdy);Log_Line(" ");
                     // time period of 1 sec
                   //  st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
