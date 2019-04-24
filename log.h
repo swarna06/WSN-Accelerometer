@@ -40,7 +40,7 @@
 
 
 // Log buffer length
-#define LOG_BUF_LEN                 2048 // bytes
+#define LOG_BUF_LEN                 16384 // bytes
 
 void Log_Init();
 

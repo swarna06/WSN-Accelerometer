@@ -122,21 +122,24 @@ int main(void)
             }*/
   //*********************LEVEL TRIGGER***************************
 
-        if(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - str < 10000000)
+        if(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - str < 1000000)
         {
         if(!GPIO_readDio(9))
                 {
                     Sen_Read_Acc(abuf);
                     d_rdy++;
-                    //time period of 1 sec
-               /*     st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
-                    if(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st < 1000000)
+                   // Log_Value_Int(d_rdy);Log_Line(" ");
+                    // time period of 1 sec
+                  //  st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
+                  /*  if(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st == 1000000)
                     {
                         Log_Value_Int(d_rdy);Log_Line(" ");
                         d_rdy=0;
+                        st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
                     }*/
-                    //Log_Value_Int(abuf[1]);Log_String_Literal(",");
-                    //Log_Value_Int(abuf[2]);Log_Line("");
+                    Log_Value_Int(abuf[1]);Log_String_Literal(",");
+                    Log_Value_Int(abuf[2]);Log_String_Literal(",");
+                    Log_Value_Int(abuf[3]);Log_Line("");
                  /* if(d_rdy==1)
                     {
                         st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
