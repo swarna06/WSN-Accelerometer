@@ -27,6 +27,7 @@
 
     #define BRD_GPIO_IN0            13
     #define BRD_GPIO_IN1            14
+    #define BRD_SEN_INT2            10
 
     #define BRD_UART_TX             3
     #define BRD_UART_RX             2
@@ -57,8 +58,9 @@
 
     #define BRD_GPIO_OUT0           11
 
-    #define BRD_GPIO_IN0
-    #define BRD_GPIO_IN1
+    #define BRD_GPIO_OUT1           12
+    #define BRD_GPIO_OUT2           8
+    #define BRD_SEN_INT2            10
 
     #define BRD_UART_TX             4
     #define BRD_UART_RX             5

@@ -27,7 +27,7 @@
 
 static void Sen_HW_Clock_Setup(uint32_t timer_base)
 {
-    const uint32_t IOID = 10;   //DIO Pin on chip
+    const uint32_t IOID = BRD_SEN_INT2;   //DIO_10 Pin on chip
     const uint32_t TIMER_LOAD_VAL = 46; //46 = ~1.024 MHz    48MHz/46 = ~1.024MHz
 
     // Set configuration parameters according to the timer number
@@ -80,60 +80,6 @@ static void Sen_HW_Clock_Setup(uint32_t timer_base)
 
 }
 
-static void Timeout_Clock_Setup(uint32_t timer_base)
-{
-    const uint32_t IOID = BRD_GPIO_OUT0;   //DIO 11 Pin on chip
-    const uint32_t TIMER_LOAD_VAL = 480000; //    48MHz/480000 = 100Hz
-
-    // Set configuration parameters according to the timer number
-    uint32_t port_id = 0, subscriber = 0, event_source = 0, periph_timer = 0;
-    if (timer_base == GPT0_BASE)
-    {
-        port_id = IOC_PORT_MCU_PORT_EVENT0;
-        subscriber = EVENT_O_GPT0ACAPTSEL;
-        event_source = EVENT_GPT0ACAPTSEL_EV_PORT_EVENT0;
-        periph_timer = PRCM_PERIPH_TIMER0;
-    }
-    else if (timer_base == GPT2_BASE)
-    {
-        port_id = IOC_PORT_MCU_PORT_EVENT4;
-        subscriber = EVENT_O_GPT2ACAPTSEL;
-        event_source = EVENT_GPT2ACAPTSEL_EV_PORT_EVENT4;
-        periph_timer = PRCM_PERIPH_TIMER2;
-    }
-
-    // Map timer event to GPIO and register CPU event
-    IOCPortConfigureSet(IOID, port_id, IOC_STD_OUTPUT);
-    EventRegister(subscriber, event_source);
-
-    // Enable timer peripheral
-    PRCMPeripheralRunEnable(periph_timer);
-    PRCMLoadSet();
-    while(!PRCMLoadGet());
-
-    // Configure and enable timer according to steps in the datasheet
-    // 1. Ensure the timer is disabled (clear the TnEN bit) before making any changes.
-    TimerDisable(timer_base, TIMER_BOTH);
-    // 2. Write the GPTM Configuration Register (GPT:CFG) with a value of 0x0000 0004.
-    HWREG(timer_base + GPT_O_CFG) = 0x00000004;
-    // 3. In the GPTM Timer Mode Register (GPT:TnMR), write the TnCMR field to 0x1 and write the TnMR field to 0x2.
-    HWREG(timer_base + GPT_O_TAMR) |= 0b1010;
-    // 4. Configure the output state of the PWM signal (whether or not it is inverted) in the GPTM Control Register (GPT:CTL) TnPWML field.
-    // 5. If a prescaler is to be used, write the prescale value to the GPTM Timer n Prescale Register (GPT:TnPR).
-//    TimerPrescaleSet(timer_base, TIMER_A, 255); // xxx
-//    TimerPrescaleMatchSet(timer_base, TIMER_A, 0); // xxx
-    // 6. If PWM interrupts are used, configure the interrupt condition in the GPT:CTL TnEVENT register field, and enable the interrupts by setting the GPT:TnMR TnPWMIE register bit.
-//    HWREG(timer_base + GPT_O_CTL) |= 0xC;
-    HWREG(timer_base + GPT_O_CTL) |= 0x0; // positive edge
-    HWREG(timer_base + GPT_O_TAMR) |= 0x200;
-    // 7. Load the timer start value into the GPTM Timer n Interval Load Register (GPT:TnILR).
-    TimerLoadSet(timer_base, TIMER_A, TIMER_LOAD_VAL);
-    // 8. Load the GPTM Timer n Match Register (GPT:TnMATCHR) with the match value.
-    TimerMatchSet(timer_base, TIMER_A, TIMER_LOAD_VAL/2); // to get 50% duty cycle
-    // 9. Set the GPTM Control Register (GPT:CTL) TnEN bit to enable the timer and begin generation of the output PWM signal.
-    TimerEnable(timer_base, TIMER_A);
-
-}
 
 static void Sen_Single_Byte_Read(uint8_t addr, uint8_t *dest)
 {

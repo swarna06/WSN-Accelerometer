@@ -32,4 +32,6 @@ void Spi_Transaction(const uint8_t *src,
                      const size_t dest_count,
                      const uint32_t cs_pin);
 
+
+
 #endif /* SPI_BUS_H_ */

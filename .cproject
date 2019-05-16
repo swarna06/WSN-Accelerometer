@@ -44,6 +44,7 @@
 								<option id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compilerID.INCLUDE_PATH.55914693" name="Include paths (-I)" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compilerID.INCLUDE_PATH" valueType="includePath">
 									<listOptionValue builtIn="false" value="${PROJECT_ROOT}"/>
 									<listOptionValue builtIn="false" value="${WORKSPACE_LOC}/../simplelink_cc2640r2_sdk_2_30_00_28/source/ti/devices/cc26x0r2"/>
+									<listOptionValue builtIn="false" value="/home/swarna/ti/simplelink_cc2640r2_sdk_2_30_00_28/source"/>
 									<listOptionValue builtIn="false" value="${CG_TOOL_INCLUDE_PATH}"/>
 								</option>
 								<option id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compilerID.ASM_SPECIFIC_FLAGS.374225536" name="Miscellaneous assembly source specific flags" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compilerID.ASM_SPECIFIC_FLAGS" useByScannerDiscovery="false" valueType="stringList">
@@ -51,6 +52,10 @@
 								</option>
 								<option id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compilerID.SPECS.464127631" name="Override built-in specs with the contents of the specified file (-specs)" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compilerID.SPECS" useByScannerDiscovery="false" value="&quot;nosys.specs&quot;" valueType="string"/>
 								<option id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compilerID.WARNINGS_TOERRORS.1007176920" name="Treat all warnings as errors (-Werror)" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compilerID.WARNINGS_TOERRORS" value="false" valueType="boolean"/>
+								<option id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compilerID.DEFINE.722594758" name="Define symbols (-D)" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compilerID.DEFINE" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="DeviceFamily_CC26X0R2"/>
+								</option>
+								<option id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compilerID.ALLWARN.1787966354" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compilerID.ALLWARN" value="false" valueType="boolean"/>
 								<inputType id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compiler.inputType__C_SRCS.649492805" name="C Sources" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compiler.inputType__C_SRCS"/>
 								<inputType id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compiler.inputType__CPP_SRCS.1476519059" name="C++ Sources" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compiler.inputType__CPP_SRCS"/>
 								<inputType id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compiler.inputType__ASM_SRCS.1784131101" name="Assembly Sources" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_7.0.compiler.inputType__ASM_SRCS"/>
