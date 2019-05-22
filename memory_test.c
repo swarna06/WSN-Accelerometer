@@ -142,6 +142,16 @@ void Mem_FRAM_Get_Dev_Id(uint8_t *dest)
                     MEM_SPI_CS_PIN);
 }
 
+void Mem_ReadStatus()
+{
+    uint8_t opcode = MEM_OC_RDSR;
+    uint8_t status = 0;
+    Spi_Transaction(&opcode, sizeof(opcode),
+                            &status, sizeof(status),
+                            MEM_SPI_CS_PIN);
+    Log_Line("status:");Log_Value_Int(status);Log_String_Literal("\r\n"); //01000000 = 64
+
+}
 void Mem_Read(uint32_t addr, uint8_t *data_ptr,uint32_t total_count)
 {
     uint8_t opcode_read = MEM_OC_READ;
@@ -162,7 +172,9 @@ void Mem_Write(uint32_t addr, uint8_t* data_ptr, uint32_t total_count)
 
     //send Write command opcode
     uint8_t opcode_write = MEM_OC_WRITE;
-    const uint8_t frame[] = {MEM_OC_WRITE, ((uint8_t)(addr>>16)), ((uint8_t)(addr>>8)), ((uint8_t)(addr)), data_ptr[0], data_ptr[1], data_ptr[2], data_ptr[3]};
+    const uint8_t frame[] = {MEM_OC_WRITE, ((uint8_t)(addr>>16)), ((uint8_t)(addr>>8)), ((uint8_t)(addr)), data_ptr[0], data_ptr[1], data_ptr[2], data_ptr[3], data_ptr[4],data_ptr[5],data_ptr[6],data_ptr[7],data_ptr[8],data_ptr[9],data_ptr[10],data_ptr[11],data_ptr[12],data_ptr[13],data_ptr[14],data_ptr[15]};
+   //const uint8_t frame[] = {MEM_OC_WRITE, ((uint8_t)(addr>>16)), ((uint8_t)(addr>>8)), ((uint8_t)(addr)), data_ptr[0], data_ptr[1], data_ptr[2], data_ptr[3]};
+
     Spi_Transaction(&frame, sizeof(frame),
                             NULL, 0,
                             MEM_SPI_CS_PIN);
@@ -198,27 +210,7 @@ void Mem_Test()
         Log_Value_Hex(dev_id[n]);
     Log_String_Literal("\r\n");
 
-    //send status register READ command
-    uint8_t opcode = MEM_OC_RDSR;
-    uint8_t status = 0;
-    Spi_Transaction(&opcode, sizeof(opcode),
-                            &status, sizeof(status),
-                            MEM_SPI_CS_PIN);
-    Log_Line("status:");Log_Value_Int(status);Log_String_Literal("\r\n"); //01000000 = 64
 
-    //send status register WRITE command
-        //send Write enable command
-        uint8_t opcode_wren = MEM_OC_WREN;
-        Spi_Transaction(&opcode_wren, sizeof(opcode_wren),
-                            NULL, 0,
-                            MEM_SPI_CS_PIN);
-   /* opcode = MEM_OC_WRSR;
-    uint8_t data_byte = 0b00000000;  // 01001100 = 76
-    const uint8_t frame[] = {MEM_OC_WRSR,data_byte};
-    Spi_Transaction(&frame, sizeof(frame),
-                                NULL, 0,
-                                MEM_SPI_CS_PIN);
-*/
 
 #endif
 }

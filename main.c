@@ -42,21 +42,22 @@
 
 #include "printf.h"
 #include "spi_bus.h"
-
+#define MAX_ADDR    0x7ffff
 
 // Global profiling variables
 volatile uint32_t pfl_tic, pfl_toc, pfl_wcet = 0;
 uint32_t str=0; //for profiling
 void GPIO_Init();
-void Sen_ISR(uint_least8_t index);
+//void Sen_ISR();
+int32_t BytetoInt(uint8_t msb, uint8_t msb1, uint8_t msb2, uint8_t lsb);
 static int32_t d_rdy=0;
 int main(void)
 {
-    int32_t abuf[4];
-    uint8_t r_abuf[4], num[4] ={1, 2, 3, 4}, data;
-    uint32_t addr=0;
+    int32_t abuf[4],d_tm=0, i=0;
+    uint8_t r_abuf[16], num[4] ={1, 2, 3, 4}, dummy[16]={0};
+    uint32_t addr=0,r_addr=0;
     bool sync_given = false;
-    bool delay_ovr = false;
+    bool delay_ovr = false, memread = false;
     uint32_t exec_time,curtime, wcet = 0,st=0,en=0;
 
 
@@ -85,22 +86,62 @@ int main(void)
     IOCIOPortPullSet(BRD_GPIO_IN1, IOC_IOPULL_UP);
     #endif // #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
 
-    Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
-    Tm_Start_Timeout(TM_TOUT_TEST_ID,TM_TOUT_TEST_VAL);
-    Tm_Start_Timeout(TM_TOUT_SYNC_ID,TM_TOUT_SYNC_VAL);
 
+
+  //  IOCPinTypeGpioInput(BRD_SEN_INT1);
+  //  IOCIOIntSet(BRD_SEN_INT1,IOC_INT_ENABLE,IOC_FALLING_EDGE);
+  //  IOCIntRegister(Sen_ISR);
    //IntEnable(INT_AON_GPIO_EDGE);
    //IntRegister(INT_AON_GPIO_EDGE, Sen_ISR);
    //IOCIOIntSet(9,IOC_INT_ENABLE,IOC_FALLING_EDGE);
    //IOCPortConfigureSet(IOID_9,IOC_PORT_GPIO,IOC_FALLING_EDGE|IOC_INT_ENABLE);
-    str = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
+
+    Log_Line("Test Begin");
     GPIO_setDio(BRD_GPIO_OUT1);  //To enable start of test connect to ref sensor via BNC cable
     Brd_Led_On(BRD_LED0);
-   /* GPIO_init();
-    GPIO_write(GPIOCC26XX_DIO_06,1);
-    GPIO_setConfig(GPIOCC26XX_DIO_09, GPIO_CFG_IN_PU|GPIO_CFG_IN_INT_FALLING);
-    GPIO_setCallback(GPIOCC26XX_DIO_09, &Sen_ISR);
-    GPIO_enableInt(GPIOCC26XX_DIO_09);*/
+
+      //Delay of 5,000,000 us = 5sec
+                  st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
+                  while(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st < 5000000)
+                  {Log_Process();} ;
+    Log_Line("Read Begin");
+
+   /*   for(i=0;i<MAX_ADDR;i+=16)
+      {
+      Mem_Read(i,r_abuf,sizeof(r_abuf));
+      //if(r_abuf[0]!=0 && r_abuf[1]!=0)
+          {for(int j=0;j<sizeof(r_abuf);j+=4)
+              {//if(r_abuf[0]!=0 && r_abuf[1]!=0)
+                 {int32_t b = (int32_t)r_abuf[j];
+                 b=(b<<8)|(int32_t)r_abuf[j+1];
+                 b=(b<<8)|(int32_t)r_abuf[j+2];
+                 b=(b<<8)|(int32_t)r_abuf[j+3];
+                 Log_Value_Int(b);Log_String_Literal(",");
+                 Log_Process();
+            //  Log_Value_Int(r_abuf[j]);Log_String_Literal(",");
+              }
+              //Log_Line("");
+              }
+          Log_Line("");
+          }
+      }
+      Brd_Led_Off(BRD_LED0);
+      Log_Line("Writing dummy");
+      for(int k=0; k<MAX_ADDR; k+=16)
+      {
+          Mem_Write(k,dummy,sizeof(dummy));
+          Log_Process();
+      }
+
+      Tm_Start_Timeout(TM_TOUT_TEST_ID,TM_TOUT_TEST_VAL);
+      Tm_Start_Timeout(TM_TOUT_SYNC_ID,TM_TOUT_SYNC_VAL);
+      Mem_ReadStatus();
+      Brd_Led_On(BRD_LED1);
+      Log_Line("Writing data");
+      str = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
+      Log_Process();
+*/
+    Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
     // Round-robin scheduling (circular execution, no priorities)
 
     while (1)
@@ -110,6 +151,57 @@ int main(void)
             Tm_Process();
 
         Log_Process();
+//****************** MEMORY WRITE & READ*****************************
+     /*   if((Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - str < 1000000) && !delay_ovr)
+            {
+                if(!GPIO_readDio(BRD_SEN_INT1))
+           // if(Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
+                    {
+                    Sen_Read_Acc(abuf);
+                    d_rdy++;
+                   // Log_Value_Int(d_rdy);Log_Line(" ");
+                    d_tm=Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
+                    uint8_t data[] = {d_tm>>24,d_tm>>16,d_tm>>8,d_tm,((abuf[1]>>24)), ((abuf[1]>>16)), ((abuf[1]>>8)),abuf[1],((abuf[2]>>24)), ((abuf[2]>>16)), ((abuf[2]>>8)),abuf[2],((abuf[3]>>24)), ((abuf[3]>>16)), ((abuf[3]>>8)),abuf[3]};
+                    Mem_Write(addr,data,sizeof(data)); //addr starts at 00000h till 7FFFFh
+                    addr+=16;
+                  //  Brd_Led_On(BRD_LED1);
+                /*   for(int j=0; j<sizeof(data);j++)
+                   {
+                       Log_Value_Int(data[j]);Log_String_Literal(",");
+                   }
+                   Log_Line(" ");
+                    }
+            }
+        else
+            {
+                delay_ovr = true;
+                Brd_Led_Off(BRD_LED1);
+            }
+
+*/
+//        if(delay_ovr==true&r_addr<addr)
+  //      {
+            if(Tm_Period_Completed(TM_PER_HEARTBEAT_ID)&&r_addr<16000)
+               {
+                Mem_Read(r_addr,r_abuf,sizeof(r_abuf));
+               // Log_Value_Hex(r_addr); Log_String_Literal(",");
+                for(int j =0; j<sizeof(r_abuf);)
+                    {
+
+                       int32_t b = (int32_t)r_abuf[j];
+                       b=(b<<8)|(int32_t)r_abuf[j+1];
+                       b=(b<<8)|(int32_t)r_abuf[j+2];
+                       b=(b<<8)|(int32_t)r_abuf[j+3];
+                       Log_Value_Int(b);Log_String_Literal(",");
+                      // Log_Value_Int(r_abuf[j]);Log_String_Literal(",");
+                       j+=4;
+
+                    }
+               Log_Line(" ");
+               r_addr+=16;
+               }
+//        }
+
 
  /* if (Pma_Batt_Volt_Meas_Ready())
           Pma_Process();
@@ -126,41 +218,64 @@ int main(void)
           //  Pfl_Tic();
           /*  Pfl_Toc();
               exec_time = Pfl_Get_Exec_Time_Microsec();
-              Log_Value_Int(exec_time);Log_Line(" ");*/
+              Log_Value_Int(exec_time);Log_Line(" ");
 
               //  Log_Value_Int(d_rdy);Log_Line(" ");
                if(Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
                    {
                    //Mem_Test();
-                 //  Sen_Read_Acc(abuf);
-                /*   Log_Value_Int(abuf[0]);Log_String_Literal(",");
+                 /*  Sen_Read_Acc(abuf);
+                   d_tm=Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
+                   Log_Value_Int(d_tm);Log_String_Literal(",");
                    Log_Value_Int(abuf[1]);Log_String_Literal(",");
                    Log_Value_Int(abuf[2]);Log_String_Literal(",");
                    Log_Value_Int(abuf[3]);
-                   Log_Line(" ");*/
-                   //to convert uint32 to uint8
-                  /* uint32_t value;
-                   uint32_t result[4];
-
-                   result[0] = (value & 0x000000ff);
-                   result[1] = (value & 0x0000ff00) >> 8;
-                   result[2] = (value & 0x00ff0000) >> 16;
-                   result[3] = (value & 0xff000000) >> 24;*/
-                   Mem_Write(addr,num,4); //addr starts at 00000h till 7FFFFh
-                   Mem_Read(addr,r_abuf,4);
-                   Log_Value_Hex(addr); Log_String_Literal(",");
-                   for(int j =0; j<4; j++)
-                   {
-                       Log_Value_Int(r_abuf[j]);Log_String_Literal(",");
-                   }
                    Log_Line(" ");
-                   addr++;
-                   }
-  //*********************LEVEL TRIGGER***************************
+*/
+                   //to convert int32 to uint8
+                 //  uint8_t data[] = {d_tm>>24,d_tm>>16,d_tm>>8,d_tm,((abuf[1]>>24)), ((abuf[1]>>16)), ((abuf[1]>>8)),abuf[1],((abuf[2]>>24)), ((abuf[2]>>16)), ((abuf[2]>>8)),abuf[2],((abuf[3]>>24)), ((abuf[3]>>16)), ((abuf[3]>>8)),abuf[3]};
+                 /*  for(int j=0; j<sizeof(num);j++)
+                                      {
+                                          Log_Value_Int(data[j]);Log_String_Literal(",");
+                                      }Log_Line("");
+                   if(addr<5)
+                       {
+                       Mem_Write(addr,num,sizeof(num)); //addr starts at 00000h till 7FFFFh
+                       addr+=4;
+                       }
+                   else if(r_addr<addr)
+                       {
+                       Mem_Read(r_addr,r_abuf,sizeof(r_abuf));
+                       r_addr+=4;
+                       for(int j=0; j<sizeof(r_abuf);j++)
+                         {
+                             Log_Value_Int(r_abuf[j]);Log_String_Literal(",");
+                         }
+                         Log_Line(" ");
+                       }
+                 //  Log_Value_Hex(addr); Log_String_Literal(",");
 
-      /*  if((Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - str < 1000000) && !delay_ovr)
+               /*    for(int j =0; j<sizeof(data);)
+                   {
+
+                           int32_t b = (int32_t)r_abuf[j];
+                           b=(b<<8)|(int32_t)r_abuf[j+1];
+                           b=(b<<8)|(int32_t)r_abuf[j+2];
+                           b=(b<<8)|(int32_t)r_abuf[j+3];
+                           Log_Value_Int(b);Log_String_Literal(",");
+                         //  Log_Value_Int((int32_t)r_abuf[j+2]>>4|(int32_t)r_abuf[j+1]<< 4|(int32_t)r_abuf[j]<< 12);Log_String_Literal(",");
+                           j+=4;
+
+                   }
+                  // addr++;
+                   }
+
+*/
+  //*********************LEVEL TRIGGER-UART LOG***************************
+
+ /*       if((Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - str < 10000000) && !delay_ovr )
         { // Mem_Test();
-        if(!GPIO_readDio(9))
+            if(!GPIO_readDio(BRD_SEN_INT1))
                 {
                     Sen_Read_Acc(abuf);
                     d_rdy++;
@@ -169,7 +284,7 @@ int main(void)
                     Log_Value_Int(abuf[1]);Log_String_Literal(",");
                     Log_Value_Int(abuf[2]);Log_String_Literal(",");
                     Log_Value_Int(abuf[3]);Log_Line("");
-                 /* if(d_rdy==1)
+                /*  if(d_rdy==1)
                     {
                         st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
                         Brd_Led_Toggle(BRD_LED0);
@@ -181,16 +296,19 @@ int main(void)
                     }
                 }
         }
+
         else
             {
                 delay_ovr = true;
                 Brd_Led_Off(BRD_LED0);
+
             }
-/*
+
+*/
 
   //*******************EDGE TRIGGER*****************************
 
-  /* if((Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - str < 5000000) && !delay_ovr)
+ /*  if((Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - str < 5000000) && !delay_ovr)
         {
            Sen_Read_Acc(abuf);
            Log_Value_Int(d_rdy);Log_Line(" ");
@@ -218,7 +336,12 @@ int main(void)
             //  ;
 
         }
-        */
+                if(Tm_Timeout_Completed(TM_TOUT_SYNC_ID))
+           {
+            IOCIntClear(BRD_SEN_INT1);
+            IOCIntEnable(BRD_SEN_INT1);
+           }
+*/
 
     #if (CFG_DEBUG_EXT_SYNC == CFG_SETTING_ENABLED)
         if(Tm_Timeout_Completed(TM_TOUT_SYNC_ID))
@@ -270,8 +393,24 @@ void GPIO_Init()
 
 }
 
-void Sen_ISR(uint_least8_t index)
+/*void Sen_ISR()
 {
-    d_rdy++;
-}
+   if(IOCIntStatus(BRD_SEN_INT1))
+   {
+       //Sen_Read_Acc(abuf);
+       d_rdy++;
+       if(d_rdy==1)
+       {
+           Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()));Log_Line("int");
+           Brd_Led_Toggle(BRD_LED0);
+       }
+       else if(d_rdy == 100)
+       {
+           Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()));
+           Brd_Led_Toggle(BRD_LED0);
+       }
+       IOCIntClear(BRD_SEN_INT1);
+       IOCIntDisable(BRD_SEN_INT1);
+   }
+}*/
 

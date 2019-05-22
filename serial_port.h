@@ -8,7 +8,7 @@
 #ifndef SERIAL_PORT_H_
 #define SERIAL_PORT_H_
 
-#define SEP_BAUD_RATE       460800
+#define SEP_BAUD_RATE       921600
 
 void Sep_Init();
 
