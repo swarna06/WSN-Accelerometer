@@ -20,7 +20,7 @@
 #include <driverlib/timer.h>
 
 #include <driverlib/aon_event.h>
-
+#include <driverlib/uart.h>
 #include <driverlib/ccfgread.h>
 #include <inc/hw_ccfg.h>
 #include <inc/hw_fcfg1.h>
@@ -42,14 +42,14 @@
 
 #include "printf.h"
 #include "spi_bus.h"
+
+
 #define MAX_ADDR    0x7ffff
 
 // Global profiling variables
 volatile uint32_t pfl_tic, pfl_toc, pfl_wcet = 0;
 uint32_t str=0; //for profiling
-void GPIO_Init();
 //void Sen_ISR();
-int32_t BytetoInt(uint8_t msb, uint8_t msb1, uint8_t msb2, uint8_t lsb);
 static int32_t d_rdy=0;
 int main(void)
 {
@@ -96,14 +96,25 @@ int main(void)
    //IOCIOIntSet(9,IOC_INT_ENABLE,IOC_FALLING_EDGE);
    //IOCPortConfigureSet(IOID_9,IOC_PORT_GPIO,IOC_FALLING_EDGE|IOC_INT_ENABLE);
 
-    Log_Line("Test Begin");
-    GPIO_setDio(BRD_GPIO_OUT1);  //To enable start of test connect to ref sensor via BNC cable
-    Brd_Led_On(BRD_LED0);
+Log_Line("Test Begin");
+GPIO_setDio(BRD_GPIO_OUT1);  //To enable start of test connect to ref sensor via BNC cable
+Brd_Led_On(BRD_LED0);
 
-      //Delay of 5,000,000 us = 5sec
-                  st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
-                  while(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st < 2000000)
-                  {Log_Process();} ;
+//Delay of 2,000,000 us = 2 sec
+st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
+while(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st < 2000000)
+{Log_Process();} ;
+
+Brd_Led_Off(BRD_LED0);
+//Write zeroes before writing sensor data to memory
+#if (CFG_DEBUG_MEM_WRITE == CFG_SETTING_ENABLED)
+  for(int k=0; k<MAX_ADDR; k+=16)
+        {
+            Mem_Write(k,dummy,sizeof(dummy));
+            Log_Process();
+        }
+#endif // #if (CFG_DEBUG_MEM_WRITE == CFG_SETTING_ENABLED)
+
 
    /*   for(i=0;i<MAX_ADDR;i+=16)
       {
@@ -202,6 +213,13 @@ int main(void)
                }
 #endif // #if (CFG_DEBUG_MEM_READ == CFG_SETTING_ENABLED)
 
+
+//**************UART Echo*****************
+   if(UARTCharsAvail(UART0_BASE))
+   {
+       i = UARTCharGetNonBlocking(UART0_BASE);
+           UARTCharPutNonBlocking(UART0_BASE, i);
+   }
 
 
  /* if (Pma_Batt_Volt_Meas_Ready())
