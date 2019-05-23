@@ -57,6 +57,9 @@ void Mem_Write_Array(const uint32_t addr,
 void Mem_Write(uint32_t addr, uint8_t* data_ptr, uint32_t total_count);
 void Mem_Read(uint32_t addr, uint8_t* data_ptr,uint32_t total_count);
 void Mem_ReadStatus();
+void Mem_Flag_Set();
+void Mem_Flag_Reset();
+bool Mem_Flag_Read();
 
 
 #endif /* MEMORY_TEST_H_ */

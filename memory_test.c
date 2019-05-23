@@ -164,7 +164,7 @@ void Mem_Read(uint32_t addr, uint8_t *data_ptr,uint32_t total_count)
 void Mem_Write(uint32_t addr, uint8_t* data_ptr, uint32_t total_count)
 {
     //send Write enable command opcode
-    uint8_t opcode_wren = MEM_OC_WREN, i ;
+    uint8_t opcode_wren = MEM_OC_WREN;
     Spi_Transaction(&opcode_wren, sizeof(opcode_wren),
                         NULL, 0,
                         MEM_SPI_CS_PIN);
@@ -179,7 +179,53 @@ void Mem_Write(uint32_t addr, uint8_t* data_ptr, uint32_t total_count)
                             NULL, 0,
                             MEM_SPI_CS_PIN);
 }
+void Mem_Flag_Set()
+{
+    uint32_t addr=0x00000;
+    //send Write enable command opcode
+    uint8_t opcode_wren = MEM_OC_WREN;
+    Spi_Transaction(&opcode_wren, sizeof(opcode_wren),
+                        NULL, 0,
+                        MEM_SPI_CS_PIN);
 
+
+    //send Write command opcode
+    uint8_t opcode_write = MEM_OC_WRITE;
+    const uint8_t frame[] = {MEM_OC_WRITE, ((uint8_t)(addr>>16)), ((uint8_t)(addr>>8)), ((uint8_t)(addr)), 1};
+
+    Spi_Transaction(&frame, sizeof(frame),
+                            NULL, 0,
+                            MEM_SPI_CS_PIN);
+}
+void Mem_Flag_Reset()
+{
+    uint32_t addr=0x00000;
+    //send Write enable command opcode
+    uint8_t opcode_wren = MEM_OC_WREN;
+    Spi_Transaction(&opcode_wren, sizeof(opcode_wren),
+                        NULL, 0,
+                        MEM_SPI_CS_PIN);
+
+
+    //send Write command opcode
+    uint8_t opcode_write = MEM_OC_WRITE;
+    const uint8_t frame[] = {MEM_OC_WRITE, ((uint8_t)(addr>>16)), ((uint8_t)(addr>>8)), ((uint8_t)(addr)), 0};
+
+    Spi_Transaction(&frame, sizeof(frame),
+                            NULL, 0,
+                            MEM_SPI_CS_PIN);
+}
+bool Mem_Flag_Read()
+{
+    uint32_t addr=0x00000;
+    uint8_t data_ptr;
+    uint8_t opcode_read = MEM_OC_READ;
+    const uint8_t frame[] = {MEM_OC_READ, ((uint8_t)(addr>>16)), ((uint8_t)(addr>>8)), ((uint8_t)(addr))};
+    Spi_Transaction(&frame, sizeof(frame),
+                                    &data_ptr, sizeof(data_ptr),
+                                    MEM_SPI_CS_PIN);
+    return data_ptr;
+}
 void Mem_Test()
 {
 #if (MEM_PART_NUM == MEM_23LCV1024)
