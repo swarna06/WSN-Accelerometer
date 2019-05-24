@@ -55,10 +55,10 @@ static int32_t d_rdy=0;
 int main(void)
 {
     int32_t abuf[4],d_tm=0, i=0;
-    uint8_t r_abuf[16], num[4] ={1, 2, 3, 4}, dummy[16]={0},memread;
+    uint8_t r_abuf[16], num[4] ={1, 2, 3, 4}, dummy[16]={0};
     uint32_t addr=1,r_addr=1;
     bool sync_given = false;
-    bool delay_ovr = false;
+    bool delay_ovr = false,memread=false;
     uint32_t exec_time,curtime, wcet = 0,st=0,en=0;
 
 
@@ -99,62 +99,17 @@ int main(void)
 Log_Line("Enter 'r' to retrieve data:");
 GPIO_setDio(BRD_GPIO_OUT1);  //To enable start of test connect to ref sensor via BNC cable
 
-
+Brd_Led_On(BRD_LED1);
 //Delay of 2,000,000 us = 2 sec
 st = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
 while(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st < 2000000)
 {Log_Process();} ;
+Brd_Led_Off(BRD_LED1);
 
 
-   /*
-    *
-    *  //Write zeroes before writing sensor data to memory
-#if (CFG_DEBUG_MEM_WRITE == CFG_SETTING_ENABLED)
-      for(int k=1; k<MAX_ADDR; k+=16)
-        {
-            Mem_Write(k,dummy,sizeof(dummy));
-            Log_Process();
-        }
-
-#endif // #if (CFG_DEBUG_MEM_WRITE == CFG_SETTING_ENABLED)
-
-         for(i=0;i<MAX_ADDR;i+=16)
-      {
-      Mem_Read(i,r_abuf,sizeof(r_abuf));
-      //if(r_abuf[0]!=0 && r_abuf[1]!=0)
-          {for(int j=0;j<sizeof(r_abuf);j+=4)
-              {//if(r_abuf[0]!=0 && r_abuf[1]!=0)
-                 {int32_t b = (int32_t)r_abuf[j];
-                 b=(b<<8)|(int32_t)r_abuf[j+1];
-                 b=(b<<8)|(int32_t)r_abuf[j+2];
-                 b=(b<<8)|(int32_t)r_abuf[j+3];
-                 Log_Value_Int(b);Log_String_Literal(",");
-                 Log_Process();
-            //  Log_Value_Int(r_abuf[j]);Log_String_Literal(",");
-              }
-              //Log_Line("");
-              }
-          Log_Line("");
-          }
-      }
-      Brd_Led_Off(BRD_LED0);
-      Log_Line("Writing dummy");
-      for(int k=0; k<MAX_ADDR; k+=16)
-      {
-          Mem_Write(k,dummy,sizeof(dummy));
-          Log_Process();
-      }
-
-      Tm_Start_Timeout(TM_TOUT_TEST_ID,TM_TOUT_TEST_VAL);
-      Tm_Start_Timeout(TM_TOUT_SYNC_ID,TM_TOUT_SYNC_VAL);
-      Mem_ReadStatus();
-      Brd_Led_On(BRD_LED1);
-      Log_Line("Writing data");
-
-      Log_Process();
-*/
     Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
-   // str = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
+    str = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
+    Log_Value_Uint(Mem_Flag_Read());Log_String_Literal("\r\n");
     // Round-robin scheduling (circular execution, no priorities)
 
     while (1)
@@ -167,32 +122,26 @@ while(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st < 2000000)
         //****************** MEMORY WRITE *****************************
 
 #if (CFG_DEBUG_MEM_WRITE == CFG_SETTING_ENABLED)
- if(!Mem_Flag_Read())
+ if(!Mem_Flag_Read()&& !delay_ovr)
  {
-       if((Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - str < 1000000) && !delay_ovr)
+       if((Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - str < 1000000) )
             {
                 if(!GPIO_readDio(BRD_SEN_INT1))
-           // if(Tm_Period_Completed(TM_PER_HEARTBEAT_ID))
-                    {
+                {
+                    Brd_Led_On(BRD_LED0);
                     Sen_Read_Acc(abuf);
                     d_rdy++;
-                   // Log_Value_Int(d_rdy);Log_Line(" ");
                     d_tm=Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
                     uint8_t data[] = {d_tm>>24,d_tm>>16,d_tm>>8,d_tm,((abuf[1]>>24)), ((abuf[1]>>16)), ((abuf[1]>>8)),abuf[1],((abuf[2]>>24)), ((abuf[2]>>16)), ((abuf[2]>>8)),abuf[2],((abuf[3]>>24)), ((abuf[3]>>16)), ((abuf[3]>>8)),abuf[3]};
                     Mem_Write(addr,data,sizeof(data)); //addr starts at 00001h till 7FFFFh
                     addr+=16;
-                /*   for(int j=0; j<sizeof(data);j++)
-                   {
-                       Log_Value_Int(data[j]);Log_String_Literal(",");
-                   }
-                   Log_Line(" ");*/
-                    }
+                }
             }
         else
             {
-                //delay_ovr = true;
+                delay_ovr = true;
                 Brd_Led_Off(BRD_LED0);
-                //Mem_Flag_Set();
+                Mem_Flag_Set();
             }
  }
 #endif // #if (CFG_DEBUG_MEM_WRITE == CFG_SETTING_ENABLED)
@@ -201,56 +150,56 @@ while(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st < 2000000)
        if(UARTCharsAvail(UART0_BASE))
        {
            i = UARTCharGetNonBlocking(UART0_BASE);
-           if(i=='r')
+           if(i=='r'&& Mem_Flag_Read())
            {
-               Log_Line("Retrieving data from memory!");
-               Mem_Flag_Set();
-               r_addr=1;
-               //Log_Value_Uint(Mem_Flag_Read());
+              Log_Line("Retrieving data from memory!");
+            //  Brd_Led_On(BRD_LED0);
+              r_addr=1;
+              memread=true;
+              Log_Value_Uint(Mem_Flag_Read());Log_String_Literal("\r\n");
            }
            else if(i=='c')
            {
-               Log_Line("Clearing mem flag and starting data collection!");
+               Log_Line("Clearing mem flag to start data collection for next run!");
                Mem_Flag_Reset();
+               Log_Value_Uint(Mem_Flag_Read());
                for(int k=1; k<MAX_ADDR; k+=16)
                        {
                            Mem_Write(k,dummy,sizeof(dummy));
                        }
-               str = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
-               Brd_Led_On(BRD_LED0);
-               addr=1;
-               //Log_Value_Uint(Mem_Flag_Read());
            }
-
+           else if(i=='f')
+           {
+               Log_Line("mem flag");Log_Value_Uint(Mem_Flag_Read());
+           }
        }
-   if(Mem_Flag_Read())
-   {
-       if(Tm_Period_Completed(TM_PER_HEARTBEAT_ID)&&r_addr<MAX_ADDR)
-                      {
-                       Mem_Read(r_addr,r_abuf,sizeof(r_abuf));
-                      // Log_Value_Hex(r_addr); Log_String_Literal(",");
-                       for(int j =0; j<sizeof(r_abuf);j+=4)
-                           {
-                              int32_t b = (int32_t)r_abuf[j];
-                              b=(b<<8)|(int32_t)r_abuf[j+1];
-                              b=(b<<8)|(int32_t)r_abuf[j+2];
-                              b=(b<<8)|(int32_t)r_abuf[j+3];
-                              if(b!=0)
-                                  {
-                                  Log_Value_Int(b);Log_String_Literal(",");
-                                  }
-                              else
-                                  {
-                                  Mem_Flag_Reset();
-                                  Brd_Led_Off(BRD_LED0);
-                                  }
-                           }
 
-                           Log_Line(" ");
-                      r_addr+=16;
-                      }
-   }
+       if(memread)
+       {
+           if(Tm_Period_Completed(TM_PER_HEARTBEAT_ID)&&r_addr<MAX_ADDR)
+                                 {
+                                  Mem_Read(r_addr,r_abuf,sizeof(r_abuf));
+                                  for(int j =0; j<sizeof(r_abuf);j+=4)
+                                      {
+                                         int32_t b = (int32_t)r_abuf[j];
+                                         b=(b<<8)|(int32_t)r_abuf[j+1];
+                                         b=(b<<8)|(int32_t)r_abuf[j+2];
+                                         b=(b<<8)|(int32_t)r_abuf[j+3];
+                                         if(b!=0)
+                                             {
+                                             Log_Value_Int(b);Log_String_Literal(",");
+                                             }
+                                         else
+                                             {
+                                             memread=false;
+                                             Log_Line("over!");
+                                             }
+                                      }
 
+                                      Log_Line(" ");
+                                 r_addr+=16;
+                                 }
+       }
 
  /* if (Pma_Batt_Volt_Meas_Ready())
           Pma_Process();

@@ -25,7 +25,7 @@
 
 // List of periods, values in milliseconds
 #define TM_PER_HEARTBEAT_ID     0
-#define TM_PER_HEARTBEAT_VAL    100
+#define TM_PER_HEARTBEAT_VAL    50
 
 #define TM_PER_PTC_ID           1
 
