@@ -49,7 +49,7 @@
 // Global profiling variables
 volatile uint32_t pfl_tic, pfl_toc, pfl_wcet = 0;
 uint32_t str=0; //for profiling
-//void Sen_ISR();
+void Sen_ISR();
 void GPIO_Init();
 static int32_t d_rdy=0;
 int main(void)
@@ -86,7 +86,13 @@ int main(void)
     IOCIOPortPullSet(BRD_GPIO_IN1, IOC_IOPULL_UP);
     #endif // #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
 
-
+    /*
+     * Interrupt settings
+     */
+        IOCPinTypeGpioInput(BRD_GPIO_IN0);
+        IOCIOPortPullSet(BRD_GPIO_IN0, IOC_IOPULL_UP);
+        IOCIOIntSet(BRD_GPIO_IN0, IOC_INT_ENABLE, IOC_FALLING_EDGE);
+        //IOCIntRegister(Sen_ISR);
 
   //  IOCPinTypeGpioInput(BRD_SEN_INT1);
   //  IOCIOIntSet(BRD_SEN_INT1,IOC_INT_ENABLE,IOC_FALLING_EDGE);
@@ -108,8 +114,15 @@ Brd_Led_Off(BRD_LED1);
 
 
     Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
-    str = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
     Log_Value_Uint(Mem_Flag_Read());Log_String_Literal("\r\n");
+    if(!Mem_Flag_Read())
+    {
+        Log_Line("Waiting for button...");
+            while (GPIO_readDio(BRD_GPIO_IN0)) {Log_Process();};
+            Log_Line("Test started");
+    }
+    str = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
+
     // Round-robin scheduling (circular execution, no priorities)
 
     while (1)
@@ -286,5 +299,12 @@ void GPIO_Init()
 
 }
 
+void Sen_ISR()
+{
+        if (IOCIntStatus(BRD_GPIO_IN0))
+          Log_Line("BRD_GPIO_IN0");
+        IOCIntClear(BRD_GPIO_IN0);
+        IntDisable(BRD_GPIO_IN0);
+}
 
 

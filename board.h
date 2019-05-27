@@ -58,7 +58,7 @@
     #define BRD_LED0                13
     #define BRD_LED1                14
 
-    #define BRD_GPIO_OUT0           11
+    #define BRD_GPIO_IN0            11
 
     #define BRD_GPIO_OUT1           12
     #define BRD_GPIO_OUT2           8
