@@ -142,13 +142,13 @@ Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
                 {
                     Brd_Led_On(BRD_LED0);
                     Sen_Read_Acc(abuf);
-                    #if (CFG_DEBUG_EXT_SYNC == CFG_SETTING_ENABLED)
+                  /*  #if (CFG_DEBUG_EXT_SYNC == CFG_SETTING_ENABLED)
                     if(!sync_given)
                     {
                         GPIO_setDio(BRD_GPIO_OUT2);
                         sync_given = true;
                     }
-                    #endif
+                    #endif*/
                     d_rdy++;
                     d_tm=Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time())-str;
                     uint8_t data[] = {d_tm>>24,d_tm>>16,d_tm>>8,d_tm,((abuf[1]>>24)), ((abuf[1]>>16)), ((abuf[1]>>8)),abuf[1],((abuf[2]>>24)), ((abuf[2]>>16)), ((abuf[2]>>8)),abuf[2],((abuf[3]>>24)), ((abuf[3]>>16)), ((abuf[3]>>8)),abuf[3]};
@@ -276,16 +276,16 @@ Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
 
 #endif // #if (CFG_DEBUG_MEM_WRITE == CFG_SETTING_DISABLED)
 
-    #if (CFG_DEBUG_EXT_SYNC == CFG_SETTING_ENABLED)
-     /*   if(Tm_Timeout_Completed(TM_TOUT_SYNC_ID))
+/*    #if (CFG_DEBUG_EXT_SYNC == CFG_SETTING_ENABLED)
+        if(Tm_Timeout_Completed(TM_TOUT_SYNC_ID))
         {
             if(!sync_given)
                 {
                     GPIO_setDio(BRD_GPIO_OUT2);
                     sync_given = true;
                 }
-        }*/
-    #endif // #if (CFG_DEBUG_EXT_SYNC == CFG_SETTING_ENABLED)
+        }
+    #endif // #if (CFG_DEBUG_EXT_SYNC == CFG_SETTING_ENABLED)*/
 
     }
 

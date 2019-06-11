@@ -35,7 +35,7 @@
 #define CFG_DEBUG_EXT_SYNC              CFG_SETTING_ENABLED  // EXT_SYNC=01
 #define CFG_DEBUG_EDGE_TRIG             CFG_SETTING_DISABLED
 #define CFG_DEBUG_LEVEL_TRIG            CFG_SETTING_DISABLED
-#define CFG_DEBUG_MEM_WRITE             CFG_SETTING_DISABLED
+#define CFG_DEBUG_MEM_WRITE             CFG_SETTING_ENABLED
 
 
 // Reliability test configuration
