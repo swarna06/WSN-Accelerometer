@@ -114,7 +114,7 @@ void Sen_Init()
 
 
     Sen_Single_Byte_Write(FILTER, 0x02); // set ODR 1000Hz
-    Sen_Single_Byte_Write(RANGE, 0x01); //Set Range +/-2g
+    Sen_Single_Byte_Write(RANGE, 0x02); //Set Range +/-2g
     Sen_Single_Byte_Write(INT_MAP, 0x01); // Map DATA_RDY interrupt enable on INT1 pin *** connect to DIO_9 pin of board
     Sen_Single_Byte_Write(POWER_CTL, 0x00); // start measurement
 }

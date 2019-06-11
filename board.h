@@ -60,8 +60,8 @@
 
     #define BRD_GPIO_IN0            11
 
-    #define BRD_GPIO_OUT1           12
-    #define BRD_GPIO_OUT2           8
+    #define BRD_GPIO_IN1            12
+    #define BRD_GPIO_OUT2           8   //SYNC
     #define BRD_SEN_INT2            10
     #define BRD_SEN_INT1            9
 

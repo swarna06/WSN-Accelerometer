@@ -87,23 +87,14 @@ int main(void)
     #endif // #if (CFG_DEBUG_RFC_ERR_BUTTON == CFG_SETTING_ENABLED)
 
     /*
-     * Interrupt settings
+     * Interrupt settings for ext sync pulse train
      */
-        IOCPinTypeGpioInput(BRD_GPIO_IN0);
-        IOCIOPortPullSet(BRD_GPIO_IN0, IOC_IOPULL_UP);
-        IOCIOIntSet(BRD_GPIO_IN0, IOC_INT_ENABLE, IOC_FALLING_EDGE);
-        //IOCIntRegister(Sen_ISR);
-
-  //  IOCPinTypeGpioInput(BRD_SEN_INT1);
-  //  IOCIOIntSet(BRD_SEN_INT1,IOC_INT_ENABLE,IOC_FALLING_EDGE);
-  //  IOCIntRegister(Sen_ISR);
-   //IntEnable(INT_AON_GPIO_EDGE);
-   //IntRegister(INT_AON_GPIO_EDGE, Sen_ISR);
-   //IOCIOIntSet(9,IOC_INT_ENABLE,IOC_FALLING_EDGE);
-   //IOCPortConfigureSet(IOID_9,IOC_PORT_GPIO,IOC_FALLING_EDGE|IOC_INT_ENABLE);
+        IOCPinTypeGpioInput(BRD_GPIO_IN1);
+        IOCIOPortPullSet(BRD_GPIO_IN1, IOC_IOPULL_UP);
+        IOCIOIntSet(BRD_GPIO_IN1, IOC_INT_ENABLE, IOC_RISING_EDGE);
+        IOCIntRegister(Sen_ISR);
 
 Log_Line("Enter 'r' to retrieve data:");
-GPIO_setDio(BRD_GPIO_OUT1);  //To enable start of test connect to ref sensor via BNC cable
 
 Brd_Led_On(BRD_LED1);
 //Delay of 2,000,000 us = 2 sec
@@ -112,8 +103,15 @@ while(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st < 2000000)
 {Log_Process();} ;
 Brd_Led_Off(BRD_LED1);
 
+Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
+#if (CFG_DEBUG_MEM_WRITE == CFG_SETTING_DISABLED)
+    Log_Line("Waiting for button...");
+                while (GPIO_readDio(BRD_GPIO_IN0)) {Log_Process();};
+                Log_Line("Test starting in 2 secs");
 
-    Tm_Start_Period(TM_PER_HEARTBEAT_ID, TM_PER_HEARTBEAT_VAL);
+#endif // #if (CFG_DEBUG_MEM_WRITE == CFG_SETTING_DISABLED)
+
+#if (CFG_DEBUG_MEM_WRITE == CFG_SETTING_ENABLED)
     Log_Value_Uint(Mem_Flag_Read());Log_String_Literal("\r\n");
     if(!Mem_Flag_Read())
     {
@@ -121,6 +119,7 @@ Brd_Led_Off(BRD_LED1);
             while (GPIO_readDio(BRD_GPIO_IN0)) {Log_Process();};
             Log_Line("Test started");
     }
+#endif // #if (CFG_DEBUG_MEM_WRITE == CFG_SETTING_ENABLED)
     str = Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
 
     // Round-robin scheduling (circular execution, no priorities)
@@ -137,14 +136,21 @@ Brd_Led_Off(BRD_LED1);
 #if (CFG_DEBUG_MEM_WRITE == CFG_SETTING_ENABLED)
  if(!Mem_Flag_Read()&& !delay_ovr)
  {
-       if((Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - str < 1000000) )
+       if((Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - str < 10000000) )
             {
                 if(!GPIO_readDio(BRD_SEN_INT1))
                 {
                     Brd_Led_On(BRD_LED0);
                     Sen_Read_Acc(abuf);
+                    #if (CFG_DEBUG_EXT_SYNC == CFG_SETTING_ENABLED)
+                    if(!sync_given)
+                    {
+                        GPIO_setDio(BRD_GPIO_OUT2);
+                        sync_given = true;
+                    }
+                    #endif
                     d_rdy++;
-                    d_tm=Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time());
+                    d_tm=Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time())-str;
                     uint8_t data[] = {d_tm>>24,d_tm>>16,d_tm>>8,d_tm,((abuf[1]>>24)), ((abuf[1]>>16)), ((abuf[1]>>8)),abuf[1],((abuf[2]>>24)), ((abuf[2]>>16)), ((abuf[2]>>8)),abuf[2],((abuf[3]>>24)), ((abuf[3]>>16)), ((abuf[3]>>8)),abuf[3]};
                     Mem_Write(addr,data,sizeof(data)); //addr starts at 00001h till 7FFFFh
                     addr+=16;
@@ -157,7 +163,7 @@ Brd_Led_Off(BRD_LED1);
                 Mem_Flag_Set();
             }
  }
-#endif // #if (CFG_DEBUG_MEM_WRITE == CFG_SETTING_ENABLED)
+
 
 //**************UART *****************
        if(UARTCharsAvail(UART0_BASE))
@@ -175,11 +181,11 @@ Brd_Led_Off(BRD_LED1);
            {
                Log_Line("Clearing mem flag to start data collection for next run!");
                Mem_Flag_Reset();
-               Log_Value_Uint(Mem_Flag_Read());
                for(int k=1; k<MAX_ADDR; k+=16)
                        {
                            Mem_Write(k,dummy,sizeof(dummy));
                        }
+               Log_Value_Uint(Mem_Flag_Read());
            }
            else if(i=='f')
            {
@@ -213,7 +219,7 @@ Brd_Led_Off(BRD_LED1);
                                  r_addr+=16;
                                  }
        }
-
+#endif // #if (CFG_DEBUG_MEM_WRITE == CFG_SETTING_ENABLED)
  /* if (Pma_Batt_Volt_Meas_Ready())
           Pma_Process();
 
@@ -228,14 +234,22 @@ Brd_Led_Off(BRD_LED1);
 
 
   //*********************LEVEL TRIGGER-UART LOG***************************
-
- /*       if((Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - str < 10000000) && !delay_ovr )
-        { // Mem_Test();
+#if (CFG_DEBUG_MEM_WRITE == CFG_SETTING_DISABLED)
+        if((Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - str < 10000000) && !delay_ovr )
+        {
             if(!GPIO_readDio(BRD_SEN_INT1))
                 {
                     Sen_Read_Acc(abuf);
                     d_rdy++;
-                    Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()));Log_String_Literal(",");
+                    Brd_Led_On(BRD_LED0);
+                   /* #if (CFG_DEBUG_EXT_SYNC == CFG_SETTING_ENABLED)
+                    if(!sync_given)
+                    {
+                        GPIO_setDio(BRD_GPIO_OUT2);
+                        sync_given = true;
+                    }
+                    #endif*/
+                    Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - str);Log_String_Literal(",");
                     //Log_Value_Int(d_rdy);Log_Line(" ");
                     Log_Value_Int(abuf[1]);Log_String_Literal(",");
                     Log_Value_Int(abuf[2]);Log_String_Literal(",");
@@ -249,7 +263,7 @@ Brd_Led_Off(BRD_LED1);
                     {
                         Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()) - st);
                         Brd_Led_Toggle(BRD_LED0);
-                    }
+                    }*/
                 }
         }
 
@@ -260,18 +274,17 @@ Brd_Led_Off(BRD_LED1);
 
             }
 
-*/
+#endif // #if (CFG_DEBUG_MEM_WRITE == CFG_SETTING_DISABLED)
 
     #if (CFG_DEBUG_EXT_SYNC == CFG_SETTING_ENABLED)
-        if(Tm_Timeout_Completed(TM_TOUT_SYNC_ID))
+     /*   if(Tm_Timeout_Completed(TM_TOUT_SYNC_ID))
         {
             if(!sync_given)
                 {
                     GPIO_setDio(BRD_GPIO_OUT2);
                     sync_given = true;
-                    Log_Value_Int(Pfl_Ticks_To_Microsec(Pfl_Get_Current_Time()));Log_Line("");
                 }
-        }
+        }*/
     #endif // #if (CFG_DEBUG_EXT_SYNC == CFG_SETTING_ENABLED)
 
     }
@@ -286,25 +299,27 @@ void GPIO_Init()
     // Configure pins as 'standard' output
     IOCPinTypeGpioOutput(BRD_LED0);
     IOCPinTypeGpioOutput(BRD_LED1);
-    IOCPinTypeGpioOutput(BRD_GPIO_OUT1);
     IOCPinTypeGpioOutput(BRD_GPIO_OUT2);
-    IOCPinTypeGpioInput(9);
+    IOCPinTypeGpioInput(BRD_SEN_INT1);
   //  IOCIOPortPullSet(9, IOC_IOPULL_DOWN);
 
     // Set initial values
     Brd_Led_Off(BRD_LED0);
     Brd_Led_Off(BRD_LED1);
-    GPIO_clearDio(BRD_GPIO_OUT1);
     GPIO_clearDio(BRD_GPIO_OUT2);
 
 }
 
 void Sen_ISR()
 {
-        if (IOCIntStatus(BRD_GPIO_IN0))
-          Log_Line("BRD_GPIO_IN0");
-        IOCIntClear(BRD_GPIO_IN0);
-        IntDisable(BRD_GPIO_IN0);
+        if (IOCIntStatus(BRD_GPIO_IN1))
+        {
+            GPIO_toggleDio(BRD_GPIO_OUT2);
+          //  Log_Line("*");
+        }
+
+        IOCIntClear(BRD_GPIO_IN1);
+        IntDisable(BRD_GPIO_IN1);
 }
 
 
