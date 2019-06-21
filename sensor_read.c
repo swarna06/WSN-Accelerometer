@@ -109,7 +109,7 @@ void Sen_Init()
 
     #if (CFG_DEBUG_EXT_SYNC == CFG_SETTING_ENABLED)
     Sen_Single_Byte_Write(SYNC, 0x05); //Set full external synchronization 00000101 with ext clk
-    Sen_HW_Clock_Setup(GPT2_BASE);     //External Clock generation 1.024MHz
+    Sen_HW_Clock_Setup(GPT2_BASE);     //External Clock generation 1.024MHz INT2 pin
     #endif // #if (CFG_DEBUG_EXT_SYNC == CFG_SETTING_ENABLED)
 
 
