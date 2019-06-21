@@ -38,7 +38,7 @@ void GPIO_Init();
 
 // Global variables
 volatile uint32_t pfl_tic, pfl_toc, pfl_wcet = 0, d_tm=0, p_tm=0; // time-stamp variables
-volatile bool drdy_set = false,  pulse_flag = false, firstpulse_flag=false; //flags for data ready, pulse and 1st sync pulse
+volatile bool drdy_set = false,  pulse_flag = false;//flags for data ready, pulse and 1st sync pulse
 volatile bool delay_ovr = false; //time keeper flag
 int32_t abuf[5]; //sensor data buffer
 static int32_t d_rdy=0;// data ready count
@@ -46,6 +46,7 @@ static int32_t d_rdy=0;// data ready count
 int main(void)
 {
     int firstpulse_tm=0;
+    bool firstpulse_flag=false;
 
 /*----------------------------------------------
  *  Modules initialization
@@ -61,19 +62,15 @@ int main(void)
     Mem_Init();
     Sen_Init();
 
-    Pfl_Tic();  //start time for time keeping
-
-
 /*----------------------------------------------
  * Interrupt settings for external sync pulse train
  * ---------------------------------------------
  */
-        IOCPinTypeGpioInput(BRD_GPIO_IN1);
-        IOCIOPortPullSet(BRD_GPIO_IN1, IOC_IOPULL_UP);
-        IOCIOIntSet(BRD_GPIO_IN1, IOC_INT_ENABLE, IOC_RISING_EDGE);
-        IOCIOIntSet(BRD_SEN_INT1, IOC_INT_ENABLE, IOC_FALLING_EDGE);
-        IOCIntRegister(Sen_ISR);
-
+    IOCPinTypeGpioInput(BRD_GPIO_IN1);
+    IOCIOPortPullSet(BRD_GPIO_IN1, IOC_IOPULL_UP);
+    IOCIOIntSet(BRD_GPIO_IN1, IOC_INT_ENABLE, IOC_RISING_EDGE);
+    IOCIOIntSet(BRD_SEN_INT1, IOC_INT_ENABLE, IOC_FALLING_EDGE);
+    IOCIntRegister(Sen_ISR);
 while (1)
 {
 
@@ -88,13 +85,18 @@ while (1)
             IOCIntDisable(BRD_GPIO_IN1);
             pulse_flag=false;
             IOCIntEnable(BRD_GPIO_IN1);
-            if(firstpulse_flag)
-            {
+            if(!firstpulse_flag)
+                {
                 firstpulse_tm=p_tm;
-                Log_Line("1st pulse");Log_Value_Int(firstpulse_tm);
-            }
+                pfl_tic=firstpulse_tm;
+                Pfl_Tic();  //start time for time keeping
+                firstpulse_flag = true;
+                Log_Value_Int(firstpulse_tm);Log_Line("1st pulse");
+                }
             else
-                Log_Line("pulse");Log_Value_Int(p_tm);
+                {
+                Log_Value_Int(p_tm);Log_Line("pulse");
+                }
 
         }
         if(drdy_set)
@@ -114,11 +116,32 @@ while (1)
     Pfl_Toc();
     if(Pfl_Get_Exec_Time() >  10000000*48)
     {   delay_ovr=true;
-    Brd_Led_Off(BRD_LED0);
+        Brd_Led_Off(BRD_LED0);
     }
 }
 
     return 0;
+}
+
+void Sen_ISR()
+{
+    int32_t t;
+    t=Pfl_Get_Current_Time();
+
+        if (IOCIntStatus(BRD_GPIO_IN1))  // Sync pulse interrupt
+        {
+            GPIO_toggleDio(BRD_GPIO_OUT2);
+            p_tm=t;
+            pulse_flag=true;
+            IOCIntClear(BRD_GPIO_IN1);
+        }
+
+        if (IOCIntStatus(BRD_SEN_INT1)) // Data ready interrupt
+        {
+            d_tm=t;
+            drdy_set = true;
+            IOCIntClear(BRD_SEN_INT1);
+        }
 }
 
 void GPIO_Init()
@@ -140,27 +163,7 @@ void GPIO_Init()
 
 }
 
-void Sen_ISR()
-{
-    int32_t t;
-    t=Pfl_Get_Current_Time();
 
-        if (IOCIntStatus(BRD_GPIO_IN1))  // Sync pulse interrupt
-        {
-            p_tm=t;
-            pulse_flag=true;
-            firstpulse_flag=true;
-            GPIO_toggleDio(BRD_GPIO_OUT2);
-        }
-
-        else if (IOCIntStatus(BRD_SEN_INT1)) // Data ready interrupt
-        {
-            d_tm=t;
-            drdy_set = true;
-        }
-    IOCIntClear(BRD_GPIO_IN1);
-    IOCIntClear(BRD_SEN_INT1);
-}
 
 
 

@@ -58,14 +58,14 @@
     #define BRD_LED0                13
     #define BRD_LED1                14
 
-    #define BRD_GPIO_IN0            11
+    #define BRD_GPIO_IN0            11 //UART TX
 
     #define BRD_GPIO_IN1            12
     #define BRD_GPIO_OUT2           8   //SYNC
     #define BRD_SEN_INT2            10
     #define BRD_SEN_INT1            9
 
-    #define BRD_UART_TX             4
+    #define BRD_UART_TX             11
     #define BRD_UART_RX             5
 
     //SPI sensor
