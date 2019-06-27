@@ -88,14 +88,13 @@ while (1)
             if(!firstpulse_flag)
                 {
                 firstpulse_tm=p_tm;
-                pfl_tic=firstpulse_tm;
-                Pfl_Tic();  //start time for time keeping
+                pfl_tic=firstpulse_tm;  //start time for time keeping
                 firstpulse_flag = true;
-                Log_Value_Int(firstpulse_tm);Log_Line("1st pulse");
+                Log_String_Literal(",");Log_Value_Int(firstpulse_tm);Log_Line("");
                 }
             else
                 {
-                Log_Value_Int(p_tm);Log_Line("pulse");
+                Log_String_Literal(",");Log_Value_Int(p_tm);Log_Line("");
                 }
 
         }
@@ -114,7 +113,7 @@ while (1)
 
   //Time keeper for 10 seconds
     Pfl_Toc();
-    if(Pfl_Get_Exec_Time() >  10000000*48)
+    if(Pfl_Get_Exec_Time() >  60000000*48)
     {   delay_ovr=true;
         Brd_Led_Off(BRD_LED0);
     }
